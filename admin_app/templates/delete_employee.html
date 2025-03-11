@@ -1,0 +1,171 @@
+
+{% extends 'admin_partials/admin_base.html' %}
+<!--parent code -->
+
+<!--<!DOCTYPE html>-->
+<!--<html lang="en">-->
+<!--<head>-->
+<!--    <meta charset="UTF-8">-->
+<!--    <title>Title</title>-->
+<!--</head>-->
+<!--<body>-->
+<!--&lt;!&ndash; post_confirm_delete.html &ndash;&gt;-->
+<!--<h1>Are you sure you want to delete </h1>-->
+<!--<p>{{ data.emp_fname }} {{ data.emp_mname }} {{ data.emp_lname }}</p>-->
+
+<!--<form method="post" enctype="multipart/form-data">-->
+<!--    {% csrf_token %}-->
+<!--    <button type="submit">Confirm Delete</button>-->
+<!--</form>-->
+<!--<a href="{% url 'employee_list' %}">Cancel</a>-->
+
+<!--</body>-->
+<!--</html>-->
+
+
+
+
+
+<!--delete record content design-->
+{% block styles %}
+    <style>
+        .delete-confirmation-content {
+            position: fixed;
+            top: 72px; /* Height of the top navbar */
+            left: 250px; /* Width of the sidebar */
+            right: 0;
+            bottom: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: rgba(244, 244, 249, 0.95);
+            z-index: 999;
+        }
+
+        .confirmation-card {
+            background: white;
+            padding: 1.8rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            max-width: 360px;
+            width: 100%;
+            margin: auto;
+            position: relative;
+            left: -125px; /* Half of sidebar width to center properly */
+        }
+
+        .confirmation-card h1 {
+            color: #1a202c;
+            margin: 0.5rem 0;
+            font-size: 1.3rem;
+            font-weight: 600;
+        }
+
+        .employee-name {
+            color: #2d3748;
+            font-size: 1.1rem;
+            margin: 1rem 0;
+            padding: 0.6rem;
+            background-color: #f7fafc;
+            border-radius: 4px;
+            font-weight: 500;
+        }
+
+        .warning-message {
+            color: #4a5568;
+            font-size: 0.95rem;
+            margin: 0.8rem 0;
+            line-height: 1.4;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 0.8rem;
+            justify-content: center;
+            margin-top: 1.5rem;
+        }
+
+        .delete-btn, .cancel-link {
+            padding: 0.6rem 1.2rem;
+            border-radius: 4px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            min-width: 100px;
+        }
+
+        .delete-btn {
+            background-color: #dc2626;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+
+        .delete-btn:hover {
+            background-color: #b91c1c;
+        }
+
+        .cancel-link {
+            background-color: #1d4ed8;
+            color: white;
+            text-decoration: none;
+        }
+
+        .cancel-link:hover {
+            background-color: #1e40af;
+        }
+
+        .warning-icon {
+            color: #dc2626;
+            font-size: 2.5rem;
+            margin: 0.5rem 0;
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 1024px) {
+            .delete-confirmation-content {
+                left: 200px; /* Adjusted for smaller sidebar */
+            }
+            .confirmation-card {
+                left: -100px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .delete-confirmation-content {
+                left: 0;
+                padding: 1rem;
+            }
+            .confirmation-card {
+                left: 0;
+                max-width: 320px;
+            }
+            .button-group {
+                flex-direction: column;
+            }
+            .delete-btn, .cancel-link {
+                width: 100%;
+            }
+        }
+    </style>
+{% endblock %}
+
+{% block content %}
+    <div class="delete-confirmation-content">
+        <div class="confirmation-card">
+            <div class="warning-icon">⚠️</div>
+            <h1>Delete Employee</h1>
+            <p class="employee-name">{{ data.emp_fname }} {{ data.emp_mname }} {{ data.emp_lname }}</p>
+            <p class="warning-message">Are you sure you want to delete this employee record? This action cannot be undone.</p>
+
+            <form method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+                <div class="button-group">
+                    <button type="submit" class="delete-btn">Delete</button>
+                    <a href="{% url 'employee_list' %}" class="cancel-link">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
+{% endblock %}

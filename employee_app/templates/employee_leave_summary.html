@@ -1,0 +1,39 @@
+{% extends 'emp_index.html' %}
+{% block welcome_message %}
+{% endblock %}
+{% block content %}
+    <h1>Leave Summary</h1>
+    <p>Total Leave Days: {{ total_leave_days }}</p>
+
+    <h2>Leave Requests</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Leave Type</th>
+                <th>Start Date</th>
+                <th>End Date</th>
+                <th>Description</th>
+                <th>Status</th>
+                <th>Leave Days</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for leave in leave_requests %}
+            <tr>
+                <td>{{ leave.leave_type }}</td>
+                <td>{{ leave.start_date }}</td>
+                <td>{{ leave.end_date }}</td>
+                <td>{{ leave.reason }}</td>
+                <td class="status {% if leave.status == 'Pending' %}pending{% elif leave.status == 'Accepted' %}accepted{% elif leave.status == 'Rejected' %}rejected{% endif %}">
+                    {{ leave.status }}
+                </td>
+                <td>{{ leave.leave_days }}</td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="6">No leave requests found.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% endblock %}

@@ -1,0 +1,270 @@
+{% extends 'admin_partials/admin_base.html' %}
+<!--parent code-->
+
+<!--<!DOCTYPE html>-->
+<!--<html lang="en">-->
+<!--<head>-->
+<!--    <meta charset="UTF-8">-->
+<!--    <title>Title</title>-->
+<!--</head>-->
+<!--<body>-->
+<!--<h1>Deleted Employees</h1>-->
+<!--<table>-->
+<!--    <thead>-->
+<!--        <tr>-->
+<!--            <th>ID</th>-->
+<!--            <th>Name</th>-->
+<!--            <th>Email</th>-->
+<!--            <th>Actions</th>-->
+<!--        </tr>-->
+<!--    </thead>-->
+<!--    <tbody>-->
+<!--        {% for employee in employees %}-->
+<!--        <tr>-->
+<!--            <td>{{ employee.emp_id }}</td>-->
+<!--            <td>{{ employee.emp_fname }} {{ employee.emp_lname }}</td>-->
+<!--            <td>{{ employee.emp_email }}</td>-->
+<!--            <td>-->
+<!--                <a href="{% url 'restore_employee' employee.id %}">Restore</a>-->
+<!--            </td>-->
+<!--        </tr>-->
+<!--        {% endfor %}-->
+<!--    </tbody>-->
+<!--</table>-->
+
+<!--</body>-->
+<!--</html>-->
+
+
+{% block styles %}
+    <style>
+        .employee-list-content {
+            position: fixed;
+            top: 72px;
+            left: 250px;
+            right: 0;
+            bottom: 0;
+            overflow-y: auto;
+            background-color: #f4f4f9;
+            z-index: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .content-wrapper {
+            background-color: #ffffff;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            padding: 15px;
+            width: 80%;
+            max-width: 850px;
+            height: auto;
+            max-height: 450px;
+            position: relative;
+            left: -125px;
+            margin: auto;
+            transform: translateY(-30px);
+        }
+
+        .page-header {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding-bottom: 10px;
+            margin-bottom: 10px;
+            border-bottom: 2px solid #e6e6e6;
+            background-color: white;
+        }
+
+        .page-title {
+            color: #2c3e50;
+            font-size: 1.4rem;
+            font-weight: 600;
+            margin: 0;
+        }
+
+        .table-container {
+            position: relative;
+            overflow: auto;
+            background: white;
+            border-radius: 8px;
+            max-height: 350px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+        }
+
+        thead {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            background-color: #3b82f6;
+        }
+
+        th {
+            padding: 8px 15px;
+            text-align: center;
+            font-weight: 500;
+            white-space: nowrap;
+            font-size: 0.9rem;
+            color: white;
+            background-color: #3b82f6;
+        }
+
+        td {
+            padding: 6px 15px;
+            border-bottom: 1px solid #eef2f6;
+            color: #2c3e50;
+            white-space: nowrap;
+            text-align: center;
+        }
+
+        tbody tr:hover {
+            background-color: #f8f9ff;
+        }
+
+        .employee-id {
+            font-family: 'Roboto Mono', monospace;
+            color: #64748b;
+            font-weight: 500;
+        }
+
+        .employee-email {
+            color: #3b82f6;
+        }
+
+        .restore-button {
+            padding: 4px 10px;
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 0.8rem;
+            transition: all 0.2s ease;
+            background-color: #0ea5e9;
+            min-width: 70px;
+            justify-content: center;
+        }
+
+        .restore-button:hover {
+            background-color: #0284c7;
+            transform: translateY(-1px);
+        }
+
+        .restore-button i {
+            font-size: 0.9rem;
+        }
+
+        .no-data-message {
+            text-align: center;
+            padding: 15px;
+            color: #64748b;
+            font-size: 1rem;
+            background-color: #f8fafc;
+            border-radius: 8px;
+            margin: 10px 0;
+            border: 1px dashed #cbd5e1;
+        }
+
+        .no-data-icon {
+            font-size: 2rem;
+            color: #94a3b8;
+            margin-bottom: 8px;
+        }
+
+        @media (max-width: 1400px) {
+            .content-wrapper {
+                width: 75%;
+                left: -100px;
+            }
+        }
+
+        @media (max-width: 1200px) {
+            .content-wrapper {
+                width: 70%;
+                left: -80px;
+            }
+        }
+
+        @media (max-width: 1024px) {
+            .employee-list-content {
+                left: 200px;
+            }
+            .content-wrapper {
+                width: 75%;
+                left: -60px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .employee-list-content {
+                left: 0;
+            }
+            .content-wrapper {
+                width: 95%;
+                left: 0;
+                padding: 12px;
+                transform: translateY(-20px);
+            }
+            .table-container {
+                max-height: 350px;
+            }
+            .page-header {
+                flex-direction: column;
+                gap: 10px;
+            }
+        }
+    </style>
+{% endblock %}
+
+{% block content %}
+    <div class="employee-list-content">
+        <div class="content-wrapper">
+            <div class="page-header">
+                <h1 class="page-title">Deleted Employees</h1>
+            </div>
+
+            <div class="table-container">
+                {% if employees %}
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Name</th>
+                                <th>Email</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for employee in employees %}
+                            <tr>
+                                <td class="employee-id">{{ employee.emp_id }}</td>
+                                <td>{{ employee.emp_fname }} {{ employee.emp_lname }}</td>
+                                <td class="employee-email">{{ employee.emp_email }}</td>
+                                <td>
+                                    <a href="{% url 'restore_employee' employee.id %}" class="restore-button">
+                                        <i class="fas fa-undo"></i> Restore
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                {% else %}
+                    <div class="no-data-message">
+                        <div class="no-data-icon">
+                            <i class="fas fa-info-circle"></i>
+                        </div>
+                        No deleted employees found
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+{% endblock %}

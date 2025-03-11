@@ -1,0 +1,259 @@
+{% extends 'partials/base.html' %}
+
+{% block styles %}
+    <style>
+        .subordinates-content {
+            position: fixed;
+            top: 72px;
+            left: 250px;
+            right: 0;
+            bottom: 0;
+            overflow-y: auto;
+            background-color: #f4f4f9;
+            padding: 40px 20px;
+            z-index: 1;
+            display: flex;
+            justify-content: center;
+        }
+
+        .container {
+            background-color: #ffffff;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+            padding: 25px;
+            width: 95%;
+            margin: 0 auto;
+            position: relative;
+            left: -60px;
+            max-height: calc(100vh - 160px);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .table-container {
+            width: 100%;
+            overflow-y: auto;
+            margin-top: 20px;
+            flex: 1;
+            position: relative; /* Added for header positioning */
+        }
+
+        h1 {
+            text-align: center;
+            margin: 0 0 25px 0;
+            color: #2c3e50;
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        table {
+            width: 100%;
+            min-width: 800px;
+            border-collapse: separate; /* Changed from collapse */
+            border-spacing: 0; /* Added for border spacing */
+            border: 1px solid #e2e8f0;
+            background-color: #ffffff;
+            font-size: 14px;
+        }
+
+        thead {
+            position: sticky;
+            top: 0;
+            z-index: 2;
+            background-color: #3b82f6;
+        }
+
+        th {
+            background-color: #3b82f6;
+            color: white;
+            font-weight: 500;
+            padding: 12px 15px;
+            text-align: left;
+            font-size: 14px;
+            white-space: nowrap;
+            border-bottom: 1px solid #e2e8f0;
+            position: sticky;
+            top: 0;
+            z-index: 2;
+        }
+
+        /* Add this to create border effect for header */
+        th:after {
+            content: '';
+            position: absolute;
+            left: 0;
+            bottom: 0;
+            width: 100%;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        td {
+            padding: 12px 15px;
+            text-align: left;
+            border: 1px solid #e2e8f0;
+            white-space: nowrap;
+            font-size: 14px;
+            color: #2c3e50;
+            background-color: inherit; /* Added for proper background */
+        }
+
+        tr:nth-child(even) {
+            background-color: #f8f9fa;
+        }
+
+        tr:hover {
+            background-color: #f8f9ff;
+        }
+
+        td a {
+            display: inline-block;
+            padding: 6px 16px;
+            background-color: #3b82f6;
+            color: white;
+            text-decoration: none;
+            border-radius: 6px;
+            transition: all 0.2s ease;
+            text-align: center;
+            min-width: 100px;
+            font-size: 14px;
+        }
+
+        td a:hover {
+            background-color: #2563eb;
+            transform: translateY(-1px);
+        }
+
+        .no-data-message {
+            text-align: center;
+            padding: 20px;
+            font-size: 14px;
+            color: #64748b;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+            margin: 20px 0;
+        }
+
+        /* Fixed column widths */
+        th:nth-child(1), td:nth-child(1) { width: 20%; }
+        th:nth-child(2), td:nth-child(2) { width: 30%; }
+        th:nth-child(3), td:nth-child(3) { width: 30%; }
+        th:nth-child(4), td:nth-child(4) {
+            width: 20%;
+            text-align: center;
+        }
+
+        /* Scrollbar styling */
+        .table-container::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+
+        .table-container::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+        }
+
+        .table-container::-webkit-scrollbar-thumb {
+            background: #c1c1c1;
+            border-radius: 4px;
+        }
+
+        .table-container::-webkit-scrollbar-thumb:hover {
+            background: #a8a8a8;
+        }
+
+        /* Responsive styles */
+        @media (max-width: 1200px) {
+            .container {
+                width: 90%;
+                left: -40px;
+            }
+        }
+
+        @media (max-width: 1024px) {
+            .subordinates-content {
+                left: 200px;
+            }
+            .container {
+                width: 95%;
+                left: -30px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .subordinates-content {
+                left: 0;
+                padding: 30px 15px;
+            }
+            .container {
+                width: 100%;
+                left: 0;
+                padding: 15px;
+            }
+            .table-container {
+                margin-top: 15px;
+            }
+            td a {
+                padding: 5px 12px;
+                min-width: 90px;
+                font-size: 14px;
+            }
+            table, th, td {
+                font-size: 14px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .subordinates-content {
+                padding: 20px 10px;
+            }
+            .container {
+                padding: 10px;
+            }
+            h1 {
+                font-size: 1.3rem;
+            }
+            table, th, td {
+                font-size: 14px;
+            }
+        }
+    </style>
+{% endblock %}
+
+{% block content %}
+    <div class="subordinates-content">
+        <div class="container">
+            <h1>Subordinates of {{ manager.emp_fname }} {{ manager.emp_lname }}</h1>
+
+            {% if subordinates %}
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Email</th>
+                                <th>Department</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for emp in subordinates %}
+                            <tr>
+                                <td>{{ emp.emp_fname }} {{ emp.emp_lname }}</td>
+                                <td>{{ emp.emp_email }}</td>
+                                <td>{{ emp.dep }}</td>
+                                <td>
+                                    <a href="{% url 'allocate_leave' emp.id %}">Allocate Leave</a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="no-data-message">No subordinates found.</div>
+            {% endif %}
+        </div>
+    </div>
+{% endblock %}

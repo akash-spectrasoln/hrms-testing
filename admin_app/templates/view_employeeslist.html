@@ -1,0 +1,1462 @@
+
+{% extends 'admin_partials/admin_base.html' %}
+<!--<!DOCTYPE html>-->
+<!--<html lang="en">-->
+<!--<head>-->
+<!--    <meta charset="UTF-8">-->
+<!--    <title>Title</title>-->
+<!--</head>-->
+<!--<body>-->
+<!--<table border="2px">-->
+<!--    <tr>-->
+<!--        <th>Employee ID</th>-->
+<!--        <th>Salutation</th>-->
+<!--        <th>First Name</th>-->
+<!--        <th>Middel Name</th>-->
+<!--        <th>Last Name</th>-->
+<!--        <th>valid from</th>-->
+<!--        <th>valid to</th>-->
+<!--        <th>Company Email</th>-->
+<!--        <th>personal Email</th>-->
+<!--        <th>phone</th>-->
+<!--        <th>office phone</th>-->
+<!--        <th>Home Phone</th>-->
+<!--        <th>Address</th>-->
+<!--        <th>Country</th>-->
+<!--        <th>State</th>-->
+<!--        <th>Street</th>-->
+<!--        <th>City</th>-->
+<!--        <th>Role</th>-->
+<!--        <th>Department</th>-->
+<!--        <Th>Designation</Th>-->
+<!--        <th>employee status</th>-->
+<!--        <th>employee manager</th>-->
+<!--        <th>contact person name</th>-->
+<!--        <th>contact person phone</th>-->
+<!--        <th>contact person email</th>-->
+<!--        <th>contact peron relation</th>-->
+<!--        <th>Salary</th>-->
+<!--        <th>resume</th>-->
+<!--        <th>Cetification</th>-->
+
+<!--        <th>update</th>-->
+<!--        <th>delete</th>-->
+
+<!--    </tr>-->
+<!-- {% for i in data %}-->
+<!--    <tr>-->
+
+<!--        <td>{{i.emp_id}}</td>-->
+<!--        <td>{{i.sal}}</td>-->
+<!--        <td>{{i.emp_fname}}</td>-->
+<!--        <td>{{i.emp_mname}}</td>-->
+<!--        <td>{{i.emp_lname}}</td>-->
+<!--        <td>{{i.emp_val_from}}</td>-->
+<!--        <td>{{i.emp_val_to}}</td>-->
+<!--        <td>{{i.emp_email}}</td>-->
+<!--        <td>{{i.emp_pemail}}</td>-->
+<!--        <td>{{i.emp_mob_ph}}</td>-->
+<!--        <td>{{i.emp_off_ph}}</td>-->
+<!--        <td>{{i.emp_home_ph}}</td>-->
+<!--         <td>{{i.emp_addr}}</td>-->
+<!--        <td>{{i.country}}</td>-->
+<!--        <td>{{i.state}}</td>-->
+
+<!--        <td>{{i.emp_home_street}}</td>-->
+<!--        <td>{{i.emp_home_city}}</td>-->
+<!--         <td>{{i.role}}</td>-->
+<!--         <td>{{i.dep}}</td>-->
+<!--         <td>{{i.designation}}</td>-->
+<!--         <td>{{i.employee_status}}</td>-->
+<!--         <td>{{i.employee_manager}}</td>-->
+<!--         <td>{{i.emp_cp_name}}</td>-->
+<!--         <td>{{i.emp_cp_ph}}</td>-->
+<!--         <td>{{i.emp_cp_email}}</td>-->
+<!--         <td>{{i.emp_cp_relation}}</td>-->
+<!--         <td>{{i.emp_base}}</td>-->
+<!--         <td><a href="{{ i.emp_resume.url }}" download>Download Resume</a></td>-->
+<!--            <td><a href="{{ i.emp_certif.url }}" download>Download Certificate</a></td>-->
+<!--        <td><a href="{% url 'employee_update' i.pk %}">Update</a></td>-->
+<!--        <td><a href="http://127.0.0.1:8000/admin_app/employee_delete/{{i.id}}">Delete</a></td>-->
+<!--        <td></td>-->
+
+<!--    </tr>-->
+<!-- {% endfor %}-->
+<!--</table>-->
+<!--</body>-->
+<!--</html>-->
+
+
+
+
+<!--<!DOCTYPE html>-->
+<!--<html lang="en">-->
+<!--<head>-->
+<!--    <meta charset="UTF-8">-->
+<!--    <meta name="viewport" content="width=device-width, initial-scale=1.0">-->
+<!--    <title>Employee List</title>-->
+<!--    &lt;!&ndash; Font Awesome &ndash;&gt;-->
+<!--    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">-->
+<!--    <style>-->
+<!--        body {-->
+<!--            font-family: Arial, sans-serif;-->
+<!--            background-color: #f4f4f9;-->
+<!--            margin: 20px;-->
+<!--        }-->
+<!--        table {-->
+<!--            width: 100%;-->
+<!--            border-collapse: collapse;-->
+<!--            margin: 20px 0;-->
+<!--            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);-->
+<!--        }-->
+<!--        th, td {-->
+<!--            padding: 12px;-->
+<!--            text-align: left;-->
+<!--        }-->
+<!--        th {-->
+<!--            background-color: #007bff;-->
+<!--            color: #fff;-->
+<!--        }-->
+<!--        tr:nth-child(even) {-->
+<!--            background-color: #f2f2f2;-->
+<!--        }-->
+<!--        tr:hover {-->
+<!--            background-color: #e1f5fe;-->
+<!--        }-->
+<!--        td a {-->
+<!--            text-decoration: none;-->
+<!--            color: #007bff;-->
+<!--            font-weight: bold;-->
+<!--        }-->
+<!--        td a:hover {-->
+<!--            text-decoration: underline;-->
+<!--        }-->
+<!--        .action-buttons a {-->
+<!--            margin: 0 5px;-->
+<!--            color: #fff;-->
+<!--            padding: 8px 12px;-->
+<!--            border-radius: 4px;-->
+<!--            display: inline-block;-->
+<!--        }-->
+<!--        .action-buttons .view {-->
+<!--            background-color: #28a745;-->
+<!--        }-->
+<!--        .action-buttons .update {-->
+<!--            background-color: #ffc107;-->
+<!--        }-->
+<!--        .action-buttons .delete {-->
+<!--            background-color: #dc3545;-->
+<!--        }-->
+<!--        .action-buttons a:hover {-->
+<!--            opacity: 0.8;-->
+<!--        }-->
+<!--    </style>-->
+<!--</head>-->
+<!--<body>-->
+
+<!--<h1>Employee List</h1>-->
+<!--<table border="2px">-->
+<!--    <thead>-->
+<!--        <tr>-->
+<!--            <th>EMPLOYEE ID</th>-->
+<!--            <th>Salutation</th>-->
+<!--            <th>First Name</th>-->
+<!--            <th>Middle Name</th>-->
+<!--            <th>Last Name</th>-->
+<!--            <th>Valid From</th>-->
+<!--            <th>Valid To</th>-->
+<!--            <th>Company Email</th>-->
+<!--            <th>Personal Email</th>-->
+<!--            <th>Phone</th>-->
+<!--            <th>Office Phone</th>-->
+<!--            <th>Home Phone</th>-->
+<!--            <th>Address</th>-->
+<!--            <th>Country</th>-->
+<!--            <th>State</th>-->
+<!--            <th>Street</th>-->
+<!--            <th>City</th>-->
+<!--            <th>Role</th>-->
+<!--            <th>Department</th>-->
+<!--            <th>Designation</th>-->
+<!--            <th>Employee Status</th>-->
+<!--            <th>Employee Manager</th>-->
+<!--            <th>Contact Person Name</th>-->
+<!--            <th>Contact Person Phone</th>-->
+<!--            <th>Contact Person Email</th>-->
+<!--            <th>Contact Person Relation</th>-->
+<!--            <th>Salary</th>-->
+<!--            <th>Resume</th>-->
+<!--            <th>Certification</th>-->
+
+<!--            <th>Update</th>-->
+<!--            <th>Delete</th>-->
+<!--        </tr>-->
+<!--    </thead>-->
+<!--    <tbody>-->
+<!--        {% for i in data %}-->
+<!--        <tr>-->
+<!--            <td>{{ i.emp_id }}</td>-->
+<!--            <td>{{ i.sal }}</td>-->
+<!--            <td>{{ i.emp_fname }}</td>-->
+<!--            <td>{{ i.emp_mname }}</td>-->
+<!--            <td>{{ i.emp_lname }}</td>-->
+<!--            <td>{{ i.emp_val_from }}</td>-->
+<!--            <td>{{ i.emp_val_to }}</td>-->
+<!--            <td>{{ i.emp_email }}</td>-->
+<!--            <td>{{ i.emp_pemail }}</td>-->
+<!--            <td>{{ i.emp_mob_ph }}</td>-->
+<!--            <td>{{ i.emp_off_ph }}</td>-->
+<!--            <td>{{ i.emp_home_ph }}</td>-->
+<!--            <td>{{ i.emp_addr }}</td>-->
+<!--            <td>{{ i.country }}</td>-->
+<!--            <td>{{ i.state }}</td>-->
+<!--            <td>{{ i.emp_home_street }}</td>-->
+<!--            <td>{{ i.emp_home_city }}</td>-->
+<!--            <td>{{ i.role }}</td>-->
+<!--            <td>{{ i.dep }}</td>-->
+<!--            <td>{{ i.designation }}</td>-->
+<!--            <td>{{ i.employee_status }}</td>-->
+<!--            <td>{{ i.employee_manager }}</td>-->
+<!--            <td>{{ i.emp_cp_name }}</td>-->
+<!--            <td>{{ i.emp_cp_ph }}</td>-->
+<!--            <td>{{ i.emp_cp_email }}</td>-->
+<!--            <td>{{ i.emp_cp_relation }}</td>-->
+<!--            <td>{{ i.emp_base }}</td>-->
+<!--            <td><a href="{{ i.emp_resume.url }}" download>Download Resume</a></td>-->
+<!--            <td><a href="{{ i.emp_certif.url }}" download>Download Certificate</a></td>-->
+
+<!--           <td class="action-buttons">-->
+<!--                <a href="{% url 'employee_update' i.pk %}" class="update"><i class="fas fa-edit"></i> Update</a>-->
+<!--            </td>-->
+<!--            <td class="action-buttons">-->
+<!--                <a href="http://127.0.0.1:8000/admin_app/employee_delete/{{i.id}}" class="delete"><i class="fas fa-trash"></i> Delete</a>-->
+<!--            </td>-->
+<!--        </tr>-->
+<!--        {% endfor %}-->
+<!--    </tbody>-->
+<!--</table>-->
+
+<!--</body>-->
+<!--</html>-->
+
+
+
+
+
+<!--<!DOCTYPE html>-->
+<!--<html lang="en">-->
+<!--<head>-->
+<!--    <meta charset="UTF-8">-->
+<!--    <meta name="viewport" content="width=device-width, initial-scale=1.0">-->
+<!--    <title>Employee List</title>-->
+<!--    &lt;!&ndash; Font Awesome &ndash;&gt;-->
+<!--    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">-->
+<!--    <style>-->
+<!--        body {-->
+<!--            font-family: Arial, sans-serif;-->
+<!--            background-color: #f4f4f9;-->
+<!--            margin: 20px;-->
+<!--        }-->
+<!--        h1 {-->
+<!--            text-align: center;-->
+<!--            color: #333;-->
+<!--        }-->
+<!--        .table-container {-->
+<!--            max-width: 100%; /* Ensures it fits the screen width */-->
+<!--            overflow-x: auto; /* Enables horizontal scrolling */-->
+<!--            margin: 20px auto;-->
+<!--            border: 1px solid #ddd;-->
+<!--            border-radius: 8px;-->
+<!--            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);-->
+<!--            background-color: #fff;-->
+<!--        }-->
+<!--        table {-->
+<!--            width: 100%;-->
+<!--            border-collapse: collapse;-->
+<!--            margin: 0;-->
+<!--        }-->
+<!--        th, td {-->
+<!--            padding: 12px;-->
+<!--            text-align: left;-->
+<!--        }-->
+<!--        th {-->
+<!--            background-color: #007bff;-->
+<!--            color: #fff;-->
+<!--        }-->
+<!--        tr:nth-child(even) {-->
+<!--            background-color: #f2f2f2;-->
+<!--        }-->
+<!--        tr:hover {-->
+<!--            background-color: #e1f5fe;-->
+<!--        }-->
+<!--        td a {-->
+<!--            text-decoration: none;-->
+<!--            color: #007bff;-->
+<!--            font-weight: bold;-->
+<!--        }-->
+<!--        td a:hover {-->
+<!--            text-decoration: underline;-->
+<!--        }-->
+<!--        .action-buttons a {-->
+<!--            margin: 0 5px;-->
+<!--            color: #fff;-->
+<!--            padding: 8px 12px;-->
+<!--            border-radius: 4px;-->
+<!--            display: inline-block;-->
+<!--        }-->
+<!--        .action-buttons .view {-->
+<!--            background-color: #28a745;-->
+<!--        }-->
+<!--        .action-buttons .update {-->
+<!--            background-color: #ffc107;-->
+<!--        }-->
+<!--        .action-buttons .delete {-->
+<!--            background-color: #dc3545;-->
+<!--        }-->
+<!--        .action-buttons a:hover {-->
+<!--            opacity: 0.8;-->
+<!--        }-->
+<!--    </style>-->
+<!--</head>-->
+<!--<body>-->
+
+<!--<h1>Employee List</h1>-->
+<!--<div class="table-container">-->
+<!--    <table border="2px">-->
+<!--        <thead>-->
+<!--            <tr>-->
+<!--                <th>EMPLOYEE ID</th>-->
+<!--                <th>Salutation</th>-->
+<!--                <th>First Name</th>-->
+<!--                <th>Middle Name</th>-->
+<!--                <th>Last Name</th>-->
+<!--                <th>Valid From</th>-->
+<!--                <th>Valid To</th>-->
+<!--                <th>Company Email</th>-->
+<!--                <th>Personal Email</th>-->
+<!--                <th>Phone</th>-->
+<!--                <th>Office Phone</th>-->
+<!--                <th>Home Phone</th>-->
+<!--                <th>Address</th>-->
+<!--                <th>Country</th>-->
+<!--                <th>State</th>-->
+<!--                <th>Street</th>-->
+<!--                <th>City</th>-->
+<!--                <th>Role</th>-->
+<!--                <th>Department</th>-->
+<!--                <th>Designation</th>-->
+<!--                <th>Employee Status</th>-->
+<!--                <th>Employee Manager</th>-->
+<!--                <th>Contact Person Name</th>-->
+<!--                <th>Contact Person Phone</th>-->
+<!--                <th>Contact Person Email</th>-->
+<!--                <th>Contact Person Relation</th>-->
+<!--                <th>Salary</th>-->
+<!--                <th>Resume</th>-->
+<!--                <th>Certification</th>-->
+
+<!--                <th>Update</th>-->
+<!--                <th>Delete</th>-->
+<!--            </tr>-->
+<!--        </thead>-->
+<!--        <tbody>-->
+<!--            {% for i in data %}-->
+<!--            <tr>-->
+<!--                <td>{{ i.emp_id }}</td>-->
+<!--                <td>{{ i.sal }}</td>-->
+<!--                <td>{{ i.emp_fname }}</td>-->
+<!--                <td>{{ i.emp_mname }}</td>-->
+<!--                <td>{{ i.emp_lname }}</td>-->
+<!--                <td>{{ i.emp_val_from }}</td>-->
+<!--                <td>{{ i.emp_val_to }}</td>-->
+<!--                <td>{{ i.emp_email }}</td>-->
+<!--                <td>{{ i.emp_pemail }}</td>-->
+<!--                <td>{{ i.emp_mob_ph }}</td>-->
+<!--                <td>{{ i.emp_off_ph }}</td>-->
+<!--                <td>{{ i.emp_home_ph }}</td>-->
+<!--                <td>{{ i.emp_addr }}</td>-->
+<!--                <td>{{ i.country }}</td>-->
+<!--                <td>{{ i.state }}</td>-->
+<!--                <td>{{ i.emp_home_street }}</td>-->
+<!--                <td>{{ i.emp_home_city }}</td>-->
+<!--                <td>{{ i.role }}</td>-->
+<!--                <td>{{ i.dep }}</td>-->
+<!--                <td>{{ i.designation }}</td>-->
+<!--                <td>{{ i.employee_status }}</td>-->
+<!--                <td>{{ i.employee_manager }}</td>-->
+<!--                <td>{{ i.emp_cp_name }}</td>-->
+<!--                <td>{{ i.emp_cp_ph }}</td>-->
+<!--                <td>{{ i.emp_cp_email }}</td>-->
+<!--                <td>{{ i.emp_cp_relation }}</td>-->
+<!--                <td>{{ i.emp_base }}</td>-->
+<!--                <td><a href="{{ i.emp_resume.url }}" download>Download Resume</a></td>-->
+<!--                <td><a href="{{ i.emp_certif.url }}" download>Download Certificate</a></td>-->
+
+<!--                <td class="action-buttons">-->
+<!--&lt;!&ndash;                    <a href="http://127.0.0.1:8000/admin_app/employee_update/{{i.id}}" class="update"><i class="fas fa-edit"></i> Update</a>&ndash;&gt;-->
+<!--                   <a href="{% url 'employee_update' i.pk %}" class="update">-->
+<!--    <i class="fas fa-edit"></i> Update-->
+<!--</a>-->
+<!--                </td>-->
+<!--                <td class="action-buttons">-->
+<!--                    <a href="http://127.0.0.1:8000/admin_app/employee_delete/{{i.id}}" class="delete"><i class="fas fa-trash"></i> Delete</a>-->
+<!--                </td>-->
+<!--            </tr>-->
+<!--            {% endfor %}-->
+<!--        </tbody>-->
+<!--    </table>-->
+<!--</div>-->
+
+<!--</body>-->
+<!--</html>-->
+
+
+
+<!--list employees code-->
+
+<!--<!DOCTYPE html>-->
+<!--<html lang="en">-->
+<!--<head>-->
+<!--    <meta charset="UTF-8">-->
+<!--    <meta name="viewport" content="width=device-width, initial-scale=1.0">-->
+<!--    <title>Employee List</title>-->
+<!--    &lt;!&ndash; Font Awesome &ndash;&gt;-->
+<!--    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">-->
+<!--    <style>-->
+<!--        body {-->
+<!--            font-family: Arial, sans-serif;-->
+<!--            background-color: #f4f4f9;-->
+<!--            margin: 0;-->
+<!--        }-->
+<!--        h1 {-->
+<!--            text-align: center;-->
+<!--            color: white;-->
+<!--            margin: 20px 0;-->
+<!--        }-->
+<!--        .navbar {-->
+<!--            display: flex;-->
+<!--            justify-content: space-between;-->
+<!--            align-items: center;-->
+<!--            background-color: #000; /* Black background */-->
+<!--            padding: 10px 20px;-->
+<!--            color: #fff;-->
+<!--            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);-->
+<!--        }-->
+<!--        .navbar h1 {-->
+<!--            margin: 0;-->
+<!--            font-size: 24px;-->
+<!--        }-->
+<!--        .navbar .nav-buttons {-->
+<!--            display: flex;-->
+<!--            gap: 10px;-->
+<!--        }-->
+<!--        .navbar .nav-buttons a {-->
+<!--            text-decoration: none;-->
+<!--            color: #fff;-->
+<!--            background-color: #007bff; /* Blue button background */-->
+<!--            padding: 8px 12px;-->
+<!--            border-radius: 4px;-->
+<!--            font-weight: bold;-->
+<!--            transition: background-color 0.3s, transform 0.2s;-->
+<!--        }-->
+<!--        .navbar .nav-buttons a:hover {-->
+<!--            background-color: #0056b3; /* Darker blue on hover */-->
+<!--            transform: scale(1.05); /* Slight zoom effect */-->
+<!--        }-->
+<!--        .table-container {-->
+<!--            max-width: 100%; /* Ensures it fits the screen width */-->
+<!--            overflow-x: auto; /* Enables horizontal scrolling */-->
+<!--            margin: 20px auto;-->
+<!--            border: 1px solid #ddd;-->
+<!--            border-radius: 8px;-->
+<!--            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);-->
+<!--            background-color: #fff;-->
+<!--        }-->
+<!--        table {-->
+<!--            width: 100%;-->
+<!--            border-collapse: collapse;-->
+<!--            margin: 0;-->
+<!--        }-->
+<!--        th, td {-->
+<!--            padding: 12px;-->
+<!--            text-align: left;-->
+<!--        }-->
+<!--        th {-->
+<!--            background-color: #007bff;-->
+<!--            color: #fff;-->
+<!--        }-->
+<!--        tr:nth-child(even) {-->
+<!--            background-color: #f2f2f2;-->
+<!--        }-->
+<!--        tr:hover {-->
+<!--            background-color: #e1f5fe;-->
+<!--        }-->
+<!--        td a {-->
+<!--            text-decoration: none;-->
+<!--            color: #007bff;-->
+<!--            font-weight: bold;-->
+<!--        }-->
+<!--        td a:hover {-->
+<!--            text-decoration: underline;-->
+<!--        }-->
+<!--        .action-buttons a {-->
+<!--            margin: 0 5px;-->
+<!--            color: #fff;-->
+<!--            padding: 8px 12px;-->
+<!--            border-radius: 4px;-->
+<!--            display: inline-block;-->
+<!--        }-->
+<!--        .action-buttons .view {-->
+<!--            background-color: #28a745;-->
+<!--        }-->
+<!--        .action-buttons .update {-->
+<!--            background-color: #ffc107;-->
+<!--        }-->
+<!--        .action-buttons .delete {-->
+<!--            background-color: #dc3545;-->
+<!--        }-->
+<!--        .action-buttons a:hover {-->
+<!--            opacity: 0.8;-->
+<!--        }-->
+<!--    </style>-->
+<!--</head>-->
+<!--<body>-->
+
+<!--<div class="navbar">-->
+<!--    <h1>Employee Management</h1>-->
+<!--    <div class="nav-buttons">-->
+<!--        <a href="{% url 'add_employee' %}"><i class="fas fa-user-plus"></i> Add Employees</a>-->
+<!--        <a href="{% url 'export_employees' %}"><i class="fas fa-download"></i> Download Employees</a>-->
+<!--    </div>-->
+<!--</div>-->
+
+<!--<h1>Employee List</h1>-->
+<!--<div class="table-container">-->
+<!--    <table border="2px">-->
+<!--        <thead>-->
+<!--            <tr>-->
+<!--                <th>EMPLOYEE ID</th>-->
+<!--                <th>Salutation</th>-->
+<!--                <th>First Name</th>-->
+<!--                <th>Middle Name</th>-->
+<!--                <th>Last Name</th>-->
+<!--                <th>Valid From</th>-->
+<!--                <th>Valid To</th>-->
+<!--                <th>Company Email</th>-->
+<!--                <th>Personal Email</th>-->
+<!--                <th>Phone</th>-->
+<!--                <th>Office Phone</th>-->
+<!--                <th>Home Phone</th>-->
+<!--                <th>Address</th>-->
+<!--                <th>Country</th>-->
+<!--                <th>State</th>-->
+<!--                <th>Street</th>-->
+<!--                <th>City</th>-->
+<!--                <th>Role</th>-->
+<!--                <th>Department</th>-->
+<!--                <th>Designation</th>-->
+<!--                <th>Employee Status</th>-->
+<!--                <th>Employee Manager</th>-->
+<!--                <th>Contact Person Name</th>-->
+<!--                <th>Contact Person Phone</th>-->
+<!--                <th>Contact Person Email</th>-->
+<!--                <th>Contact Person Relation</th>-->
+<!--                <th>Salary</th>-->
+<!--                <th>Resume</th>-->
+<!--                <th>Certification</th>-->
+<!--                <th>Update</th>-->
+<!--                <th>Delete</th>-->
+<!--            </tr>-->
+<!--        </thead>-->
+<!--        <tbody>-->
+<!--            {% for i in data %}-->
+<!--            <tr>-->
+<!--                <td>{{ i.emp_id }}</td>-->
+<!--                <td>{{ i.sal }}</td>-->
+<!--                <td>{{ i.emp_fname }}</td>-->
+<!--                <td>{{ i.emp_mname }}</td>-->
+<!--                <td>{{ i.emp_lname }}</td>-->
+<!--                <td>{{ i.emp_val_from }}</td>-->
+<!--                <td>{{ i.emp_val_to }}</td>-->
+<!--                <td>{{ i.emp_email }}</td>-->
+<!--                <td>{{ i.emp_pemail }}</td>-->
+<!--                <td>{{ i.emp_mob_ph }}</td>-->
+<!--                <td>{{ i.emp_off_ph }}</td>-->
+<!--                <td>{{ i.emp_home_ph }}</td>-->
+<!--                <td>{{ i.emp_addr }}</td>-->
+<!--                <td>{{ i.country }}</td>-->
+<!--                <td>{{ i.state }}</td>-->
+<!--                <td>{{ i.emp_home_street }}</td>-->
+<!--                <td>{{ i.emp_home_city }}</td>-->
+<!--                <td>{{ i.role }}</td>-->
+<!--                <td>{{ i.dep }}</td>-->
+<!--                <td>{{ i.designation }}</td>-->
+<!--                <td>{{ i.employee_status }}</td>-->
+<!--                <td>{{ i.employee_manager }}</td>-->
+<!--                <td>{{ i.emp_cp_name }}</td>-->
+<!--                <td>{{ i.emp_cp_ph }}</td>-->
+<!--                <td>{{ i.emp_cp_email }}</td>-->
+<!--                <td>{{ i.emp_cp_relation }}</td>-->
+<!--                <td>{{ i.emp_base }}</td>-->
+<!--                <td><a href="{{ i.emp_resume.url }}" download>Download Resume</a></td>-->
+<!--                <td><a href="{{ i.emp_certif.url }}" download>Download Certificate</a></td>-->
+<!--                <td class="action-buttons">-->
+<!--                   <a href="{% url 'employee_update' i.pk %}" class="update">-->
+<!--                       <i class="fas fa-edit"></i> Update-->
+<!--                   </a>-->
+<!--                </td>-->
+<!--                <td class="action-buttons">-->
+<!--                    <a href="http://127.0.0.1:8000/admin_app/employee_delete/{{i.id}}" class="delete"><i class="fas fa-trash"></i> Delete</a>-->
+<!--                </td>-->
+<!--            </tr>-->
+<!--            {% endfor %}-->
+<!--        </tbody>-->
+<!--    </table>-->
+<!--</div>-->
+
+<!--</body>-->
+<!--</html>-->
+
+
+
+<!--list employee with navbar(6-1-25)-->
+
+<!--<!DOCTYPE html>-->
+<!--<html lang="en">-->
+<!--<head>-->
+<!--    <meta charset="UTF-8">-->
+<!--    <meta name="viewport" content="width=device-width, initial-scale=1.0">-->
+<!--    <title>Employee List</title>-->
+<!--    &lt;!&ndash; Bootstrap CSS &ndash;&gt;-->
+<!--    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/css/bootstrap.min.css" rel="stylesheet">-->
+<!--    &lt;!&ndash; Font Awesome &ndash;&gt;-->
+<!--    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">-->
+<!--    <style>-->
+<!--        body {-->
+<!--            font-family: Arial, sans-serif;-->
+<!--            background-color: #f4f4f9;-->
+<!--            margin: 0;-->
+<!--        }-->
+<!--        h1 {-->
+<!--            text-align: center;-->
+<!--            color: #333;-->
+<!--            margin: 20px 0;-->
+<!--        }-->
+<!--        .navbar {-->
+<!--            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);-->
+<!--        }-->
+<!--        .profile-icon {-->
+<!--            width: 40px;-->
+<!--            height: 40px;-->
+<!--            border-radius: 50%;-->
+<!--            background-color: #ddd;-->
+<!--            display: inline-block;-->
+<!--            margin-right: 10px;-->
+<!--        }-->
+<!--        .table-container {-->
+<!--            max-width: 100%; /* Ensures it fits the screen width */-->
+<!--            overflow-x: auto; /* Enables horizontal scrolling */-->
+<!--            margin: 20px auto;-->
+<!--            border: 1px solid #ddd;-->
+<!--            border-radius: 8px;-->
+<!--            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);-->
+<!--            background-color: #fff;-->
+<!--        }-->
+<!--        table {-->
+<!--            width: 100%;-->
+<!--            border-collapse: collapse;-->
+<!--            margin: 0;-->
+<!--        }-->
+<!--        th, td {-->
+<!--            padding: 12px;-->
+<!--            text-align: left;-->
+<!--        }-->
+<!--        th {-->
+<!--            background-color: #007bff;-->
+<!--            color: #fff;-->
+<!--        }-->
+<!--        tr:nth-child(even) {-->
+<!--            background-color: #f2f2f2;-->
+<!--        }-->
+<!--        tr:hover {-->
+<!--            background-color: #e1f5fe;-->
+<!--        }-->
+<!--        td a {-->
+<!--            text-decoration: none;-->
+<!--            color: #007bff;-->
+<!--            font-weight: bold;-->
+<!--        }-->
+<!--        td a:hover {-->
+<!--            text-decoration: underline;-->
+<!--        }-->
+<!--        .action-buttons a {-->
+<!--            margin: 0 5px;-->
+<!--            color: #fff;-->
+<!--            padding: 8px 12px;-->
+<!--            border-radius: 4px;-->
+<!--            display: inline-block;-->
+<!--        }-->
+<!--        .action-buttons .view {-->
+<!--            background-color: #28a745;-->
+<!--        }-->
+<!--        .action-buttons .update {-->
+<!--            background-color: #ffc107;-->
+<!--        }-->
+<!--        .action-buttons .delete {-->
+<!--            background-color: #dc3545;-->
+<!--        }-->
+<!--        .action-buttons a:hover {-->
+<!--            opacity: 0.8;-->
+<!--        }-->
+<!--    </style>-->
+<!--</head>-->
+<!--<body>-->
+
+<!--&lt;!&ndash; Navbar &ndash;&gt;-->
+<!--<nav class="navbar navbar-expand-lg navbar-light bg-light">-->
+<!--    <div class="container-fluid">-->
+<!--        &lt;!&ndash; Brand Logo &ndash;&gt;-->
+<!--        <a class="navbar-brand" href="#">Employee Management</a>-->
+
+<!--        &lt;!&ndash; Navbar Toggler (for mobile view) &ndash;&gt;-->
+<!--        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarContent" aria-controls="navbarContent" aria-expanded="false" aria-label="Toggle navigation">-->
+<!--            <span class="navbar-toggler-icon"></span>-->
+<!--        </button>-->
+
+<!--        <div class="collapse navbar-collapse" id="navbarContent">-->
+<!--            &lt;!&ndash; Search Box &ndash;&gt;-->
+<!--            <form class="d-flex mx-auto" style="width: 50%;">-->
+<!--                <input class="form-control me-2" type="search" placeholder="Search" aria-label="Search">-->
+<!--                <button class="btn btn-outline-success" type="submit">Search</button>-->
+<!--            </form>-->
+
+<!--            &lt;!&ndash; Dropdown Menu &ndash;&gt;-->
+<!--            <ul class="navbar-nav me-auto mb-2 mb-lg-0">-->
+<!--                <li class="nav-item dropdown">-->
+<!--                    <a class="nav-link dropdown-toggle" href="#" id="dropdownMenuLink" role="button" data-bs-toggle="dropdown" aria-expanded="false">-->
+<!--                        Options-->
+<!--                    </a>-->
+<!--                    <ul class="dropdown-menu" aria-labelledby="dropdownMenuLink">-->
+<!--                        <li><a class="dropdown-item" href="{% url 'add_employee' %}">Add Employee</a></li>-->
+<!--                        <li><a class="dropdown-item" href="{% url 'export_employees' %}">Download Employees</a></li>-->
+<!--                    </ul>-->
+<!--                </li>-->
+<!--            </ul>-->
+
+<!--            &lt;!&ndash; Profile Icon with View Profile Link &ndash;&gt;-->
+<!--            <div class="d-flex align-items-center">-->
+<!--                <div class="profile-icon"></div>-->
+<!--                <a href="#" class="nav-link">View Profile</a>-->
+<!--            </div>-->
+<!--        </div>-->
+<!--    </div>-->
+<!--</nav>-->
+
+<!--<h1>Employee List</h1>-->
+<!--<div class="table-container">-->
+<!--    <table border="2px">-->
+<!--        <thead>-->
+<!--            <tr>-->
+<!--                <th>EMPLOYEE ID</th>-->
+<!--                <th>Salutation</th>-->
+<!--                <th>First Name</th>-->
+<!--                <th>Middle Name</th>-->
+<!--                <th>Last Name</th>-->
+<!--                <th>Valid From</th>-->
+<!--                <th>Valid To</th>-->
+<!--                <th>Company Email</th>-->
+<!--                <th>Personal Email</th>-->
+<!--                <th>Phone</th>-->
+<!--                <th>Office Phone</th>-->
+<!--                <th>Home Phone</th>-->
+<!--                <th>Address</th>-->
+<!--                <th>Country</th>-->
+<!--                <th>State</th>-->
+<!--                <th>Street</th>-->
+<!--                <th>City</th>-->
+<!--                <th>Role</th>-->
+<!--                <th>Department</th>-->
+<!--                <th>Designation</th>-->
+<!--                <th>Employee Status</th>-->
+<!--                <th>Employee Manager</th>-->
+<!--                <th>Contact Person Name</th>-->
+<!--                <th>Contact Person Phone</th>-->
+<!--                <th>Contact Person Email</th>-->
+<!--                <th>Contact Person Relation</th>-->
+<!--                <th>Salary</th>-->
+<!--                <th>Resume</th>-->
+<!--                <th>Certification</th>-->
+<!--                <th>Update</th>-->
+<!--                <th>Delete</th>-->
+<!--            </tr>-->
+<!--        </thead>-->
+<!--        <tbody>-->
+<!--            {% for i in data %}-->
+<!--            <tr>-->
+<!--                <td>{{ i.emp_id }}</td>-->
+<!--                <td>{{ i.sal }}</td>-->
+<!--                <td>{{ i.emp_fname }}</td>-->
+<!--                <td>{{ i.emp_mname }}</td>-->
+<!--                <td>{{ i.emp_lname }}</td>-->
+<!--                <td>{{ i.emp_val_from }}</td>-->
+<!--                <td>{{ i.emp_val_to }}</td>-->
+<!--                <td>{{ i.emp_email }}</td>-->
+<!--                <td>{{ i.emp_pemail }}</td>-->
+<!--                <td>{{ i.emp_mob_ph }}</td>-->
+<!--                <td>{{ i.emp_off_ph }}</td>-->
+<!--                <td>{{ i.emp_home_ph }}</td>-->
+<!--                <td>{{ i.emp_addr }}</td>-->
+<!--                <td>{{ i.country }}</td>-->
+<!--                <td>{{ i.state }}</td>-->
+<!--                <td>{{ i.emp_home_street }}</td>-->
+<!--                <td>{{ i.emp_home_city }}</td>-->
+<!--                <td>{{ i.role }}</td>-->
+<!--                <td>{{ i.dep }}</td>-->
+<!--                <td>{{ i.designation }}</td>-->
+<!--                <td>{{ i.employee_status }}</td>-->
+<!--                <td>{{ i.employee_manager }}</td>-->
+<!--                <td>{{ i.emp_cp_name }}</td>-->
+<!--                <td>{{ i.emp_cp_ph }}</td>-->
+<!--                <td>{{ i.emp_cp_email }}</td>-->
+<!--                <td>{{ i.emp_cp_relation }}</td>-->
+<!--                <td>{{ i.emp_base }}</td>-->
+<!--                <td><a href="{{ i.emp_resume.url }}" download>Download Resume</a></td>-->
+<!--                <td><a href="{{ i.emp_certif.url }}" download>Download Certificate</a></td>-->
+<!--                <td class="action-buttons">-->
+<!--                   <a href="{% url 'employee_update' i.pk %}" class="update">-->
+<!--                       <i class="fas fa-edit"></i> Update-->
+<!--                   </a>-->
+<!--                </td>-->
+<!--                <td class="action-buttons">-->
+<!--                    <a href="http://127.0.0.1:8000/admin_app/employee_delete/{{i.id}}" class="delete"><i class="fas fa-trash"></i> Delete</a>-->
+<!--                </td>-->
+<!--            </tr>-->
+<!--            {% endfor %}-->
+<!--        </tbody>-->
+<!--    </table>-->
+<!--</div>-->
+
+<!--&lt;!&ndash; Bootstrap JS &ndash;&gt;-->
+<!--<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/js/bootstrap.bundle.min.js"></script>-->
+<!--</body>-->
+<!--</html>-->
+
+
+
+
+<!--<!DOCTYPE html>-->
+<!--<html lang="en">-->
+<!--<head>-->
+<!--    <meta charset="UTF-8">-->
+<!--    <title>Employee List</title>-->
+<!--    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">-->
+<!--    <style>-->
+<!--        body {-->
+<!--            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;-->
+<!--            background-color: #f5f5f5;-->
+<!--            margin: 0;-->
+<!--            padding: 2rem;-->
+<!--            min-height: 100vh;-->
+<!--        }-->
+
+<!--        .navbar {-->
+<!--            background-color: #34495e;-->
+<!--            padding: 1rem 2rem;-->
+<!--            margin: -2rem -2rem 2rem -2rem;-->
+<!--            display: flex;-->
+<!--            justify-content: space-between;-->
+<!--            align-items: center;-->
+<!--            box-shadow: 0 2px 4px rgba(0,0,0,0.1);-->
+<!--        }-->
+
+<!--        .navbar h1 {-->
+<!--            color: white;-->
+<!--            margin: 0;-->
+<!--            font-size: 1.5rem;-->
+<!--        }-->
+
+<!--        .nav-buttons {-->
+<!--            display: flex;-->
+<!--            gap: 1rem;-->
+<!--        }-->
+
+<!--        .nav-buttons a {-->
+<!--            padding: 0.5rem 1rem;-->
+<!--            background-color: #3498db;-->
+<!--            color: white;-->
+<!--            text-decoration: none;-->
+<!--            border-radius: 5px;-->
+<!--            display: flex;-->
+<!--            align-items: center;-->
+<!--            gap: 0.5rem;-->
+<!--            transition: background-color 0.3s;-->
+<!--        }-->
+
+<!--        .nav-buttons a:hover {-->
+<!--            background-color: #2980b9;-->
+<!--        }-->
+
+<!--        h1 {-->
+<!--            color: #2c3e50;-->
+<!--            text-align: center;-->
+<!--            margin-bottom: 2rem;-->
+<!--            font-size: 2rem;-->
+<!--        }-->
+
+<!--        .table-container {-->
+<!--            max-width: 100%;-->
+<!--            margin: 0 auto;-->
+<!--            background: white;-->
+<!--            border-radius: 10px;-->
+<!--            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);-->
+<!--            overflow-x: auto;-->
+<!--        }-->
+
+<!--        table {-->
+<!--            width: 100%;-->
+<!--            border-collapse: collapse;-->
+<!--            background-color: white;-->
+<!--        }-->
+
+<!--        thead {-->
+<!--            background-color: #34495e;-->
+<!--            color: white;-->
+<!--        }-->
+
+<!--        th {-->
+<!--            padding: 1rem;-->
+<!--            text-align: left;-->
+<!--            font-weight: 600;-->
+<!--            white-space: nowrap;-->
+<!--        }-->
+
+<!--        td {-->
+<!--            padding: 1rem;-->
+<!--            border-bottom: 1px solid #eee;-->
+<!--            color: #444;-->
+<!--        }-->
+
+<!--        tr:last-child td {-->
+<!--            border-bottom: none;-->
+<!--        }-->
+
+<!--        tbody tr:nth-child(odd) {-->
+<!--            background-color: #ffffff;-->
+<!--        }-->
+
+<!--        tbody tr:nth-child(even) {-->
+<!--            background-color: #f8f9fa;-->
+<!--        }-->
+
+<!--        tbody tr:hover {-->
+<!--            background-color: #e8f4fd;-->
+<!--        }-->
+
+<!--        .action-buttons {-->
+<!--            display: flex;-->
+<!--            gap: 0.5rem;-->
+<!--        }-->
+
+<!--        .action-buttons a {-->
+<!--            padding: 0.5rem 1rem;-->
+<!--            color: white;-->
+<!--            text-decoration: none;-->
+<!--            border-radius: 5px;-->
+<!--            display: flex;-->
+<!--            align-items: center;-->
+<!--            gap: 0.5rem;-->
+<!--            font-size: 0.9rem;-->
+<!--            transition: opacity 0.3s;-->
+<!--        }-->
+
+<!--        .update {-->
+<!--            background-color: #f1c40f;-->
+<!--        }-->
+
+<!--        .delete {-->
+<!--            background-color: #e74c3c;-->
+<!--        }-->
+
+<!--        .action-buttons a:hover {-->
+<!--            opacity: 0.9;-->
+<!--        }-->
+
+<!--        td a.download-link {-->
+<!--            color: #3498db;-->
+<!--            text-decoration: none;-->
+<!--            display: inline-flex;-->
+<!--            align-items: center;-->
+<!--            gap: 0.5rem;-->
+<!--        }-->
+
+<!--        td a.download-link:hover {-->
+<!--            text-decoration: underline;-->
+<!--        }-->
+
+<!--        @media (max-width: 768px) {-->
+<!--            body {-->
+<!--                padding: 1rem;-->
+<!--            }-->
+
+<!--            .navbar {-->
+<!--                flex-direction: column;-->
+<!--                gap: 1rem;-->
+<!--                padding: 1rem;-->
+<!--                margin: -1rem -1rem 1rem -1rem;-->
+<!--            }-->
+
+<!--            .nav-buttons {-->
+<!--                width: 100%;-->
+<!--                justify-content: center;-->
+<!--            }-->
+<!--        }-->
+<!--    </style>-->
+<!--</head>-->
+<!--<body>-->
+<!--    <div class="navbar">-->
+<!--        <h1>Employee Management</h1>-->
+<!--        <div class="nav-buttons">-->
+<!--            <a href="{% url 'add_employee' %}">-->
+<!--                <i class="fas fa-user-plus"></i> Add Employee-->
+<!--            </a>-->
+<!--            <a href="{% url 'export_employees' %}">-->
+<!--                <i class="fas fa-download"></i> Download List-->
+<!--            </a>-->
+<!--        </div>-->
+<!--    </div>-->
+
+<!--    <h1>Employee List</h1>-->
+<!--    <div class="table-container">-->
+<!--        <table>-->
+<!--            <thead>-->
+<!--                <tr>-->
+<!--                    <th>ID</th>-->
+<!--                    <th>Salutation</th>-->
+<!--                    <th>First Name</th>-->
+<!--                    <th>Middle Name</th>-->
+<!--                    <th>Last Name</th>-->
+<!--                    <th>Valid From</th>-->
+<!--                    <th>Valid To</th>-->
+<!--                    <th>Company Email</th>-->
+<!--                    <th>Personal Email</th>-->
+<!--                    <th>Phone</th>-->
+<!--                    <th>Office Phone</th>-->
+<!--                    <th>Home Phone</th>-->
+<!--                    <th>Address</th>-->
+<!--                    <th>Country</th>-->
+<!--                    <th>State</th>-->
+<!--                    <th>Street</th>-->
+<!--                    <th>City</th>-->
+<!--                    <th>Role</th>-->
+<!--                    <th>Department</th>-->
+<!--                    <th>Designation</th>-->
+<!--                    <th>Status</th>-->
+<!--                    <th>Manager</th>-->
+<!--                    <th>Contact Person</th>-->
+<!--                    <th>Contact Phone</th>-->
+<!--                    <th>Contact Email</th>-->
+<!--                    <th>Relation</th>-->
+<!--                    <th>Salary</th>-->
+<!--                    <th>Resume</th>-->
+<!--                    <th>Certificate</th>-->
+<!--                    <th>Actions</th>-->
+<!--                </tr>-->
+<!--            </thead>-->
+<!--            <tbody>-->
+<!--                {% for i in data %}-->
+<!--                <tr>-->
+<!--                    <td>{{ i.emp_id }}</td>-->
+<!--                    <td>{{ i.sal }}</td>-->
+<!--                    <td>{{ i.emp_fname }}</td>-->
+<!--                    <td>{{ i.emp_mname }}</td>-->
+<!--                    <td>{{ i.emp_lname }}</td>-->
+<!--                    <td>{{ i.emp_val_from }}</td>-->
+<!--                    <td>{{ i.emp_val_to }}</td>-->
+<!--                    <td>{{ i.emp_email }}</td>-->
+<!--                    <td>{{ i.emp_pemail }}</td>-->
+<!--                    <td>{{ i.emp_mob_ph }}</td>-->
+<!--                    <td>{{ i.emp_off_ph }}</td>-->
+<!--                    <td>{{ i.emp_home_ph }}</td>-->
+<!--                    <td>{{ i.emp_addr }}</td>-->
+<!--                    <td>{{ i.country }}</td>-->
+<!--                    <td>{{ i.state }}</td>-->
+<!--                    <td>{{ i.emp_home_street }}</td>-->
+<!--                    <td>{{ i.emp_home_city }}</td>-->
+<!--                    <td>{{ i.role }}</td>-->
+<!--                    <td>{{ i.dep }}</td>-->
+<!--                    <td>{{ i.designation }}</td>-->
+<!--                    <td>{{ i.employee_status }}</td>-->
+<!--                    <td>{{ i.employee_manager }}</td>-->
+<!--                    <td>{{ i.emp_cp_name }}</td>-->
+<!--                    <td>{{ i.emp_cp_ph }}</td>-->
+<!--                    <td>{{ i.emp_cp_email }}</td>-->
+<!--                    <td>{{ i.emp_cp_relation }}</td>-->
+<!--                    <td>{{ i.emp_base }}</td>-->
+<!--                    <td>-->
+<!--                        <a href="{{ i.emp_resume.url }}" class="download-link" download>-->
+<!--                            <i class="fas fa-file-download"></i> Resume-->
+<!--                        </a>-->
+<!--                    </td>-->
+<!--                    <td>-->
+<!--                        <a href="{{ i.emp_certif.url }}" class="download-link" download>-->
+<!--                            <i class="fas fa-certificate"></i> Certificate-->
+<!--                        </a>-->
+<!--                    </td>-->
+<!--                    <td class="action-buttons">-->
+<!--                        <a href="{% url 'employee_update' i.pk %}" class="update">-->
+<!--                            <i class="fas fa-edit"></i> Update-->
+<!--                        </a>-->
+<!--                        <a href="http://127.0.0.1:8000/admin_app/employee_delete/{{i.id}}" class="delete">-->
+<!--                            <i class="fas fa-trash"></i> Delete-->
+<!--                        </a>-->
+<!--                    </td>-->
+<!--                </tr>-->
+<!--                {% endfor %}-->
+<!--            </tbody>-->
+<!--        </table>-->
+<!--    </div>-->
+<!--</body>-->
+<!--</html>-->
+
+
+
+
+
+{% block styles %}
+    <style>
+        .employee-list-content {
+            position: fixed;
+            top: 72px;
+            left: 250px;
+            right: 0;
+            bottom: 0;
+            overflow-y: auto;
+            background-color: #f4f4f9;
+            padding: 40px 20px;
+            z-index: 1;
+            display: flex;
+            justify-content: center;
+        }
+
+        .content-wrapper {
+            background-color: #ffffff;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            padding: 25px;
+            width: 95%;
+            max-width: 1400px;
+            margin: 0 auto;
+            position: relative;
+            left: -60px;
+            height: calc(100vh - 160px);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .page-header {
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #e6e6e6;
+        }
+
+        .page-title {
+            color: #2c3e50;
+            font-size: 1.5rem;
+            font-weight: 600;
+            text-align: center;
+            margin: 0;
+        }
+
+        .table-container {
+            flex: 1;
+            overflow: auto;
+            margin-top: 20px;
+            border-radius: 4px;
+        }
+
+        /* Scrollbar styling */
+        .table-container::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+
+        .table-container::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+        }
+
+        .table-container::-webkit-scrollbar-thumb {
+            background: #c1c1c1;
+            border-radius: 4px;
+        }
+
+        .table-container::-webkit-scrollbar-thumb:hover {
+            background: #a8a8a8;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            background-color: #ffffff;
+        }
+
+        thead {
+            position: sticky;
+            top: 0;
+            z-index: 2;
+        }
+
+        th {
+            color: white;
+            padding: 12px 15px;
+            font-weight: 500;
+            background-color: #3b82f6;
+            text-align: center;
+            font-size: 14px;
+            white-space: nowrap;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #eef2f6;
+            color: #2c3e50;
+            text-align: center;
+            font-size: 14px;
+            white-space: nowrap;
+        }
+
+        tbody tr:nth-child(even) {
+            background-color: #f8f9fa;
+        }
+
+        tbody tr:hover {
+            background-color: #f8f9ff;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 6px;
+            justify-content: center;
+            white-space: nowrap;
+        }
+
+        .action-buttons a {
+            padding: 6px 12px;
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 14px;
+            transition: all 0.2s ease;
+            min-width: 70px;
+            justify-content: center;
+        }
+
+        .update {
+            background-color: #3b82f6;
+        }
+
+        .update:hover {
+            background-color: #2563eb;
+            transform: translateY(-1px);
+        }
+
+        .delete {
+            background-color: #ef4444;
+        }
+
+        .delete:hover {
+            background-color: #dc2626;
+            transform: translateY(-1px);
+        }
+
+        .download-link {
+            color: #3b82f6;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+
+        .download-link:hover {
+            color: #2563eb;
+        }
+
+        /* Responsive styles */
+        @media (max-width: 1200px) {
+            .content-wrapper {
+                width: 90%;
+                left: -40px;
+            }
+            table {
+                min-width: 1000px;
+            }
+        }
+
+        @media (max-width: 1024px) {
+            .employee-list-content {
+                left: 200px;
+            }
+            .content-wrapper {
+                width: 95%;
+                left: -30px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .employee-list-content {
+                left: 0;
+                padding: 30px 15px;
+            }
+            .content-wrapper {
+                width: 100%;
+                left: 0;
+                padding: 15px;
+            }
+            .table-container {
+                margin-top: 15px;
+            }
+            th, td {
+                padding: 10px 12px;
+                font-size: 14px;
+            }
+            .action-buttons a {
+                padding: 4px 8px;
+                font-size: 13px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .employee-list-content {
+                padding: 20px 10px;
+            }
+            .content-wrapper {
+                padding: 10px;
+            }
+            .page-title {
+                font-size: 1.3rem;
+            }
+        }
+    </style>
+{% endblock %}
+
+
+
+{% block content %}
+    <div class="employee-list-content">
+        <div class="content-wrapper">
+            <div class="page-header">
+                <h1 class="page-title">Employee List</h1>
+            </div>
+
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Salutation</th>
+                            <th>First Name</th>
+                            <th>Middle Name</th>
+                            <th>Last Name</th>
+                            <th>Valid From</th>
+                            <th>Valid To</th>
+                            <th>Company Email</th>
+                            <th>Personal Email</th>
+                            <th>Phone</th>
+                            <th>Office Phone</th>
+                            <th>Home Phone</th>
+                            <th>Address</th>
+                            <th>Country</th>
+                            <th>State</th>
+                            <th>Street</th>
+                            <th>City</th>
+                            <th>Role</th>
+                            <th>Department</th>
+                            <th>Designation</th>
+                            <th>Status</th>
+                            <th>Manager</th>
+                            <th>Contact Person</th>
+                            <th>Contact Phone</th>
+                            <th>Contact Email</th>
+                            <th>Relation</th>
+                            <th>Salary</th>
+                            <th>Resume</th>
+                            <th>Certificate</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for i in data %}
+                        <tr>
+                            <td>{{ i.emp_id }}</td>
+                            <td>{{ i.sal }}</td>
+                            <td>{{ i.emp_fname }}</td>
+                            <td>{{ i.emp_mname }}</td>
+                            <td>{{ i.emp_lname }}</td>
+                            <td>{{ i.emp_val_from }}</td>
+                            <td>{{ i.emp_val_to }}</td>
+                            <td>{{ i.emp_email }}</td>
+                            <td>{{ i.emp_pemail }}</td>
+                            <td>{{ i.emp_mob_ph }}</td>
+                            <td>{{ i.emp_off_ph }}</td>
+                            <td>{{ i.emp_home_ph }}</td>
+                            <td>{{ i.emp_addr }}</td>
+                            <td>{{ i.country }}</td>
+                            <td>{{ i.state }}</td>
+                            <td>{{ i.emp_home_street }}</td>
+                            <td>{{ i.emp_home_city }}</td>
+                            <td>{{ i.role }}</td>
+                            <td>{{ i.dep }}</td>
+                            <td>{{ i.designation }}</td>
+                            <td>{{ i.employee_status }}</td>
+                            <td>{{ i.employee_manager }}</td>
+                            <td>{{ i.emp_cp_name }}</td>
+                            <td>{{ i.emp_cp_ph }}</td>
+                            <td>{{ i.emp_cp_email }}</td>
+                            <td>{{ i.emp_cp_relation }}</td>
+                            <td>{{ i.emp_base }}</td>
+                            <td>
+
+                                    <a href="{{ i.resume.url }}" class="download-link" download>
+                                        <i class="fas fa-file-download"></i> Resume
+                                    </a>
+
+                            </td>
+                            <td>
+
+                                    <a href="{{ i.certif.url }}" class="download-link" download>
+                                        <i class="fas fa-certificate"></i> Certificate
+                                    </a>
+
+                            </td>
+                            <td>
+                                <div class="action-buttons">
+                                    <a href="{% url 'employee_edit' i.pk %}" class="update">
+                                        <i class="fas fa-edit"></i> Edit
+                                    </a>
+                                    <a href="{% url 'employee_delete' i.id %}" class="delete">
+                                        <i class="fas fa-trash"></i> Delete
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="30" style="text-align: center; padding: 20px; color: #64748b; font-style: italic;">
+                                No employees found
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+{% endblock %}

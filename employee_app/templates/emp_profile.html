@@ -1,0 +1,259 @@
+{% extends 'partials/base.html' %}
+
+{% block styles %}
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        .profile-content {
+            position: fixed;
+            top: 72px;
+            left: 250px;
+            right: 0;
+            bottom: 0;
+            overflow-y: auto;
+            background-color: #f4f4f9;
+            padding: 72px 20px;
+            z-index: 1;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 550px;
+            background-color: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            margin: 0 auto;
+            position: relative;
+            left: -125px;
+        }
+
+        .profile-header {
+            text-align: center;
+            margin-bottom: 20px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #ecf0f1;
+        }
+
+        .profile-icon {
+            font-size: 2.8rem;
+            color: #3498db;
+            margin-bottom: 10px;
+            display: block;
+            text-align: center;
+        }
+
+        .profile-header h2 {
+            color: #2c3e50;
+            font-size: 1.3rem;
+            margin-bottom: 4px;
+            font-weight: 600;
+        }
+
+        .profile-header p {
+            font-size: 0.85rem;
+            color: #7f8c8d;
+            margin-bottom: 6px;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 12px;
+            padding: 5px;
+        }
+
+        .info-card {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 10px;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .info-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        .info-label {
+            color: #7f8c8d;
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 3px;
+            font-weight: 500;
+        }
+
+        .info-value {
+            color: #2c3e50;
+            font-size: 0.85rem;
+            font-weight: 500;
+            padding: 5px 8px;
+            background-color: #ffffff;
+            border-radius: 4px;
+            border-left: 3px solid #3498db;
+            word-break: break-word;
+            overflow-wrap: break-word;
+        }
+
+        .info-section {
+            margin-top: 12px;
+        }
+
+        .section-header {
+            color: #2c3e50;
+            font-size: 1rem;
+            margin-bottom: 12px;
+            padding-bottom: 6px;
+            border-bottom: 2px solid #ecf0f1;
+            display: flex;
+            align-items: center;
+            font-weight: 600;
+        }
+
+        .section-header::before {
+            content: '';
+            display: inline-block;
+            width: 3px;
+            height: 14px;
+            background-color: #3498db;
+            margin-right: 8px;
+            border-radius: 2px;
+        }
+
+        /* Scrollbar styling */
+        .profile-content::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+
+        .profile-content::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+        }
+
+        .profile-content::-webkit-scrollbar-thumb {
+            background: #c1c1c1;
+            border-radius: 4px;
+        }
+
+        .profile-content::-webkit-scrollbar-thumb:hover {
+            background: #a8a8a8;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 1200px) {
+            .container {
+                max-width: 500px;
+                left: -100px;
+            }
+        }
+
+        @media (max-width: 1024px) {
+            .profile-content {
+                left: 200px;
+                padding: 60px 20px;
+            }
+            .container {
+                max-width: 450px;
+                left: -60px;
+            }
+            .info-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .profile-content {
+                left: 0;
+                padding: 20px;
+            }
+            .container {
+                width: 95%;
+                max-width: none;
+                left: 0;
+                padding: 15px;
+            }
+            .info-grid {
+                grid-template-columns: 1fr;
+            }
+            .info-value {
+                font-size: 0.8rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .profile-content {
+                padding: 15px 10px;
+            }
+            .container {
+                width: 100%;
+                padding: 12px;
+            }
+            .profile-header h2 {
+                font-size: 1.2rem;
+            }
+            .info-card {
+                padding: 8px;
+            }
+            .info-value {
+                padding: 4px 6px;
+            }
+        }
+    </style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+{% endblock %}
+
+{% block welcome_message %}
+{% endblock %}
+
+{% block content %}
+    <div class="profile-content">
+        <div class="container">
+            <div class="profile-header">
+                <i class="fas fa-user-circle profile-icon"></i>
+                <h2>{{ employee.emp_fname }} {{ employee.emp_lname }}</h2>
+                <p>{{ employee.role }} | {{ employee.dep }}</p>
+            </div>
+
+            <div class="info-section">
+                <div class="section-header">
+                    Employee Information
+                </div>
+                <div class="info-grid">
+                    <div class="info-card">
+                        <div class="info-label">Employee ID</div>
+                        <div class="info-value">{{ employee.emp_id }}</div>
+                    </div>
+
+                    <div class="info-card">
+                        <div class="info-label">Email Address</div>
+                        <div class="info-value">{{ employee.emp_email }}</div>
+                    </div>
+
+                    <div class="info-card">
+                        <div class="info-label">Phone Number</div>
+                        <div class="info-value">{{ employee.emp_mob_ph }}</div>
+                    </div>
+
+                    <div class="info-card">
+                        <div class="info-label">Designation</div>
+                        <div class="info-value">{{ employee.designation }}</div>
+                    </div>
+
+                    <div class="info-card">
+                        <div class="info-label">Manager</div>
+                        <div class="info-value">{{ employee.employee_manager }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}

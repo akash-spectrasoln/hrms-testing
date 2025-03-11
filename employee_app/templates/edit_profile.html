@@ -1,0 +1,85 @@
+<!--<!DOCTYPE html>-->
+<!--<html lang="en">-->
+<!--<head>-->
+<!--    <meta charset="UTF-8">-->
+<!--    <title>Title</title>-->
+<!--</head>-->
+<!--<body>-->
+<!--<h2>Edit Profile</h2>-->
+
+<!--<form method="post">-->
+<!--    {% csrf_token %}-->
+<!--    {{ form.as_p }}  &lt;!&ndash; Display the form fields &ndash;&gt;-->
+<!--    <button type="submit">Save Changes</button>-->
+<!--</form>-->
+<!--</body>-->
+<!--</html>-->
+
+
+
+<!--<form method="post">-->
+<!--    {% csrf_token %}-->
+<!--    {{ form.as_p }}  &lt;!&ndash; Automatically renders other fields &ndash;&gt;-->
+
+<!--    &lt;!&ndash; Country Dropdown &ndash;&gt;-->
+<!--    <label for="id_country">Country:</label>-->
+<!--    <select id="id_country" name="country">-->
+<!--        {% for country in countries %}-->
+<!--            <option value="{{ country.id }}" {% if country.id == form.instance.country.id %}selected{% endif %}>-->
+<!--                {{ country.name }}-->
+<!--            </option>-->
+<!--        {% endfor %}-->
+<!--    </select>-->
+
+<!--    &lt;!&ndash; State Dropdown (Initially Empty or Prefilled) &ndash;&gt;-->
+<!--    <label for="id_state">State:</label>-->
+<!--    <select id="id_state" name="state">-->
+<!--        {% for state in states %}-->
+<!--            <option value="{{ state.id }}" {% if state.id == form.instance.state.id %}selected{% endif %}>-->
+<!--                {{ state.name }}-->
+<!--            </option>-->
+<!--        {% endfor %}-->
+<!--    </select>-->
+
+<!--    <button type="submit">Save Changes</button>-->
+<!--</form>-->
+
+<!--&lt;!&ndash; Include jQuery &ndash;&gt;-->
+<!--<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>-->
+
+<!--<script>-->
+<!--    // Trigger AJAX request when country is selected-->
+<!--    $('#id_country').on('change', function () {-->
+<!--        var countryId = $(this).val();  // Get selected country ID-->
+
+<!--        // Send AJAX request to get states-->
+<!--        $.ajax({-->
+<!--            url: '/get_states/',  // The URL to fetch states-->
+<!--            type: 'GET',-->
+<!--            data: { country_id: countryId },-->
+<!--            success: function (response) {-->
+<!--                // Clear the current options in the state dropdown-->
+<!--                var stateDropdown = $('#id_state');-->
+<!--                stateDropdown.empty();-->
+
+<!--                // Add new options from the response-->
+<!--                response.states.forEach(function (state) {-->
+<!--                    stateDropdown.append('<option value="' + state.id + '">' + state.name + '</option>');-->
+<!--                });-->
+<!--            },-->
+<!--            error: function (xhr, status, error) {-->
+<!--                console.error('Error fetching states:', error);-->
+<!--            }-->
+<!--        });-->
+<!--    });-->
+
+<!--    // Trigger the change event on page load (if the country is pre-selected)-->
+<!--    $(document).ready(function () {-->
+<!--        $('#id_country').trigger('change');-->
+<!--    });-->
+<!--</script>-->
+
+
+
+
+

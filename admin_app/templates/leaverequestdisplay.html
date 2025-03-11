@@ -1,0 +1,924 @@
+
+
+{% extends 'admin_partials/admin_base.html' %}
+
+<!--&lt;!&ndash;<!DOCTYPE html>&ndash;&gt;-->
+<!--&lt;!&ndash;<html lang="en">&ndash;&gt;-->
+<!--&lt;!&ndash;<head>&ndash;&gt;-->
+<!--&lt;!&ndash;    <meta charset="UTF-8">&ndash;&gt;-->
+<!--&lt;!&ndash;    <title>Title</title>&ndash;&gt;-->
+<!--&lt;!&ndash;</head>&ndash;&gt;-->
+<!--&lt;!&ndash;<body>&ndash;&gt;-->
+<!--&lt;!&ndash;{% for i in data %}&ndash;&gt;-->
+<!--&lt;!&ndash;{{i.employee}}&ndash;&gt;-->
+<!--&lt;!&ndash;{{i.start_date}}&ndash;&gt;-->
+<!--&lt;!&ndash;{{i.end_date}}&ndash;&gt;-->
+<!--&lt;!&ndash;{{i.reason}}&ndash;&gt;-->
+<!--&lt;!&ndash;{% endfor %}&ndash;&gt;-->
+<!--&lt;!&ndash;</body>&ndash;&gt;-->
+<!--&lt;!&ndash;</html>&ndash;&gt;-->
+
+
+<!--<!DOCTYPE html>-->
+<!--<html lang="en">-->
+<!--<head>-->
+<!--    <meta charset="UTF-8">-->
+<!--    <meta name="viewport" content="width=device-width, initial-scale=1.0">-->
+<!--    <title>Leave Request Display</title>-->
+<!--    <style>-->
+<!--        body {-->
+<!--            font-family: Arial, sans-serif;-->
+<!--            margin: 0;-->
+<!--            padding: 0;-->
+<!--            background-color: #f4f4f9;-->
+<!--        }-->
+<!--        h1 {-->
+<!--            text-align: center;-->
+<!--            color: #333;-->
+<!--            margin-top: 20px;-->
+<!--        }-->
+<!--        .container {-->
+<!--            width: 90%;-->
+<!--            max-width: 1200px;-->
+<!--            margin: 20px auto;-->
+<!--            background-color: #fff;-->
+<!--            border-radius: 10px;-->
+<!--            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);-->
+<!--            overflow: hidden;-->
+<!--        }-->
+<!--        table {-->
+<!--            width: 100%;-->
+<!--            border-collapse: collapse;-->
+<!--        }-->
+<!--        table th, table td {-->
+<!--            padding: 15px;-->
+<!--            text-align: left;-->
+<!--        }-->
+<!--        table th {-->
+<!--            background-color: #007BFF;-->
+<!--            color: #fff;-->
+<!--        }-->
+<!--        table tr:nth-child(even) {-->
+<!--            background-color: #f9f9f9;-->
+<!--        }-->
+<!--        table tr:hover {-->
+<!--            background-color: #f1f1f1;-->
+<!--        }-->
+<!--        .no-data {-->
+<!--            text-align: center;-->
+<!--            padding: 20px;-->
+<!--            color: #666;-->
+<!--        }-->
+<!--    </style>-->
+<!--</head>-->
+<!--<body>-->
+<!--    <h1>Leave Requests</h1>-->
+<!--    <div class="container">-->
+<!--        {% if data %}-->
+<!--        <table>-->
+<!--            <thead>-->
+<!--                <tr>-->
+<!--                    <th>Employee</th>-->
+<!--                    <th>Start Date</th>-->
+<!--                    <th>End Date</th>-->
+<!--                    <th>Reason</th>-->
+<!--                </tr>-->
+<!--            </thead>-->
+<!--            <tbody>-->
+<!--                {% for i in data %}-->
+<!--                <tr>-->
+<!--                    <td>{{ i.employee }}</td>-->
+<!--                    <td>{{ i.start_date }}</td>-->
+<!--                    <td>{{ i.end_date }}</td>-->
+<!--                    <td>{{ i.reason }}</td>-->
+<!--                </tr>-->
+<!--                {% endfor %}-->
+<!--            </tbody>-->
+<!--        </table>-->
+<!--        {% else %}-->
+<!--        <div class="no-data">No leave requests to display.</div>-->
+<!--        {% endif %}-->
+<!--    </div>-->
+<!--</body>-->
+<!--</html>-->
+
+
+
+
+<!--<!DOCTYPE html>-->
+<!--<html>-->
+<!--<head>-->
+<!--    <title>Leave Requests</title>-->
+<!--</head>-->
+<!--<body>-->
+<!--    <h1>Leave Requests</h1>-->
+
+<!--    <table border="1">-->
+<!--        <thead>-->
+<!--            <tr>-->
+<!--                <th>Employee Name</th>-->
+<!--                <th>Employee Email</th>-->
+<!--                <th>Start Date</th>-->
+<!--                <th>End Date</th>-->
+<!--                <th>Reason</th>-->
+<!--                <th>Status</th>-->
+<!--            </tr>-->
+<!--        </thead>-->
+<!--        <tbody>-->
+<!--            {% for data in leave_requests_data %}-->
+<!--            <tr>-->
+<!--                <td>{{ data.employee_name }}</td>-->
+<!--                <td>{{ data.employee_email }}</td>-->
+<!--                <td>{{ data.leave_request.start_date }}</td>-->
+<!--                <td>{{ data.leave_request.end_date }}</td>-->
+<!--                <td>{{ data.leave_request.reason }}</td>-->
+<!--                <td>{{ data.leave_request.status }}</td>-->
+<!--            </tr>-->
+<!--            {% endfor %}-->
+<!--        </tbody>-->
+<!--    </table>-->
+
+<!--</body>-->
+<!--</html>-->
+
+
+
+<!--main designed code-->
+
+<!--<!DOCTYPE html>-->
+<!--<html lang="en">-->
+<!--<head>-->
+<!--    <meta charset="UTF-8">-->
+<!--    <meta name="viewport" content="width=device-width, initial-scale=1.0">-->
+<!--    <title>Leave Requests</title>-->
+<!--    <style>-->
+<!--        /* General styles */-->
+<!--        body {-->
+<!--            font-family: Arial, sans-serif;-->
+<!--            background-color: #1a1a40; /* Dark blue background */-->
+<!--            color: #f0f0f5; /* Light text color */-->
+<!--            margin: 0;-->
+<!--            padding: 0;-->
+<!--        }-->
+
+<!--        h1 {-->
+<!--            text-align: center;-->
+<!--            color: #ffffff;-->
+<!--            margin-top: 20px;-->
+<!--        }-->
+
+<!--        table {-->
+<!--            width: 90%;-->
+<!--            margin: 20px auto;-->
+<!--            border-collapse: collapse;-->
+<!--            background-color: #252552; /* Darker blue */-->
+<!--            color: #f0f0f5;-->
+<!--        }-->
+
+<!--        th, td {-->
+<!--            padding: 12px 15px;-->
+<!--            text-align: center;-->
+<!--            border: 1px solid #3c3c74; /* Border color */-->
+<!--        }-->
+
+<!--        th {-->
+<!--            background-color: #333366; /* Slightly lighter dark blue */-->
+<!--            font-weight: bold;-->
+<!--        }-->
+
+<!--        tr:nth-child(even) {-->
+<!--            background-color: #2d2d59; /* Alternate row color */-->
+<!--        }-->
+
+<!--        tr:hover {-->
+<!--            background-color: #404080; /* Row hover effect */-->
+<!--        }-->
+
+<!--        button {-->
+<!--            padding: 8px 16px;-->
+<!--            font-size: 14px;-->
+<!--            color: #ffffff;-->
+<!--            background-color: #0066cc; /* Button blue */-->
+<!--            border: none;-->
+<!--            border-radius: 4px;-->
+<!--            cursor: pointer;-->
+<!--        }-->
+
+<!--        button:hover {-->
+<!--            background-color: #004080; /* Darker blue on hover */-->
+<!--        }-->
+
+<!--        form {-->
+<!--            display: inline;-->
+<!--        }-->
+
+<!--        .container {-->
+<!--            max-width: 1200px;-->
+<!--            margin: 0 auto;-->
+<!--            padding: 20px;-->
+<!--            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2); /* Subtle shadow */-->
+<!--            border-radius: 8px;-->
+<!--        }-->
+<!--    </style>-->
+<!--</head>-->
+<!--<body>-->
+<!--    <div class="container">-->
+<!--        <h1>Leave Requests</h1>-->
+<!--        <table>-->
+<!--            <thead>-->
+<!--                <tr>-->
+<!--                    <th>Employee Name</th>-->
+<!--                    <th>Employee Email</th>-->
+<!--                    <th>Leave Type</th>-->
+<!--                    <th>Start Date</th>-->
+<!--                    <th>End Date</th>-->
+<!--                    <th>Reason</th>-->
+<!--                    <th>Status</th>-->
+<!--                    <th>Actions</th>-->
+<!--                </tr>-->
+<!--            </thead>-->
+<!--            <tbody>-->
+<!--                {% for data in leave_requests_data %}-->
+<!--                <tr>-->
+<!--                    <td>{{ data.employee_name }}</td>-->
+<!--                    <td>{{ data.employee_email }}</td>-->
+<!--                    <td>{{ data.leave_request.leave_type }}</td>-->
+<!--                    <td>{{ data.leave_request.start_date }}</td>-->
+<!--                    <td>{{ data.leave_request.end_date }}</td>-->
+<!--                    <td>{{ data.leave_request.reason }}</td>-->
+<!--                    <td>{{ data.leave_request.status }}</td>-->
+<!--                    <td>-->
+<!--                        {% if data.leave_request.status == "Pending" %}-->
+<!--                            <form method="post" action="{% url 'accept_leave_request' data.leave_request.id %}">-->
+<!--                                {% csrf_token %}-->
+<!--                                <button type="submit">Accept</button>-->
+<!--                            </form>-->
+<!--                            <form method="post" action="{% url 'reject_leave_request' data.leave_request.id %}">-->
+<!--                                {% csrf_token %}-->
+<!--                                <button type="submit" style="background-color: #cc0000;">Reject</button>-->
+<!--                            </form>-->
+<!--                        {% else %}-->
+<!--                            {{ data.leave_request.status }}-->
+<!--                        {% endif %}-->
+<!--                    </td>-->
+<!--                </tr>-->
+<!--                {% endfor %}-->
+<!--            </tbody>-->
+<!--        </table>-->
+<!--    </div>-->
+<!--</body>-->
+<!--</html>-->
+
+
+
+<!--main template-->
+
+<!--<!DOCTYPE html>-->
+<!--<html lang="en">-->
+<!--<head>-->
+<!--    <meta charset="UTF-8">-->
+<!--    <meta name="viewport" content="width=device-width, initial-scale=1.0">-->
+<!--    <title>Leave Requests</title>-->
+<!--    <style>-->
+<!--        body {-->
+<!--            font-family: Arial, sans-serif;-->
+<!--            background-color: #f4f4f9;-->
+<!--            color: #333;-->
+<!--            margin: 0;-->
+<!--            padding: 0;-->
+<!--        }-->
+
+<!--        h1 {-->
+<!--            text-align: center;-->
+<!--            margin-top: 20px;-->
+<!--            color: #333;-->
+<!--        }-->
+
+<!--        table {-->
+<!--            width: 90%;-->
+<!--            margin: 20px auto;-->
+<!--            border-collapse: collapse;-->
+<!--        }-->
+
+<!--        th, td {-->
+<!--            padding: 12px 15px;-->
+<!--            text-align: center;-->
+<!--            border: 1px solid #ccc;-->
+<!--        }-->
+
+<!--        th {-->
+<!--            background-color: #004080;-->
+<!--            color: #fff;-->
+<!--        }-->
+
+<!--        tr:nth-child(even) {-->
+<!--            background-color: #f2f2f2;-->
+<!--        }-->
+
+<!--        tr:hover {-->
+<!--            background-color: #e6e6e6;-->
+<!--        }-->
+
+<!--        .status {-->
+<!--            font-weight: bold;-->
+<!--        }-->
+
+<!--        .pending {-->
+<!--            color: #ffa500;-->
+<!--        }-->
+
+<!--        .accepted {-->
+<!--           color: #28a745; /* Green color */-->
+
+<!--        }-->
+
+<!--        .rejected {-->
+<!--            color: #dc3545;-->
+<!--        }-->
+
+<!--        .action-buttons {-->
+<!--            display: flex;-->
+<!--            gap: 5px;-->
+<!--            justify-content: center;-->
+<!--        }-->
+
+<!--        button {-->
+<!--            padding: 8px 16px;-->
+<!--            font-size: 14px;-->
+<!--            color: #ffffff;-->
+<!--            background-color: #004080;-->
+<!--            border: none;-->
+<!--            border-radius: 4px;-->
+<!--            cursor: pointer;-->
+<!--            margin: 0;-->
+<!--            flex: 1;-->
+<!--            max-width: 80px;-->
+<!--        }-->
+
+<!--        button:hover {-->
+<!--            background-color: #002b57;-->
+<!--        }-->
+
+<!--        button[type="submit"] {-->
+<!--            background-color: #004080;-->
+<!--        }-->
+
+<!--        button[type="submit"]:hover {-->
+<!--            background-color: #002b57;-->
+<!--        }-->
+
+<!--        button.reject-button {-->
+<!--            background-color: #dc3545;-->
+<!--        }-->
+
+<!--        button.reject-button:hover {-->
+<!--            background-color: #c82333;-->
+<!--        }-->
+
+<!--        form {-->
+<!--            flex: 1;-->
+<!--        }-->
+
+<!--        .container {-->
+<!--            max-width: 1200px;-->
+<!--            margin: 0 auto;-->
+<!--            padding: 20px;-->
+<!--            background-color: #ffffff;-->
+<!--            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);-->
+<!--            border-radius: 8px;-->
+<!--        }-->
+<!--    </style>-->
+<!--</head>-->
+<!--<body>-->
+<!--    <div class="container">-->
+<!--        <h1>Leave Requests</h1>-->
+<!--        <table>-->
+<!--            <thead>-->
+<!--                <tr>-->
+<!--                    <th>Employee Name</th>-->
+<!--                    <th>Employee Email</th>-->
+<!--                    <th>Leave Type</th>-->
+<!--                    <th>Start Date</th>-->
+<!--                    <th>End Date</th>-->
+<!--                    <th>Description</th>-->
+<!--                    <th>Status</th>-->
+<!--                    <th>Actions</th>-->
+<!--                </tr>-->
+<!--            </thead>-->
+<!--            <tbody>-->
+<!--                {% for data in leave_requests_data %}-->
+<!--                <tr>-->
+<!--                    <td>{{ data.employee_name }}</td>-->
+<!--                    <td>{{ data.employee_email }}</td>-->
+<!--                    <td>{{ data.leave_request.leave_type }}</td>-->
+<!--                    <td>{{ data.leave_request.start_date }}</td>-->
+<!--                    <td>{{ data.leave_request.end_date }}</td>-->
+<!--                    <td>{{ data.leave_request.reason }}</td>-->
+<!--                    <td class="status {% if data.leave_request.status == 'Pending' %}pending{% elif data.leave_request.status == 'Accepted' %}accepted{% elif data.leave_request.status == 'Rejected' %}rejected{% endif %}">-->
+<!--                        {{ data.leave_request.status }}-->
+<!--                    </td>-->
+<!--                    <td>-->
+<!--                        {% if data.leave_request.status == "Pending" %}-->
+<!--                            <div class="action-buttons">-->
+<!--                                <form method="post" action="{% url 'accept_leave_request' data.leave_request.id %}">-->
+<!--                                    {% csrf_token %}-->
+<!--                                    <button type="submit">Accept</button>-->
+<!--                                </form>-->
+<!--                                <form method="post" action="{% url 'reject_leave_request' data.leave_request.id %}">-->
+<!--                                    {% csrf_token %}-->
+<!--                                    <button type="submit" class="reject-button">Reject</button>-->
+<!--                                </form>-->
+<!--                            </div>-->
+<!--                        {% else %}-->
+<!--                            {{ data.leave_request.status }}-->
+<!--                        {% endif %}-->
+<!--                    </td>-->
+<!--                </tr>-->
+<!--                {% endfor %}-->
+<!--            </tbody>-->
+<!--        </table>-->
+<!--    </div>-->
+<!--</body>-->
+<!--</html>-->
+
+
+
+
+
+
+
+{% block styles %}
+    <style>
+        .leave-requests-content {
+            position: fixed;
+            top: 72px;
+            left: 250px;
+            right: 0;
+            bottom: 0;
+            overflow-y: auto;
+            background-color: #f4f4f9;
+            padding: 40px 20px;
+            z-index: 1;
+            display: flex;
+            justify-content: center;
+        }
+
+        .container {
+            background-color: #ffffff;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+            padding: 25px;
+            width: 95%;
+            margin: 0 auto;
+            position: relative;
+            left: -60px;
+            max-height: calc(100vh - 160px);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .filter-section {
+            background-color: #f8fafc;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            display: flex;
+            gap: 20px;
+            align-items: center;
+        }
+
+        .filter-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex: 1;
+        }
+
+        .filter-label {
+            font-size: 14px;
+            color: #2c3e50;
+            font-weight: 500;
+            min-width: 80px;
+        }
+
+        .filter-input {
+            padding: 8px 12px;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            font-size: 14px;
+            color: #2c3e50;
+            background-color: white;
+            width: 100%;
+            transition: all 0.3s ease;
+        }
+
+        .filter-input:focus {
+            border-color: #3b82f6;
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+        }
+
+        .table-container {
+            width: 100%;
+            overflow-y: auto;
+            margin-top: 20px;
+            flex: 1;
+            position: relative;
+        }
+
+        h1 {
+            text-align: center;
+            margin: 0 0 25px 0;
+            color: #2c3e50;
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        table {
+            width: 100%;
+            min-width: 800px;
+            border-collapse: separate;
+            border-spacing: 0;
+            border: 1px solid #e2e8f0;
+            background-color: #ffffff;
+            font-size: 14px;
+        }
+
+        thead {
+            position: sticky;
+            top: 0;
+            z-index: 2;
+            background-color: #3b82f6;
+        }
+
+        th {
+            background-color: #3b82f6;
+            color: white;
+            font-weight: 500;
+            padding: 12px 15px;
+            text-align: center;
+            font-size: 14px;
+            white-space: nowrap;
+            border-bottom: 1px solid #e2e8f0;
+            position: sticky;
+            top: 0;
+            z-index: 2;
+        }
+
+        td {
+            padding: 12px 15px;
+            text-align: center;
+            border: 1px solid #e2e8f0;
+            white-space: nowrap;
+            font-size: 14px;
+            color: #2c3e50;
+            background-color: inherit;
+        }
+
+        tr:nth-child(even) {
+            background-color: #f8f9fa;
+        }
+
+        tr:hover {
+            background-color: #f8f9ff;
+        }
+
+        .status-badge {
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-weight: 500;
+            display: inline-block;
+            font-size: 0.8rem;
+        }
+
+        .status-pending {
+            color: #f59e0b;
+            background-color: #fef3c7;
+        }
+
+        .status-accepted {
+            color: #10b981;
+            background-color: #d1fae5;
+        }
+
+        .status-rejected {
+            color: #ef4444;
+            background-color: #fee2e2;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+        }
+
+        .action-button {
+            padding: 6px 12px;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            min-width: 70px;
+            transition: all 0.2s ease;
+        }
+
+        .button-accept {
+            background-color: #0ea5e9;
+        }
+
+        .button-reject {
+            background-color: #ff6b6b;
+        }
+
+        .action-button:hover {
+            transform: translateY(-1px);
+            opacity: 0.9;
+        }
+
+        .no-data-message {
+            text-align: center;
+            padding: 20px;
+            font-size: 14px;
+            color: #64748b;
+            font-style: italic;
+        }
+
+        /* Scrollbar styling */
+        .table-container::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+
+        .table-container::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+        }
+
+        .table-container::-webkit-scrollbar-thumb {
+            background: #c1c1c1;
+            border-radius: 4px;
+        }
+
+        .table-container::-webkit-scrollbar-thumb:hover {
+            background: #a8a8a8;
+        }
+
+        /* Responsive styles */
+        @media (max-width: 1200px) {
+            .container {
+                width: 90%;
+                left: -40px;
+            }
+            .filter-section {
+                flex-wrap: wrap;
+            }
+            .filter-group {
+                min-width: 200px;
+            }
+        }
+
+        @media (max-width: 1024px) {
+            .leave-requests-content {
+                left: 200px;
+            }
+            .container {
+                width: 95%;
+                left: -30px;
+            }
+            .filter-section {
+                flex-direction: column;
+                gap: 15px;
+            }
+            .filter-group {
+                width: 100%;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .leave-requests-content {
+                left: 0;
+                padding: 30px 15px;
+            }
+            .container {
+                width: 100%;
+                left: 0;
+                padding: 15px;
+            }
+            .table-container {
+                margin-top: 15px;
+            }
+            .action-button {
+                padding: 5px 12px;
+                min-width: 90px;
+                font-size: 14px;
+            }
+            table, th, td {
+                font-size: 14px;
+            }
+        }
+    </style>
+{% endblock %}
+
+{% block content %}
+    <div class="leave-requests-content">
+        <div class="container">
+            <h1>Leave Requests</h1>
+
+            <div class="filter-section">
+                <div class="filter-group">
+                    <label class="filter-label" for="yearFilter">Year:</label>
+                    <select id="yearFilter" class="filter-input" onchange="filterResults()">
+                        <option value="">All Years</option>
+                        {% for year in available_years %}
+                            <option value="{{ year }}">{{ year }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label class="filter-label" for="employeeNameFilter">Employee:</label>
+                    <input type="text"
+                           id="employeeNameFilter"
+                           class="filter-input"
+                           placeholder="Enter employee name"
+                           onkeyup="debouncedFilter()">
+                </div>
+                <div class="filter-group">
+                    <label class="filter-label" for="statusFilter">Status:</label>
+                    <select id="statusFilter" class="filter-input" onchange="filterResults()">
+                        <option value="">All Status</option>
+                        <option value="Pending">Pending</option>
+                        <option value="Accepted">Accepted</option>
+                        <option value="Rejected">Rejected</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Employee Name</th>
+                            <th>Employee Email</th>
+                            <th>Leave Type</th>
+                            <th>Start Date</th>
+                            <th>End Date</th>
+                            <th>Description</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="leaveRequestsTableBody">
+                        {% for data in leave_requests_data %}
+                        <tr>
+                            <td>{{ data.employee_name }}</td>
+                            <td>{{ data.employee_email }}</td>
+                            <td>{{ data.leave_request.leave_type }}</td>
+                            <td>{{ data.leave_request.start_date }}</td>
+                            <td>{{ data.leave_request.end_date }}</td>
+                            <td>{{ data.leave_request.reason }}</td>
+                            <td>
+                                <span class="status-badge
+                                    {% if data.leave_request.status == 'Pending' %}status-pending
+                                    {% elif data.leave_request.status == 'Accepted' %}status-accepted
+                                    {% elif data.leave_request.status == 'Rejected' %}status-rejected{% endif %}">
+                                    {{ data.leave_request.status }}
+                                </span>
+                            </td>
+                            <td>
+                                {% if data.leave_request.status == "Pending" %}
+                                    <div class="action-buttons">
+                                        <form method="post" action="{% url 'accept_leave_request' data.leave_request.id %}">
+                                            {% csrf_token %}
+                                            <button type="submit" class="action-button button-accept">Accept</button>
+                                        </form>
+                                        <form method="post" action="{% url 'reject_leave_request' data.leave_request.id %}">
+                                            {% csrf_token %}
+                                            <button type="submit" class="action-button button-reject">Reject</button>
+                                        </form>
+                                    </div>
+                                {% else %}
+                                    <span class="status-badge
+                                        {% if data.leave_request.status == 'Accepted' %}status-accepted
+                                        {% elif data.leave_request.status == 'Rejected' %}status-rejected{% endif %}">
+                                        {{ data.leave_request.status }}
+                                    </span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    {% block scripts %}
+    <script>
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
+
+        function showLoading() {
+            const tableBody = document.getElementById("leaveRequestsTableBody");
+            tableBody.innerHTML = `
+                <tr>
+                    <td colspan="8" class="no-data-message">
+                        Loading leave requests...
+                    </td>
+                </tr>`;
+        }
+
+        function showError(message) {
+            const tableBody = document.getElementById("leaveRequestsTableBody");
+            tableBody.innerHTML = `
+                <tr>
+                    <td colspan="8" class="no-data-message" style="color: #dc2626;">
+                        ${message}
+                    </td>
+                </tr>`;
+        }
+
+       function filterResults() {
+    const year = document.getElementById("yearFilter").value;
+    const employeeName = document.getElementById("employeeNameFilter").value.trim();
+    const status = document.getElementById("statusFilter").value;
+
+    showLoading();
+
+    // Add quotes around the URL and use template literals properly
+    fetch(`/admin_app/filter-leave-requests/?year=${encodeURIComponent(year)}&employee_name=${encodeURIComponent(employeeName)}&status=${encodeURIComponent(status)}`)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            return response.json();
+        })
+        .then(data => {
+            const tableBody = document.getElementById("leaveRequestsTableBody");
+
+            if (data.length === 0) {
+                tableBody.innerHTML = `
+                    <tr>
+                        <td colspan="8" class="no-data-message">
+                            No leave requests found
+                        </td>
+                    </tr>`;
+                return;
+            }
+
+            tableBody.innerHTML = data.map(request => {
+                let statusClass = '';
+                if (request.status === 'Pending') statusClass = 'status-pending';
+                else if (request.status === 'Accepted') statusClass = 'status-accepted';
+                else if (request.status === 'Rejected') statusClass = 'status-rejected';
+
+                let statusBadge = `
+                    <span class="status-badge ${statusClass}">
+                        ${request.status}
+                    </span>`;
+
+                let actionButtons = request.status === 'Pending' ? `
+                    <div class="action-buttons">
+                        <form method="post" action="/admin_app/accept_leave_request/${request.id}/">
+                            <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
+                            <button type="submit" class="action-button button-accept">Accept</button>
+                        </form>
+                        <form method="post" action="/admin_app/reject_leave_request/${request.id}/">
+                            <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
+                            <button type="submit" class="action-button button-reject">Reject</button>
+                        </form>
+                    </div>` : statusBadge;
+
+                return `
+                    <tr>
+                        <td>${request.employee_name}</td>
+                        <td>${request.employee_email}</td>
+                        <td>${request.leave_type}</td>
+                        <td>${request.start_date}</td>
+                        <td>${request.end_date}</td>
+                        <td>${request.reason}</td>
+                        <td>${statusBadge}</td>
+                        <td>${actionButtons}</td>
+                    </tr>`;
+            }).join('');
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showError('Error loading leave requests. Please try again.');
+        });
+}
+
+        const debouncedFilter = debounce(filterResults, 300);
+    </script>
+    {% endblock %}
+{% endblock %}
