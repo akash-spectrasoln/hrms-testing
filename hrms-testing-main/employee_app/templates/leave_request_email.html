@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Leave Request Alert</title>
+</head>
+<body>
+    <p>Dear {{ manager_name }},</p>
+    <p>A new leave request has been submitted by <strong>{{ employee_name }}</strong>.</p>
+    <p><strong>Leave Request Details:</strong></p>
+    <ul>
+        <li><b>Start Date:</b> {{ start_date }}</li>
+        <li><b>End Date:</b> {{ end_date }}</li>
+        <li><b>Reason:</b> {{ reason }}</li>
+    </ul>
+    <p>Please log in to the portal to take action on the request.</p>
+    <p>Regards,</p>
+    <p>HRMS System</p>
+</body>
+</html>

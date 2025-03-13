@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Admin Portal{% endblock %}</title>
+
+    <!-- Base CSS -->
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: #f4f4f5;
+            color: #27272a;
+        }
+
+        /* Navbar Styles */
+        .navbar {
+            background-color: #ffffff;
+            padding: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: fixed;
+            width: 100%;
+            top: 0;
+            z-index: 1000;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        .logo {
+            color: #3b82f6;
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+
+        .profile-section {
+            position: relative;
+        }
+
+        .profile-button {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background-color: #3b82f6;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: #ffffff;
+            transition: background-color 0.3s;
+        }
+
+        .profile-button:hover {
+            background-color: #2563eb;
+        }
+
+        .profile-dropdown {
+            position: absolute;
+            right: 0;
+            top: 50px;
+            background-color: #ffffff;
+            border-radius: 8px;
+            width: 200px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            display: none;
+        }
+
+        .profile-dropdown.active {
+            display: block;
+        }
+
+        .profile-info {
+            padding: 1rem;
+            border-bottom: 1px solid #e4e4e7;
+        }
+
+        .profile-info h3 {
+            color: #3b82f6;
+            margin-bottom: 0.5rem;
+        }
+
+        .profile-info p {
+            color: #71717a;
+            font-size: 0.9rem;
+        }
+
+        .dropdown-options a {
+            display: block;
+            padding: 0.75rem 1rem;
+            color: #27272a;
+            text-decoration: none;
+            transition: background-color 0.3s;
+        }
+
+        .dropdown-options a:hover {
+            background-color: #f4f4f5;
+        }
+
+        /* Sidebar Styles */
+        .sidebar {
+            position: fixed;
+            left: 0;
+            top: 72px;
+            height: calc(100vh - 72px);
+            width: 250px;
+            background-color: #ffffff;
+            padding: 1.5rem 1rem;
+            box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+        }
+
+        .sidebar-menu {
+            list-style: none;
+        }
+
+        .menu-item {
+            margin-bottom: 0.75rem;
+        }
+
+        .menu-item a {
+            display: flex;
+            align-items: center;
+            padding: 0.75rem 1rem;
+            color: #27272a;
+            text-decoration: none;
+            border-radius: 6px;
+            transition: all 0.3s ease;
+        }
+
+        .menu-item a:hover {
+            background-color: #e6f0ff;
+            color: #3b82f6;
+        }
+
+        .menu-item.active a {
+            background-color: #e6f0ff;
+            color: #3b82f6;
+            border-left: 3px solid #3b82f6;
+            padding-left: calc(1rem - 3px);
+        }
+
+        .menu-icon {
+            margin-right: 0.75rem;
+            width: 20px;
+            height: 20px;
+        }
+
+        .menu-item a:hover .menu-icon {
+            transform: scale(1.1);
+            transition: transform 0.3s ease;
+        }
+
+        /* Main Content Area */
+        .main-content {
+            margin-left: 250px;
+            margin-top: 72px;
+            padding: 2rem;
+            background-color: #ffffff;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .sidebar {
+                transform: translateX(-100%);
+                transition: transform 0.3s ease-in-out;
+            }
+
+            .sidebar.active {
+                transform: translateX(0);
+            }
+
+            .main-content {
+                margin-left: 0;
+            }
+        }
+    </style>
+
+    <!-- Additional CSS block for child templates -->
+    {% block styles %}
+    {% endblock %}
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar">
+        <div class="logo">Admin Portal</div>
+        <div class="profile-section">
+            <button class="profile-button" onclick="toggleProfile()">AD</button>
+            <div class="profile-dropdown" id="profileDropdown">
+                <div class="profile-info">
+                    <h3>Administrator</h3>
+                    <p>Admin Dashboard</p>
+                </div>
+                <div class="dropdown-options">
+                    <a href="">Change Password</a>
+                    <a href="{% url 'admin_logout' %}">Logout</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <ul class="sidebar-menu">
+            <li class="menu-item active">
+                <a href="{% url 'admin_index' %}">
+                    <span class="menu-icon">🏠</span>
+                    Home
+                </a>
+            </li>
+            <li class="menu-item">
+                <a href="{% url 'add_employee' %}">
+                    <span class="menu-icon">👤</span>
+                    Add Employee
+                </a>
+            </li>
+            <li class="menu-item">
+                <a href="{% url 'employee_list' %}">
+                    <span class="menu-icon">👥</span>
+                    View Employees
+                </a>
+            </li>
+            <li class="menu-item">
+                <a href="{% url 'deleted_employees' %}">
+                    <span class="menu-icon">🗑️</span>
+                    Deleted Employees
+                </a>
+            </li>
+            <li class="menu-item">
+                <a href="{% url 'export_employees' %}">
+                    <span class="menu-icon">📥</span>
+                    Download Employees
+                </a>
+            </li>
+            <li class="menu-item">
+                <a href="{% url 'leave_request_display' %}">
+                    <span class="menu-icon">📋</span>
+                    Manage Leave Requests
+                </a>
+            </li>
+        </ul>
+    </div>
+
+    <!-- Main Content Area -->
+    <div class="main-content">
+        {% block content %}
+        {% endblock content %}
+    </div>
+
+    <!-- Base JavaScript -->
+    <script>
+        function toggleProfile() {
+            const dropdown = document.getElementById('profileDropdown');
+            dropdown.classList.toggle('active');
+        }
+
+        document.addEventListener('click', function(event) {
+            const dropdown = document.getElementById('profileDropdown');
+            const profileButton = event.target.closest('.profile-button');
+            if (!profileButton && dropdown.classList.contains('active')) {
+                dropdown.classList.remove('active');
+            }
+        });
+    </script>
+
+    <!-- Additional JavaScript block for child templates -->
+    {% block scripts %}
+    {% endblock %}
+</body>
+</html>

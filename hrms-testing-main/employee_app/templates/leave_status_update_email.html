@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Leave Request Status Update</title>
+</head>
+<body>
+    <p>Dear {{ employee_name }},</p>
+    <p>Your leave request has been <strong>{{ status }}</strong>.</p>
+    <p><strong>Leave Request Details:</strong></p>
+    <ul>
+        <li><b>Leave Type:</b> {{ leave_type }}</li>
+        <li><b>Start Date:</b> {{ start_date }}</li>
+        <li><b>End Date:</b> {{ end_date }}</li>
+        <li><b>Reason:</b> {{ reason }}</li>
+    </ul>
+    <p>Thank you for using the HRMS system.</p>
+    <p>Regards,</p>
+    <p>HRMS System</p>
+</body>
+</html>

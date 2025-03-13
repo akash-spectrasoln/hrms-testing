@@ -1,0 +1,414 @@
+
+
+{% extends 'admin_partials/admin_base.html' %}
+
+<!--parent template-->
+
+
+<!--<!DOCTYPE html>-->
+<!--<html>-->
+<!--<head>-->
+<!--    <title>Add Holiday</title>-->
+<!--</head>-->
+<!--<body>-->
+<!--    <h2>Add Holiday</h2>-->
+
+<!--    {% if messages %}-->
+<!--        <ul>-->
+<!--            {% for message in messages %}-->
+<!--                <li style="color: green;">{{ message }}</li>-->
+<!--            {% endfor %}-->
+<!--        </ul>-->
+<!--    {% endif %}-->
+
+<!--    <form method="post">-->
+<!--        {% csrf_token %}-->
+<!--        <label for="leave_type">Leave Type:</label>-->
+<!--        {{ form.leave_type }}-->
+<!--        <br><br>-->
+
+<!--        <label for="name">Holiday Name:</label>-->
+<!--        {{ form.name }}-->
+<!--        <br><br>-->
+
+<!--        <label for="date">Holiday Date:</label>-->
+<!--        {{ form.date }}-->
+<!--        <br><br>-->
+
+<!--        <button type="submit">Submit</button>-->
+<!--    </form>-->
+
+<!--    <br>-->
+<!--    <a href="{% url 'admin_dashboard' %}">Back to Admin Dashboard</a>-->
+<!--</body>-->
+<!--</html>-->
+
+
+
+
+<!--inherited designed template-->
+
+{% block styles %}
+<style>
+    *, *::before, *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+    }
+
+    .add-holiday-content {
+        position: fixed;
+        top: 72px;
+        left: 250px;
+        right: 0;
+        bottom: 0;
+        background-color: #f4f4f9;
+        z-index: 1;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+
+    .form-container {
+        background-color: #ffffff;
+        border-radius: 12px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        padding: 25px;
+        width: 450px;
+        height: 480px;
+        margin-left: -125px;
+        margin-top: -50px;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .page-header {
+        text-align: center;
+        margin-bottom: 20px;
+        padding-bottom: 15px;
+        border-bottom: 1px solid #e5e7eb;
+    }
+
+    .page-title {
+        color: #2c3e50;
+        font-size: 1.4rem;
+        font-weight: 600;
+        margin: 0;
+    }
+
+    .form-group {
+        margin-bottom: 18px;
+    }
+
+    .form-label {
+        display: block;
+        margin-bottom: 6px;
+        color: #4b5563;
+        font-weight: 500;
+        font-size: 0.9rem;
+    }
+
+    .form-control {
+        width: 100%;
+        padding: 8px 12px;
+        border: 1px solid #d1d5db;
+        border-radius: 6px;
+        font-size: 0.9rem;
+        color: #1f2937;
+        background-color: #ffffff;
+        transition: all 0.2s ease;
+    }
+
+    select.form-control {
+        appearance: none;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%234b5563' viewBox='0 0 16 16'%3E%3Cpath d='M8 10l4-4H4z'/%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 12px center;
+        padding-right: 35px;
+    }
+
+    select.form-control option {
+        padding: 8px;
+        font-size: 0.9rem;
+    }
+
+    input[type="date"].form-control {
+        padding-right: 10px;
+    }
+
+    .form-control:focus {
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+        outline: none;
+    }
+
+    .field-error {
+        color: #dc2626;
+        font-size: 0.8rem;
+        margin-top: 4px;
+        padding: 4px 8px;
+        background-color: #fee2e2;
+        border-radius: 4px;
+        border: 1px solid #fecaca;
+    }
+
+    .messages {
+        margin: -5px 0 15px 0;
+    }
+
+    .message {
+        padding: 12px 16px;
+        border-radius: 6px;
+        margin-bottom: 8px;
+        font-size: 0.95rem;
+        text-align: center;
+    }
+
+    .message.success {
+        background-color: #dcfce7;
+        color: #166534;
+        border: 1px solid #bbf7d0;
+    }
+
+    .message.error {
+        background-color: #fee2e2;
+        color: #991b1b;
+        border: 1px solid #fecaca;
+    }
+
+    .submit-button {
+        width: 100%;
+        padding: 10px;
+        background-color: #3b82f6;
+        color: #ffffff;
+        border: none;
+        border-radius: 6px;
+        font-size: 0.95rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        margin-top: auto;
+    }
+
+    .submit-button:hover {
+        background-color: #2563eb;
+        transform: translateY(-1px);
+    }
+
+    .back-link {
+        display: block;
+        text-align: center;
+        margin-top: 12px;
+        color: #6b7280;
+        text-decoration: none;
+        font-size: 0.9rem;
+        transition: color 0.2s ease;
+    }
+
+    .back-link:hover {
+        color: #3b82f6;
+    }
+
+    @media (max-width: 1024px) {
+        .add-holiday-content {
+            left: 200px;
+        }
+
+        .form-container {
+            width: 400px;
+            margin-left: -100px;
+        }
+    }
+
+    @media (max-width: 768px) {
+        .add-holiday-content {
+            left: 0;
+            padding: 15px;
+        }
+
+        .form-container {
+            width: calc(100% - 30px);
+            margin: 0 15px;
+            padding: 20px;
+            height: auto;
+            min-height: 480px;
+        }
+    }
+</style>
+{% endblock %}
+
+
+{% block content %}
+<div class="add-holiday-content">
+    <div class="form-container">
+        <div class="page-header">
+            <h2 class="page-title">Add Holiday</h2>
+        </div>
+
+        {% if messages %}
+            <div class="messages">
+                {% for message in messages %}
+                    <div class="message {{ message.tags }}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        <form method="post" id="holidayForm">
+            {% csrf_token %}
+
+            <div class="form-group">
+                <label class="form-label" for="id_leave_type">Leave Type</label>
+                <select name="leave_type" id="id_leave_type" class="form-control" required>
+                    <option value="">Select Leave Type</option>
+                    <option value="fixed" {% if form.leave_type.value == 'fixed' %}selected{% endif %}>Fixed Holiday</option>
+                    <option value="floating" {% if form.leave_type.value == 'floating' %}selected{% endif %}>Floating Holiday</option>
+                </select>
+                {% if form.leave_type.errors %}
+                    <div class="field-error">
+                        {% for error in form.leave_type.errors %}{{ error }}{% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="id_name">Holiday Name</label>
+                <input type="text"
+                       name="name"
+                       id="id_name"
+                       class="form-control"
+                       required
+                       placeholder="Enter holiday name"
+                       value="{{ form.name.value|default:'' }}"
+                       maxlength="100">
+                {% if form.name.errors %}
+                    <div class="field-error">
+                        {% for error in form.name.errors %}{{ error }}{% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="id_date">Holiday Date</label>
+                <input type="date"
+                       name="date"
+                       id="id_date"
+                       class="form-control"
+                       required
+                       value="{{ form.date.value|date:'Y-m-d'|default:'' }}">
+                {% if form.date.errors %}
+                    <div class="field-error">
+                        {% for error in form.date.errors %}{{ error }}{% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+
+            <div style="flex-grow: 1;"></div> <!-- Spacer -->
+
+            <div class="button-container">
+                <button type="submit" class="submit-button">Add Holiday</button>
+                <a href="{% url 'admin_dashboard' %}" class="back-link">Back to Admin Dashboard</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const form = document.getElementById('holidayForm');
+        const formContainer = document.querySelector('.form-container');
+        const dateInput = document.getElementById('id_date');
+        const leaveTypeSelect = document.getElementById('id_leave_type');
+        const nameInput = document.getElementById('id_name');
+
+        // Store original form height
+        const originalHeight = formContainer.offsetHeight;
+        formContainer.style.minHeight = ${originalHeight}px;
+
+        // Set minimum date to today for fixed holidays
+        function updateDateRestrictions() {
+            const today = new Date().toISOString().split('T')[0];
+            if (leaveTypeSelect.value === 'fixed') {
+                dateInput.min = today;
+            } else {
+                dateInput.removeAttribute('min');
+            }
+        }
+
+        // Initialize date restrictions
+        updateDateRestrictions();
+
+        // Handle leave type change
+        leaveTypeSelect.addEventListener('change', function() {
+            updateDateRestrictions();
+
+            // Remove any existing error messages
+            const existingErrors = document.querySelectorAll('.field-error');
+            existingErrors.forEach(error => error.remove());
+        });
+
+        // Form validation
+        form.addEventListener('submit', function(e) {
+            let isValid = true;
+            let errorMessage = '';
+
+            // Clear existing error messages
+            const existingErrors = document.querySelectorAll('.field-error');
+            existingErrors.forEach(error => error.remove());
+
+            // Validate leave type
+            if (!leaveTypeSelect.value) {
+                isValid = false;
+                errorMessage += 'Please select a leave type.\n';
+                leaveTypeSelect.parentElement.appendChild(createErrorElement('Please select a leave type'));
+            }
+
+            // Validate holiday name
+            if (!nameInput.value.trim()) {
+                isValid = false;
+                errorMessage += 'Please enter a holiday name.\n';
+                nameInput.parentElement.appendChild(createErrorElement('Please enter a holiday name'));
+            }
+
+            // Validate date
+            if (!dateInput.value) {
+                isValid = false;
+                errorMessage += 'Please select a date.\n';
+                dateInput.parentElement.appendChild(createErrorElement('Please select a date'));
+            }
+
+            if (!isValid) {
+                e.preventDefault();
+                formContainer.style.height = 'auto';
+                formContainer.style.minHeight = ${originalHeight}px;
+            }
+        });
+
+        // Helper function to create error element
+        function createErrorElement(message) {
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'field-error';
+            errorDiv.textContent = message;
+            return errorDiv;
+        }
+
+        // Handle successful submission
+        if (document.querySelector('.message.success')) {
+            form.reset();
+            updateDateRestrictions();
+            formContainer.style.height = ${originalHeight}px;
+        }
+
+        // Add form-control class to all form inputs
+        const formInputs = document.querySelectorAll('input, select');
+        formInputs.forEach(input => {
+            if (!input.classList.contains('form-control')) {
+                input.classList.add('form-control');
+            }
+        });
+    });
+</script>
+{% endblock %}

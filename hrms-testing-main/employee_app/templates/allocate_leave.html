@@ -1,0 +1,295 @@
+
+{% extends 'partials/base.html' %}
+<!--<!DOCTYPE html>-->
+<!--<html lang="en">-->
+<!--<head>-->
+<!--    <meta charset="UTF-8">-->
+<!--    <meta name="viewport" content="width=device-width, initial-scale=1.0">-->
+<!--    <title>Allocate Leave</title>-->
+<!--</head>-->
+<!--<body>-->
+
+<!--    <h2>Allocate Leave for {{ employee.emp_fname }} {{ employee.emp_lname }}</h2>-->
+
+<!--    <form method="POST">-->
+<!--        {% csrf_token %}-->
+
+<!--        <label for="start_date">Start Date:</label>-->
+<!--        <input type="date" id="start_date" name="start_date" required>-->
+
+<!--        <label for="end_date">End Date:</label>-->
+<!--        <input type="date" id="end_date" name="end_date" required>-->
+
+<!--        <label for="reason">Reason:</label>-->
+<!--        <textarea id="reason" name="reason" required></textarea> &lt;!&ndash; Added the reason field &ndash;&gt;-->
+
+<!--        <button type="submit">Allocate Leave</button>-->
+<!--    </form>-->
+
+<!--    {% if messages %}-->
+<!--        <ul>-->
+<!--            {% for message in messages %}-->
+<!--                <li>{{ message }}</li>-->
+<!--            {% endfor %}-->
+<!--        </ul>-->
+<!--    {% endif %}-->
+
+<!--    <a href="{% url 'view_subordinates' %}">Back to Subordinates</a>-->
+
+<!--</body>-->
+<!--</html>-->
+
+
+
+
+{% block styles %}
+    <style>
+        .allocate-leave-content {
+            position: fixed;
+            top: 72px;
+            left: 250px;
+            right: 0;
+            bottom: 0;
+            overflow-y: auto;
+            background-color: #f4f4f9;
+            padding: 40px 20px;
+            z-index: 1;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+        }
+
+        .form-container {
+            width: 70%;
+            max-width: 500px;
+            background-color: #ffffff;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            margin: 0 auto;
+            position: relative;
+            left: -60px;
+        }
+
+        .page-header {
+            margin-bottom: 20px;
+            padding-bottom: 12px;
+            border-bottom: 2px solid #e6e6e6;
+            text-align: center;
+        }
+
+        .page-title {
+            color: #2c3e50;
+            font-size: 1.4rem;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .employee-name {
+            color: #64748b;
+            font-size: 0.9rem;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 6px;
+            color: #2c3e50;
+            font-weight: 500;
+            font-size: 14px;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 8px 10px;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: border-color 0.2s ease;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+        }
+
+        textarea.form-input {
+            min-height: 100px;
+            resize: vertical;
+        }
+
+        .date-inputs {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .button-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-top: 20px;
+        }
+
+        .submit-button {
+            background-color: #3b82f6;
+            color: white;
+            padding: 8px 20px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            width: auto;
+            min-width: 120px;
+            text-align: center;
+        }
+
+        .submit-button:hover {
+            background-color: #2563eb;
+            transform: translateY(-1px);
+        }
+
+        .back-link {
+            display: block;
+            text-align: center;
+            margin-top: 15px;
+            color: #64748b;
+            text-decoration: none;
+            font-size: 14px;
+            transition: color 0.2s ease;
+        }
+
+        .back-link:hover {
+            color: #3b82f6;
+        }
+
+        .messages {
+            margin-bottom: 15px;
+        }
+
+        .message {
+            padding: 10px;
+            border-radius: 6px;
+            margin-bottom: 8px;
+            font-size: 14px;
+            text-align: center;
+        }
+
+        .message-success {
+            background-color: #d1fae5;
+            color: #065f46;
+            border: 1px solid #a7f3d0;
+        }
+
+        .message-error {
+            background-color: #fee2e2;
+            color: #991b1b;
+            border: 1px solid #fecaca;
+        }
+
+        /* Responsive styles */
+        @media (max-width: 1200px) {
+            .form-container {
+                width: 75%;
+                left: -40px;
+            }
+        }
+
+        @media (max-width: 1024px) {
+            .allocate-leave-content {
+                left: 200px;
+            }
+            .form-container {
+                width: 80%;
+                left: -30px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .allocate-leave-content {
+                left: 0;
+                padding: 30px 15px;
+            }
+            .form-container {
+                width: 90%;
+                left: 0;
+                margin: 0 auto;
+            }
+            .date-inputs {
+                grid-template-columns: 1fr;
+            }
+            .submit-button {
+                width: 100%;
+                max-width: 200px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .allocate-leave-content {
+                padding: 20px 10px;
+            }
+            .form-container {
+                padding: 15px;
+            }
+            .page-title {
+                font-size: 1.2rem;
+            }
+        }
+    </style>
+{% endblock %}
+
+{% block content %}
+    <div class="allocate-leave-content">
+        <div class="form-container">
+            <div class="page-header">
+                <h1 class="page-title">Allocate Leave</h1>
+                <div class="employee-name">for {{ employee.emp_fname }} {{ employee.emp_lname }}</div>
+            </div>
+
+            {% if messages %}
+                <div class="messages">
+                    {% for message in messages %}
+                        <div class="message {% if message.tags %}message-{{ message.tags }}{% endif %}">
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+
+            <form method="POST">
+                {% csrf_token %}
+
+                <div class="date-inputs">
+                    <div class="form-group">
+                        <label class="form-label" for="start_date">Start Date</label>
+                        <input type="date" id="start_date" name="start_date"
+                               class="form-input" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="end_date">End Date</label>
+                        <input type="date" id="end_date" name="end_date"
+                               class="form-input" required>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="reason">Reason</label>
+                    <textarea id="reason" name="reason" class="form-input"
+                              placeholder="Enter leave reason" required></textarea>
+                </div>
+
+                <div class="button-container">
+                    <button type="submit" class="submit-button">Allocate Leave</button>
+                    <a href="{% url 'view_subordinates' %}" class="back-link">Back to Subordinates</a>
+                </div>
+            </form>
+        </div>
+    </div>
+{% endblock %}

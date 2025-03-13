@@ -1,0 +1,376 @@
+
+
+{% extends 'partials/base.html' %}
+
+<!--<!DOCTYPE html>-->
+<!--<html lang="en">-->
+<!--<head>-->
+<!--    <meta charset="UTF-8">-->
+<!--    <meta name="viewport" content="width=device-width, initial-scale=1.0">-->
+<!--    <title>My Leave History</title>-->
+<!--    <style>-->
+<!--        body {-->
+<!--            font-family: Arial, sans-serif;-->
+<!--            background-color: #f4f4f9;-->
+<!--            color: #333;-->
+<!--        }-->
+
+<!--        h1 {-->
+<!--            text-align: center;-->
+<!--            margin-top: 20px;-->
+<!--        }-->
+
+<!--        table {-->
+<!--            width: 90%;-->
+<!--            margin: 20px auto;-->
+<!--            border-collapse: collapse;-->
+<!--        }-->
+
+<!--        th, td {-->
+<!--            padding: 10px;-->
+<!--            text-align: center;-->
+<!--            border: 1px solid #ccc;-->
+<!--        }-->
+
+<!--        th {-->
+<!--            background-color: #004080;-->
+<!--            color: #fff;-->
+<!--        }-->
+
+<!--        tr:nth-child(even) {-->
+<!--            background-color: #f2f2f2;-->
+<!--        }-->
+
+<!--        .status {-->
+<!--            font-weight: bold;-->
+<!--        }-->
+
+<!--        .pending {-->
+<!--            color: #ffa500; /* Orange for pending */-->
+<!--        }-->
+
+<!--        .accepted {-->
+<!--            color: #28a745; /* Green for accepted */-->
+<!--        }-->
+
+<!--        .rejected {-->
+<!--            color: #dc3545; /* Red for rejected */-->
+<!--        }-->
+<!--    </style>-->
+<!--</head>-->
+<!--<body>-->
+<!--    <h1>My Leave History</h1>-->
+<!--    <table>-->
+<!--        <thead>-->
+<!--            <tr>-->
+<!--                <th>Leave Type</th>-->
+<!--                <th>Start Date</th>-->
+<!--                <th>End Date</th>-->
+<!--                <th>Description</th>-->
+<!--                <th>Status</th>-->
+<!--            </tr>-->
+<!--        </thead>-->
+<!--        <tbody>-->
+<!--            {% for leave in leave_requests %}-->
+<!--            <tr>-->
+<!--                <td>{{leave.leave_type}}</td>-->
+<!--                <td>{{ leave.start_date }}</td>-->
+<!--                <td>{{ leave.end_date }}</td>-->
+<!--                <td>{{ leave.reason }}</td>-->
+<!--                <td class="status {% if leave.status == 'Pending' %}pending{% elif leave.status == 'Accepted' %}accepted{% elif leave.status == 'Rejected' %}rejected{% endif %}">-->
+<!--                    {{ leave.status }}-->
+<!--                </td>-->
+<!--            </tr>-->
+<!--            {% empty %}-->
+<!--            <tr>-->
+<!--                <td colspan="4">No leave requests found.</td>-->
+<!--            </tr>-->
+<!--            {% endfor %}-->
+<!--        </tbody>-->
+<!--    </table>-->
+<!--</body>-->
+<!--</html>-->
+
+
+
+
+
+
+
+{% block styles %}
+    <style>
+        .leave-history-content {
+            position: fixed;
+            top: 72px;
+            left: 250px;
+            right: 0;
+            bottom: 0;
+            overflow-y: auto;
+            background-color: #f4f4f9;
+            padding: 40px 20px;
+            z-index: 1;
+            display: flex;
+            justify-content: center;
+        }
+
+        .content-wrapper {
+            background-color: #ffffff;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            padding: 25px;
+            width: 95%;
+            max-width: 1400px;
+            margin: 0 auto;
+            position: relative;
+            left: -60px;
+            height: calc(100vh - 160px);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .page-header {
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #e6e6e6;
+        }
+
+        .page-title {
+            color: #2c3e50;
+            font-size: 1.5rem;
+            font-weight: 600;
+            text-align: center;
+            margin: 0;
+        }
+
+        .table-container {
+            flex: 1;
+            overflow: auto;
+            margin-top: 20px;
+            border-radius: 4px;
+        }
+
+        /* Scrollbar styling */
+        .table-container::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+
+        .table-container::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+        }
+
+        .table-container::-webkit-scrollbar-thumb {
+            background: #c1c1c1;
+            border-radius: 4px;
+        }
+
+        .table-container::-webkit-scrollbar-thumb:hover {
+            background: #a8a8a8;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            background-color: #ffffff;
+        }
+
+        thead {
+            position: sticky;
+            top: 0;
+            z-index: 2;
+        }
+
+        th {
+            color: white;
+            padding: 12px 15px;
+            font-weight: 500;
+            background-color: #3b82f6;
+            text-align: center;
+            font-size: 14px;
+            white-space: nowrap;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #eef2f6;
+            color: #2c3e50;
+            text-align: center;
+            font-size: 14px;
+            white-space: nowrap;
+        }
+
+        /* Column widths */
+        th:nth-child(1), td:nth-child(1) { width: 13%; } /* Start Date */
+        th:nth-child(2), td:nth-child(2) { width: 13%; } /* End Date */
+        th:nth-child(3), td:nth-child(3) { width: 12%; } /* Leave Type */
+        th:nth-child(4), td:nth-child(4) { width: 15%; } /* Description */
+        th:nth-child(5), td:nth-child(5) { width: 10%; } /* Status */
+        th:nth-child(6), td:nth-child(6) { width: 8%; }  /* Leave Days */
+        th:nth-child(7), td:nth-child(7) { width: 15%; } /* Approved/Rejected By */
+
+        tbody tr:nth-child(even) {
+            background-color: #f8f9fa;
+        }
+
+        tbody tr:hover {
+            background-color: #f8f9ff;
+        }
+
+        .status {
+            font-weight: 500;
+            padding: 6px 10px;
+            border-radius: 4px;
+            display: inline-block;
+            text-align: center;
+            width: fit-content;
+            margin: 0 auto;
+            font-size: 14px;
+            white-space: nowrap;
+        }
+
+        .pending {
+            color: #f59e0b;
+            background-color: #fef3c7;
+        }
+
+        .accepted,
+        .approved {
+            color: #10b981;
+            background-color: #d1fae5;
+        }
+
+        .rejected {
+            color: #ef4444;
+            background-color: #fee2e2;
+        }
+
+        .no-data {
+            text-align: center;
+            padding: 20px;
+            color: #64748b;
+            font-style: italic;
+        }
+
+        /* Responsive styles */
+        @media (max-width: 1200px) {
+            .content-wrapper {
+                width: 90%;
+                left: -40px;
+            }
+            table {
+                min-width: 1000px;
+            }
+        }
+
+        @media (max-width: 1024px) {
+            .leave-history-content {
+                left: 200px;
+            }
+            .content-wrapper {
+                width: 95%;
+                left: -30px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .leave-history-content {
+                left: 0;
+                padding: 30px 15px;
+            }
+            .content-wrapper {
+                width: 100%;
+                left: 0;
+                padding: 15px;
+            }
+            .table-container {
+                margin-top: 15px;
+            }
+            th, td {
+                padding: 10px 12px;
+                font-size: 14px;
+            }
+            .status {
+                padding: 4px 8px;
+                font-size: 14px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .leave-history-content {
+                padding: 20px 10px;
+            }
+            .content-wrapper {
+                padding: 10px;
+            }
+            .page-title {
+                font-size: 1.3rem;
+            }
+        }
+    </style>
+{% endblock %}
+
+{% block content %}
+    <div class="leave-history-content">
+        <div class="content-wrapper">
+            <div class="page-header">
+                <h1 class="page-title">My Leave History</h1>
+            </div>
+
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Start Date</th>
+                            <th>End Date</th>
+                            <th>Leave Type</th>
+                            <th>Description</th>
+                            <th>Status</th>
+                            <th>Leave Days</th>
+                            <th>Approved/Rejected By</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for leave in leave_requests %}
+                        <tr>
+                            <td>{{ leave.start_date }}</td>
+                            <td>{{ leave.end_date }}</td>
+                            <td>{{ leave.leave_type }}</td>
+                            <td>{{ leave.reason }}</td>
+                            <td>
+                                <span class="status {% if leave.status == 'Pending' %}pending{% elif leave.status == 'Accepted' or leave.status == 'Approved' %}accepted{% elif leave.status == 'Rejected' %}rejected{% endif %}">
+                                    {{ leave.status }}
+                                </span>
+                            </td>
+                            <td>{{ leave.leave_days }}</td>
+                            <td>
+                                {% if leave.status != 'Pending' %}
+                                    {% if leave.approved_by %}
+                                        {% if leave.approved_by.is_superuser %}
+                                            Admin
+                                        {% else %}
+                                            {{ leave.employee_master.employee_manager.emp_fname }}
+                                            {{ leave.employee_master.employee_manager.emp_lname }}
+                                            ({{ leave.employee_master.employee_manager.emp_id }})
+                                        {% endif %}
+                                    {% else %}
+                                        N/A
+                                    {% endif %}
+                                {% else %}
+                                    &nbsp;
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="7" class="no-data">No leave requests found.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+{% endblock %}

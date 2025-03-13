@@ -1,0 +1,228 @@
+
+{% extends 'partials/base.html' %}
+<!--main template-->
+
+<!--<h1>Manage Leave Request</h1>-->
+<!--<p>Employee: {{ leave_request.employee_master.emp_fname }} {{ leave_request.employee_master.emp_lname }}</p>-->
+<!--<p>Leave Type: {{ leave_request.leave_type }}</p>-->
+<!--<p>Dates: {{ leave_request.start_date }} to {{ leave_request.end_date }}</p>-->
+<!--<p>Status: {{ leave_request.status }}</p>-->
+<!--<form method="post">-->
+<!--    {% csrf_token %}-->
+<!--    <button type="submit" name="action" value="accept">Accept</button>-->
+<!--    <button type="submit" name="action" value="reject">Reject</button>-->
+<!--</form>-->
+
+
+
+<!--designed template-->
+
+
+
+
+{% block styles %}
+    <style>
+        .manage-leave-content {
+            position: fixed;
+            top: 72px;
+            left: 250px;
+            right: 0;
+            bottom: 0;
+            overflow-y: auto;
+            background-color: #f4f4f9;
+            padding: 40px 20px;
+            z-index: 1;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+        }
+
+        .leave-details-card {
+            background-color: #ffffff;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            width: 70%; /* Reduced from 95% */
+            max-width: 600px; /* Reduced from 800px */
+            margin: 0 auto;
+            padding: 20px; /* Reduced from 25px */
+            position: relative;
+            left: -60px;
+        }
+
+        .leave-details-card h1 {
+            text-align: center;
+            color: #2c3e50;
+            font-size: 1.4rem; /* Slightly reduced */
+            font-weight: 600;
+            margin-bottom: 20px; /* Reduced from 25px */
+            padding-bottom: 12px; /* Reduced from 15px */
+            border-bottom: 2px solid #f1f5f9;
+        }
+
+        .details-row {
+            display: flex;
+            margin: 10px 0; /* Reduced from 15px */
+            align-items: center;
+            padding: 8px 12px; /* Reduced from 12px 15px */
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .details-row:last-child {
+            border-bottom: none;
+        }
+
+        .detail-label {
+            color: #3b82f6;
+            font-weight: 500;
+            width: 100px; /* Reduced from 120px */
+            margin-right: 12px; /* Reduced from 15px */
+            font-size: 14px;
+        }
+
+        .detail-value {
+            color: #2c3e50;
+            font-size: 14px;
+        }
+
+        .action-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 12px; /* Reduced from 15px */
+            margin-top: 20px; /* Reduced from 30px */
+            padding-top: 15px; /* Reduced from 20px */
+            border-top: 2px solid #f1f5f9;
+        }
+
+        .btn {
+            padding: 8px 20px; /* Reduced from 10px 25px */
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.2s;
+            font-size: 14px;
+            min-width: 100px; /* Reduced from 120px */
+        }
+
+        .btn-accept {
+            background-color: #3b82f6;
+            color: white;
+        }
+
+        .btn-reject {
+            background-color: #ef4444;
+            color: white;
+        }
+
+        .btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .btn-accept:hover {
+            background-color: #2563eb;
+        }
+
+        .btn-reject:hover {
+            background-color: #dc2626;
+        }
+
+        /* Responsive styles */
+        @media (max-width: 1200px) {
+            .leave-details-card {
+                width: 75%;
+                left: -40px;
+            }
+        }
+
+        @media (max-width: 1024px) {
+            .manage-leave-content {
+                left: 200px;
+            }
+            .leave-details-card {
+                width: 80%;
+                left: -30px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .manage-leave-content {
+                left: 0;
+                padding: 30px 15px;
+            }
+            .leave-details-card {
+                width: 90%;
+                left: 0;
+                padding: 15px;
+            }
+            .details-row {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 6px;
+            }
+            .detail-label {
+                width: 100%;
+                margin-bottom: 2px;
+            }
+            .action-buttons {
+                flex-direction: column;
+                gap: 8px;
+            }
+            .btn {
+                width: 100%;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .manage-leave-content {
+                padding: 20px 10px;
+            }
+            .leave-details-card {
+                width: 95%;
+                padding: 12px;
+            }
+            h1 {
+                font-size: 1.2rem;
+            }
+        }
+    </style>
+{% endblock %}
+
+{% block content %}
+    <div class="manage-leave-content">
+        <div class="leave-details-card">
+            <h1>Manage Leave Request</h1>
+
+            <div class="details-row">
+                <span class="detail-label">Employee</span>
+                <span class="detail-value">{{ leave_request.employee_master.emp_fname }} {{ leave_request.employee_master.emp_lname }}</span>
+            </div>
+
+            <div class="details-row">
+                <span class="detail-label">Leave Type</span>
+                <span class="detail-value">{{ leave_request.leave_type }}</span>
+            </div>
+
+            <div class="details-row">
+                <span class="detail-label">Start Date</span>
+                <span class="detail-value">{{ leave_request.start_date }}</span>
+            </div>
+
+            <div class="details-row">
+                <span class="detail-label">End Date</span>
+                <span class="detail-value">{{ leave_request.end_date }}</span>
+            </div>
+
+            <div class="details-row">
+                <span class="detail-label">Status</span>
+                <span class="detail-value">{{ leave_request.status }}</span>
+            </div>
+
+            <form method="post" class="action-buttons">
+                {% csrf_token %}
+                <button type="submit" name="action" value="accept" class="btn btn-accept">Accept</button>
+                <button type="submit" name="action" value="reject" class="btn btn-reject">Reject</button>
+            </form>
+        </div>
+    </div>
+{% endblock %}

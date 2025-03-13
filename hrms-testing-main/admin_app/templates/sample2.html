@@ -1,0 +1,386 @@
+{% extends 'admin_partials/admin_base.html' %}
+
+{% block styles %}
+<style>
+    .container {
+        padding: 15px;
+        margin-top: 72px;
+        margin-left: 250px;
+    }
+
+    .form-card {
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        padding: 20px;
+        max-width: 1000px;
+        margin: 0 auto;
+    }
+
+    .card-header {
+        text-align: center;
+        margin-bottom: 20px;
+        padding-bottom: 15px;
+        border-bottom: 1px solid #eee;
+    }
+
+    .card-title {
+        font-size: 1.25rem;
+        color: #333;
+        margin: 0;
+    }
+
+    .form-section {
+        margin-bottom: 20px;
+        padding: 15px;
+        background: #f8f9fa;
+        border-radius: 6px;
+    }
+
+    .section-title {
+        font-size: 1rem;
+        color: #0d6efd;
+        margin-bottom: 15px;
+        font-weight: 500;
+    }
+
+    .form-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 15px;
+    }
+
+    .form-group {
+        margin-bottom: 10px;
+    }
+
+    .form-label {
+        display: block;
+        font-size: 0.875rem;
+        margin-bottom: 5px;
+        color: #444;
+    }
+
+    .form-label.required::after {
+        content: '*';
+        color: #dc3545;
+        margin-left: 4px;
+    }
+
+    .form-control {
+        width: 100%;
+        padding: 8px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-size: 0.875rem;
+    }
+
+    .form-control:focus {
+        border-color: #0d6efd;
+        box-shadow: 0 0 0 2px rgba(13, 110, 253, 0.25);
+        outline: none;
+    }
+
+    textarea.form-control {
+        min-height: 80px;
+        resize: vertical;
+    }
+
+    .submit-btn {
+        background: #0d6efd;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 4px;
+        width: 100%;
+        max-width: 200px;
+        margin: 20px auto 0;
+        display: block;
+        font-size: 1rem;
+        cursor: pointer;
+        transition: background 0.3s;
+    }
+
+    .submit-btn:hover {
+        background: #0b5ed7;
+    }
+
+    @media (max-width: 768px) {
+        .container {
+            margin-left: 0;
+            padding: 10px;
+        }
+        
+        .form-card {
+            padding: 15px;
+        }
+        
+        .form-section {
+            padding: 10px;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="form-card">
+        <div class="card-header">
+            <h2 class="card-title">Add Employee</h2>
+        </div>
+
+        <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+
+            <!-- Basic Information -->
+            <div class="form-section">
+                <h3 class="section-title">Basic Information</h3>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label class="form-label required">Employee ID</label>
+                        <input type="text" name="empid" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label required">Salutation</label>
+                        <select name="sal" class="form-control" required>
+                            <option value="">Select</option>
+                            {% for sal in salutations %}
+                                <option value="{{ sal.id }}">{{ sal.sal_name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label required">First Name</label>
+                        <input type="text" name="fname" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Middle Name</label>
+                        <input type="text" name="mname" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label required">Last Name</label>
+                        <input type="text" name="lname" class="form-control" required>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Validity Period -->
+            <div class="form-section">
+                <h3 class="section-title">Validity Period</h3>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label class="form-label required">Valid From</label>
+                        <input type="date" name="empvalidfrom" class="form-control" value="{{ default_valid_from|date:'Y-m-d' }}" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label required">Valid To</label>
+                        <input type="date" name="empvalidto" class="form-control" value="{{ default_valid_to|date:'Y-m-d' }}" required>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Contact Information -->
+            <div class="form-section">
+                <h3 class="section-title">Contact Information</h3>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label class="form-label required">Company Email</label>
+                        <input type="email" name="empcemail" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label required">Personal Email</label>
+                        <input type="email" name="emppemail" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label required">Personal Phone</label>
+                        <input type="tel" name="empphone" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label required">Office Phone</label>
+                        <input type="tel" name="empophone" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label required">Home Phone</label>
+                        <input type="tel" name="emphphone" class="form-control" required>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Address Information -->
+            <div class="form-section">
+                <h3 class="section-title">Address Details</h3>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label class="form-label required">Country</label>
+                        <select name="country" id="country" class="form-control" required>
+                            <option value="">Select Country</option>
+                            {% for country in countries %}
+                                <option value="{{ country.id }}">{{ country.country_name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label required">State</label>
+                        <select name="state" id="state" class="form-control" required>
+                            <option value="">Select State</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label required">City</label>
+                        <input type="text" name="city" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label required">Street</label>
+                        <input type="text" name="street" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label required">Pincode</label>
+                        <input type="text" name="pincode" class="form-control" required>
+                    </div>
+                </div>
+<!--                <div class="form-group mt-3">-->
+<!--                    <label class="form-label required">Complete Address</label>-->
+<!--                    <textarea name="empaddr" class="form-control" required></textarea>-->
+<!--                </div>-->
+            </div>
+
+            <!-- Employment Details -->
+            <div class="form-section">
+                <h3 class="section-title">Employment Details</h3>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label class="form-label required">Role</label>
+                        <select name="role" class="form-control" required>
+                            <option value="">Select Role</option>
+                            {% for role in roles %}
+                                <option value="{{ role.id }}">{{ role.role_name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label required">Department</label>
+                        <select name="dep" class="form-control" required>
+                            <option value="">Select Department</option>
+                            {% for department in departments %}
+                                <option value="{{ department.id }}">{{ department.dep_name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label required">Designation</label>
+                        <input type="text" name="desig" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label required">Employee Status</label>
+                        <select name="employee_status" class="form-control" required>
+                            <option value="">Choose Status</option>
+                            <option value="employed">Employed</option>
+                            <option value="resigned">Resigned</option>
+                            <option value="maternal_leave">Maternal Leave</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label required">Manager</label>
+                        <select name="manager" class="form-control" required>
+                            <option value="">Select Manager</option>
+                            {% for employee in employees %}
+                                <option value="{{ employee.emp_id }}">{{ employee.emp_fname }} {{ employee.emp_lname }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label required">Salary</label>
+                        <input type="number" step="0.001" name="empsalary" class="form-control" required>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Documents -->
+            <div class="form-section">
+                <h3 class="section-title">Documents</h3>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label class="form-label required">Resume</label>
+                        <input type="file" name="resume" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label required">Other Certification</label>
+                        <input type="file" name="certif" class="form-control" required>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Emergency Contact -->
+            <div class="form-section">
+                <h3 class="section-title">Emergency Contact</h3>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label class="form-label required">Contact Person Name</label>
+                        <input type="text" name="empcpname" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label required">Contact Person Phone</label>
+                        <input type="tel" name="empcpph" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label required">Contact Person Email</label>
+                        <input type="email" name="empcpemail" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label required">Relationship</label>
+                        <select name="empcprelation" class="form-control" required>
+                            <option value="">Choose Relation</option>
+                            <option value="Mother">Mother</option>
+                            <option value="Father">Father</option>
+                            <option value="Brother">Brother</option>
+                            <option value="Sister">Sister</option>
+                            <option value="Husband">Husband</option>
+                            <option value="Wife">Wife</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <button type="submit" class="submit-btn">Add Employee</button>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+    $(document).ready(function () {
+        $('#country').change(function () {
+            var countryId = $(this).val();
+            if (countryId) {
+                $.ajax({
+                    url: "{% url 'get_states' %}",
+                    data: {
+                        'country_id': countryId
+                    },
+                    beforeSend: function() {
+                        $('#state').prop('disabled', true);
+                    },
+                    success: function (data) {
+                        var stateDropdown = $('#state');
+                        stateDropdown.empty();
+                        stateDropdown.append('<option value="">Select State</option>');
+                        $.each(data, function (key, state) {
+                            stateDropdown.append('<option value="' + state.id + '">' + state.name + '</option>');
+                        });
+                    },
+                    error: function () {
+                        alert('Error fetching states.');
+                    },
+                    complete: function() {
+                        $('#state').prop('disabled', false);
+                    }
+                });
+            } else {
+                $('#state').empty().append('<option value="">Select State</option>');
+            }
+        });
+    });
+</script>
+{% endblock %}

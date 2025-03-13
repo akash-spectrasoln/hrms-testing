@@ -1,0 +1,236 @@
+<!--<!DOCTYPE html>-->
+<!--<html lang="en">-->
+<!--<head>-->
+<!--    <meta charset="UTF-8">-->
+<!--    <title>Title</title>-->
+<!--</head>-->
+<!--<body>-->
+<!--<!DOCTYPE html>-->
+<!--<html lang="en">-->
+<!--<head>-->
+<!--  <meta charset="UTF-8">-->
+<!--  <meta name="viewport" content="width=device-width, initial-scale=1.0">-->
+<!--  <title>Navbar with Add Employees Button</title>-->
+<!--  {% load static %}-->
+<!--  <link rel="stylesheet" href="{% static 'index.css' %}">-->
+<!--</head>-->
+<!--<body>-->
+<!--  <nav class="navbar">-->
+<!--    <div class="logo">-->
+<!--      <h1>Company Logo</h1>-->
+<!--    </div>-->
+<!--    <ul class="nav-links">-->
+<!--      <li><a href="#">Home</a></li>-->
+<!--      <li><a href="#">About</a></li>-->
+<!--      <li><a href="#">Services</a></li>-->
+<!--      <li><a href="#">Contact</a></li>-->
+<!--    </ul>-->
+
+<!--   <a href="{% url 'add_employee' %}"><button class="add-btn">Add Employees</button></a>-->
+<!--  </nav>-->
+<!--</body>-->
+<!--</html>-->
+
+<!--</body>-->
+<!--</html>-->
+
+
+
+<!--<!DOCTYPE html>-->
+<!--<html lang="en">-->
+<!--<head>-->
+<!--    <meta charset="UTF-8">-->
+<!--    <meta name="viewport" content="width=device-width, initial-scale=1.0">-->
+<!--    <title>Basic Navbar</title>-->
+<!--    <style>-->
+<!--        body {-->
+<!--            margin: 0;-->
+<!--            font-family: Arial, sans-serif;-->
+<!--        }-->
+<!--        .navbar {-->
+<!--            display: flex;-->
+<!--            justify-content: space-between;-->
+<!--            align-items: center;-->
+<!--            background-color: #333;-->
+<!--            padding: 0.5rem 1rem;-->
+<!--            color: white;-->
+<!--        }-->
+<!--        .navbar .brand {-->
+<!--            font-size: 1.5rem;-->
+<!--            font-weight: bold;-->
+<!--        }-->
+<!--        .navbar .links {-->
+<!--            display: flex;-->
+<!--            gap: 1rem;-->
+<!--        }-->
+<!--        .navbar a {-->
+<!--            color: white;-->
+<!--            text-decoration: none;-->
+<!--            padding: 0.5rem 1rem;-->
+<!--            transition: background-color 0.3s;-->
+<!--        }-->
+<!--        .navbar a:hover {-->
+<!--            background-color: #575757;-->
+<!--            border-radius: 5px;-->
+<!--        }-->
+<!--    </style>-->
+<!--</head>-->
+<!--<body>-->
+<!--    <nav class="navbar">-->
+<!--        <div class="brand"></div>-->
+<!--        <div class="links">-->
+<!--            <a href="#">Home</a>-->
+<!--            <a href="#">About</a>-->
+<!--            <a href="#">Contact</a>-->
+<!--            <a href="{% url 'add_employee' %}">Add Employees</a>-->
+<!--        </div>-->
+<!--    </nav>-->
+<!--</body>-->
+<!--</html>-->
+
+
+
+<!--13-1-25-->
+
+
+
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+/* Reset default styles */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+/* Navbar container */
+.navbar {
+    background-color: white;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    padding: 0 2rem;
+    height: 64px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+/* Portal name styling */
+.portal-name {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #1a1a1a;
+}
+
+/* Profile dropdown container */
+.dropdown {
+    position: relative;
+    display: inline-block;
+}
+
+/* Profile icon button */
+.profile-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 50%;
+    transition: background-color 0.3s;
+}
+
+.profile-btn:hover {
+    background-color: #f3f4f6;
+}
+
+/* Profile icon */
+.profile-icon {
+    width: 24px;
+    height: 24px;
+    background-color: #666;
+    border-radius: 50%;
+    position: relative;
+}
+
+.profile-icon::before {
+    content: '';
+    position: absolute;
+    top: 6px;
+    left: 7px;
+    width: 10px;
+    height: 10px;
+    background-color: white;
+    border-radius: 50%;
+}
+
+.profile-icon::after {
+    content: '';
+    position: absolute;
+    top: 18px;
+    left: 4px;
+    width: 16px;
+    height: 16px;
+    background-color: white;
+    border-radius: 50%;
+    clip-path: polygon(0 0, 100% 0, 100% 50%, 0 50%);
+}
+
+/* Dropdown content */
+.dropdown-content {
+    display: none;
+    position: absolute;
+    right: 0;
+    background-color: white;
+    min-width: 200px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    border-radius: 4px;
+    z-index: 1;
+}
+
+/* Show dropdown when hovering over the container */
+.dropdown:hover .dropdown-content {
+    display: block;
+}
+
+/* Dropdown items */
+.dropdown-item {
+    padding: 12px 16px;
+    text-decoration: none;
+    display: block;
+    color: #333;
+    transition: background-color 0.2s;
+}
+
+.dropdown-item:hover {
+    background-color: #f3f4f6;
+}
+
+/* Icons for dropdown items */
+.dropdown-item i {
+    margin-right: 8px;
+    font-size: 14px;
+}
+</style>
+</head>
+<body>
+
+<nav class="navbar">
+    <div class="portal-name">Admin Portal</div>
+
+    <div class="dropdown">
+        <button class="profile-btn">
+            <div class="profile-icon"></div>
+        </button>
+        <div class="dropdown-content">
+            <a href="#" class="dropdown-item">
+                <i>👥</i><b>Add Employees</b>
+            </a>
+            <a href="#" class="dropdown-item">
+                <i>👥</i> <b>Download Employees</b>
+            </a>
+        </div>
+    </div>
+</nav>
+
+</body>
+</html>
