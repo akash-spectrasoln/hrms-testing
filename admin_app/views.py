@@ -84,7 +84,7 @@ def add_employee(request):
             return HttpResponse("Salutation does not exist", status=400)
 
         try:
-            role = Role.objects.get(id=role_id)
+            role = Role.objects.get(role_id=role_id)
         except Role.DoesNotExist:
             return HttpResponse("Role does not exist", status=400)
 
@@ -94,7 +94,7 @@ def add_employee(request):
             return HttpResponse("Department does not exist", status=400)
 
         try:
-            State = State.objects.get(id=state_id)
+            State = state.objects.get(id=state_id)
         except State.DoesNotExist:
             return HttpResponse("State does not exist", status=400)
 

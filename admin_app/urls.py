@@ -2,7 +2,7 @@ from django.urls import path
 
 from django.contrib.auth import views as auth_views
 # from admin_app.views import load_states  # Ensure correct function import
-from admin_app.views import *
+from .views import *
 urlpatterns=[
 path('adminbase/',mainbase_view,name='adminbase'),
 path('admin_index/',admin_index,name='admin_index'),
