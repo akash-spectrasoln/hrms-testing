@@ -1,0 +1,1139 @@
+{% extends 'admin_partials/admin_base.html' %}
+
+{% block styles %}
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+<style>
+    /* Root Variables */
+  :root {
+      --primary-50: #eff6ff;
+      --primary-100: #dbeafe;
+      --primary-500: #3b82f6;
+      --primary-600: #2563eb;
+      --primary-700: #1d4ed8;
+      --success-50: #f0fdf4;
+      --success-500: #22c55e;
+      --success-600: #16a34a;
+      --neutral-50: #f9fafb;
+      --neutral-100: #f3f4f6;
+      --neutral-200: #e5e7eb;
+      --neutral-300: #d1d5db;
+      --neutral-600: #4b5563;
+      --neutral-700: #374151;
+      --neutral-800: #1f2937;
+      --error-50: #fef2f2;
+      --error-500: #ef4444;
+  }
+
+  /* Base Styles */
+  body {
+      font-family: 'Inter', sans-serif;
+      background-color: var(--neutral-50);
+      color: var(--neutral-800);
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Container and Layout */
+  .container {
+      padding: 20px;
+      margin: 80px auto;
+      max-width: 1200px;
+      width: 100%;
+      overflow-x: hidden;
+      min-height: calc(100vh - 160px);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+  }
+
+  .main-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 40px 0;
+  }
+
+  /* Form Card */
+  .form-card {
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+      padding: 25px;
+      max-width: 1000px;
+      margin: auto;
+      width: 100%;
+  }
+
+  /* Card Header */
+  .card-header {
+      background: linear-gradient(135deg, var(--primary-600), var(--primary-700));
+      margin: -25px -25px 20px -25px;
+      padding: 20px;
+      border-radius: 16px 16px 0 0;
+      text-align: center;
+      color: white;
+  }
+
+  .card-title {
+      font-size: 1.5rem;
+      margin: 0;
+      font-weight: 600;
+  }
+
+  /* Progress Steps */
+  .form-progress {
+      display: flex;
+      justify-content: space-between;
+      padding: 20px 40px;
+      background: var(--neutral-50);
+      margin: -10px -25px 20px -25px;
+      border-bottom: 1px solid var(--neutral-200);
+      gap: 30px;
+      overflow-x: auto;
+      scrollbar-width: thin;
+      scrollbar-color: var(--primary-500) var(--neutral-100);
+  }
+
+  .form-progress::-webkit-scrollbar {
+      height: 6px;
+  }
+
+  .form-progress::-webkit-scrollbar-track {
+      background: var(--neutral-100);
+      border-radius: 3px;
+  }
+
+  .form-progress::-webkit-scrollbar-thumb {
+      background-color: var(--primary-500);
+      border-radius: 3px;
+  }
+
+  .progress-step {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      position: relative;
+      flex: 0 0 auto;
+      min-width: max-content;
+      cursor: pointer;
+  }
+
+  .step-number {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: white;
+      border: 2px solid var(--neutral-300);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+      color: var(--neutral-600);
+      transition: all 0.3s ease;
+      flex-shrink: 0;
+  }
+
+  .progress-step.active .step-number {
+      background: var(--primary-600);
+      border-color: var(--primary-600);
+      color: white;
+  }
+
+  .progress-step.completed .step-number {
+      background: var(--success-500);
+      border-color: var(--success-500);
+      color: white;
+  }
+
+  .progress-step.completed .step-number::after {
+      content: '✓';
+  }
+
+  .step-label {
+      font-size: 0.875rem;
+      color: var(--neutral-600);
+      font-weight: 500;
+      white-space: nowrap;
+  }
+
+  .progress-step.active .step-label {
+      color: var(--primary-600);
+  }
+
+  .progress-step.completed .step-label {
+      color: var(--success-500);
+  }
+
+  /* Form Sections */
+  .form-section {
+      background: var(--neutral-50);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 20px;
+      border: 1px solid var(--neutral-200);
+      transition: all 0.3s ease;
+  }
+
+  .form-section:hover {
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+      transform: translateY(-2px);
+  }
+
+  .section-title {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 1.1rem;
+      color: var(--primary-600);
+      margin-bottom: 20px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--neutral-200);
+  }
+
+  .section-title i {
+      width: 28px;
+      height: 28px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--primary-600);
+      color: white;
+      border-radius: 8px;
+  }
+
+  /* Form Controls */
+  .form-group {
+      margin-bottom: 15px;
+      position: relative;
+      width: 100%;
+      min-width: 0;
+  }
+
+  .form-label {
+      display: block;
+      font-size: 0.85rem;
+      margin-bottom: 5px;
+      color: var(--neutral-700);
+      font-weight: 500;
+  }
+
+  .form-label.required::after {
+      content: ' *';
+      color: var(--error-500);
+      font-weight: bold;
+  }
+
+  /* Enhanced Select Wrapper */
+  .select-wrapper {
+      position: relative;
+      width: 100%;
+      height: 38px;
+  }
+
+  .select-wrapper select {
+      width: 100%;
+      height: 38px;
+      padding: 6px 30px 6px 12px;
+      border: 1.5px solid var(--neutral-200);
+      border-radius: 8px;
+      font-size: 0.9rem;
+      color: var(--neutral-800);
+      background-color: white;
+      cursor: pointer;
+      -webkit-appearance: none !important;
+      -moz-appearance: none !important;
+      appearance: none !important;
+      background-image: none !important;
+  }
+
+  .select-wrapper::after {
+      content: '';
+      position: absolute;
+      right: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 0;
+      height: 0;
+      border-left: 5px solid transparent;
+      border-right: 5px solid transparent;
+      border-top: 5px solid var(--neutral-600);
+      pointer-events: none;
+  }
+
+  .select-wrapper select:hover {
+      border-color: var(--primary-500);
+  }
+
+  .select-wrapper select:focus {
+      border-color: var(--primary-500);
+      box-shadow: 0 0 0 3px var(--primary-50);
+      outline: none;
+  }
+
+  .select-wrapper.loading::after {
+      content: '';
+      border: 2px solid var(--neutral-200);
+      border-top: 2px solid var(--primary-500);
+      border-radius: 50%;
+      width: 16px;
+      height: 16px;
+      animation: spin 1s linear infinite;
+  }
+
+  @keyframes spin {
+      0% { transform: translateY(-50%) rotate(0deg); }
+      100% { transform: translateY(-50%) rotate(360deg); }
+  }
+
+  /* Form Control Base */
+  .form-control {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1.5px solid var(--neutral-200);
+      border-radius: 8px;
+      font-size: 0.9rem;
+      transition: all 0.3s ease;
+      background-color: white;
+      box-shadow: none !important;
+  }
+
+  .form-control:required {
+      box-shadow: none !important;
+  }
+
+  .form-control:hover {
+      border-color: var(--primary-500);
+  }
+
+  .form-control:focus {
+      border-color: var(--primary-500);
+      box-shadow: 0 0 0 3px var(--primary-50) !important;
+      outline: none;
+  }
+
+  /* Remove browser validation styling */
+  .form-control:invalid {
+      box-shadow: none !important;
+  }
+
+  .form-control:required:invalid {
+      box-shadow: none !important;
+  }
+
+  ::-webkit-validation-bubble-message,
+  ::-webkit-validation-bubble-arrow {
+      display: none;
+  }
+
+  /* Grid Layouts */
+  .form-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 20px;
+      width: 100%;
+  }
+
+  .form-grid-two-columns {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 20px;
+      width: 100%;
+  }
+
+  .form-grid-three-columns {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+      width: 100%;
+  }
+
+  /* File Upload Styling */
+  .file-input-container {
+      position: relative;
+      width: 100%;
+      height: 100px;
+      border: 2px dashed var(--neutral-300);
+      border-radius: 8px;
+      background: var(--neutral-50);
+      transition: all 0.3s ease;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+  }
+
+  .file-input-container:hover,
+  .file-input-container.dragover {
+      border-color: var(--primary-500);
+      background: var(--primary-50);
+  }
+
+  .file-upload-text {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      text-align: center;
+      pointer-events: none;
+      width: 100%;
+      padding: 0 20px;
+  }
+
+  .file-upload-text i {
+      font-size: 1.5rem;
+      color: var(--primary-500);
+      margin-bottom: 8px;
+  }
+
+  .file-name-display {
+      position: absolute;
+      bottom: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 0.85rem;
+      color: var(--primary-600);
+      max-width: 90%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+  }
+
+  .file-input-container input[type="file"] {
+      opacity: 0;
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      cursor: pointer;
+  }
+
+  .current-file {
+      margin-top: 8px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.85rem;
+      color: var(--neutral-600);
+      padding: 8px 12px;
+      background: var(--neutral-50);
+      border-radius: 6px;
+      border: 1px solid var(--neutral-200);
+  }
+
+  .current-file i {
+      color: var(--primary-500);
+  }
+
+  .current-file a {
+      color: var(--primary-500);
+      text-decoration: none;
+      max-width: 200px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+  }
+
+  .current-file a:hover {
+      text-decoration: underline;
+  }
+
+  /* Submit Button */
+  .submit-btn {
+      background: linear-gradient(135deg, var(--primary-600), var(--primary-700));
+      color: white;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 5px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+      width: 100%;
+      max-width: 130px;
+      margin: 15px auto 0;
+      height: 32px;
+  }
+
+  .submit-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 2px 8px rgba(37, 99, 235, 0.2);
+  }
+
+  .submit-btn:active {
+      transform: translateY(0);
+  }
+
+  /* Responsive Design */
+  @media (max-width: 768px) {
+      .container {
+          margin: 20px 10px;
+          padding: 10px;
+      }
+
+      .form-card {
+          padding: 15px;
+      }
+
+      .form-grid-two-columns,
+      .form-grid-three-columns {
+          grid-template-columns: 1fr;
+      }
+
+      .select-wrapper select {
+          font-size: 16px;
+      }
+
+      .step-label {
+          display: none;
+      }
+
+      .form-progress {
+          padding: 15px;
+          margin: -5px -15px 15px -15px;
+      }
+  }
+</style>
+{% endblock styles %}
+
+
+{% block content %}
+<div class="container">
+    <div class="main-content">
+        <div class="form-card">
+            <!-- Form Header -->
+            <div class="card-header">
+                <h2 class="card-title">Employee Registration</h2>
+            </div>
+
+            <!-- Progress Steps -->
+            <div class="form-progress">
+                <div class="progress-step active" data-section="basic-info">
+                    <div class="step-number">1</div>
+                    <span class="step-label">Basic Info</span>
+                </div>
+                <div class="progress-step" data-section="validity">
+                    <div class="step-number">2</div>
+                    <span class="step-label">Validity Period</span>
+                </div>
+                <div class="progress-step" data-section="contact-info">
+                    <div class="step-number">3</div>
+                    <span class="step-label">Contact Info</span>
+                </div>
+                <div class="progress-step" data-section="address">
+                    <div class="step-number">4</div>
+                    <span class="step-label">Address</span>
+                </div>
+                <div class="progress-step" data-section="employment">
+                    <div class="step-number">5</div>
+                    <span class="step-label">Employment</span>
+                </div>
+                <div class="progress-step" data-section="documents">
+                    <div class="step-number">6</div>
+                    <span class="step-label">Documents</span>
+                </div>
+            </div>
+
+            <form method="post" enctype="multipart/form-data" id="employeeForm">
+                {% csrf_token %}
+
+                <!-- Basic Information Section -->
+                <div class="form-section" data-section="basic-info">
+                    <h3 class="section-title">
+                        <i class="fas fa-user"></i>
+                        Basic Information
+                    </h3>
+                    <div class="form-grid-two-columns">
+                        <div class="form-group">
+                            <label class="form-label required">Employee ID</label>
+                            <input type="text" name="empid" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label required">Salutation</label>
+                            <div class="select-wrapper">
+                                <select name="sal" class="form-control" required>
+                                    <option value="">Select</option>
+                                    {% for sal in salutations %}
+                                    <option value="{{ sal.id }}">{{ sal.sal_name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-grid-three-columns">
+                        <div class="form-group">
+                            <label class="form-label required">First Name</label>
+                            <input type="text" name="fname" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Middle Name</label>
+                            <input type="text" name="mname" class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label required">Last Name</label>
+                            <input type="text" name="lname" class="form-control" required>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Validity Period Section -->
+                <div class="form-section" data-section="validity">
+                    <h3 class="section-title">
+                        <i class="fas fa-calendar"></i>
+                        Validity Period
+                    </h3>
+                    <div class="form-grid-two-columns">
+                        <div class="form-group">
+                            <label class="form-label required">Valid From</label>
+                            <input type="date" name="empvalidfrom" class="form-control"
+                                   value="{{ default_valid_from|date:'Y-m-d' }}" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label required">Valid To</label>
+                            <input type="date" name="empvalidto" class="form-control"
+                                   value="{{ default_valid_to|date:'Y-m-d' }}" required>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Contact Information Section -->
+                <div class="form-section" data-section="contact-info">
+                    <h3 class="section-title">
+                        <i class="fas fa-address-card"></i>
+                        Contact Information
+                    </h3>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label class="form-label required">Company Email</label>
+                            <input type="email" name="empcemail" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label required">Personal Email</label>
+                            <input type="email" name="emppemail" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label required">Personal Phone</label>
+                            <input type="tel" name="empphone" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Office Phone</label>
+                            <input type="tel" name="empophone" class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Home Phone</label>
+                            <input type="tel" name="emphphone" class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label required">Emergency Contact Name</label>
+                            <input type="text" name="empcpname" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label required">Emergency Contact Phone</label>
+                            <input type="tel" name="empcpph" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label required">Emergency Contact Email</label>
+                            <input type="email" name="empcpemail" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label required">Emergency Contact Relationship</label>
+                            <div class="select-wrapper">
+                                <select name="empcprelation" class="form-control" required>
+                                    <option value="">Choose Relation</option>
+                                    <option value="Mother">Mother</option>
+                                    <option value="Father">Father</option>
+                                    <option value="Brother">Brother</option>
+                                    <option value="Sister">Sister</option>
+                                    <option value="Husband">Husband</option>
+                                    <option value="Wife">Wife</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+
+                <!-- Address Information Section -->
+                <div class="form-section" data-section="address">
+                    <h3 class="section-title">
+                        <i class="fas fa-map-marker-alt"></i>
+                        Address Details
+                    </h3>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label class="form-label required">Country</label>
+                            <div class="select-wrapper">
+                                <select name="country" id="country" class="form-control" required>
+                                    <option value="">Select Country</option>
+                                    {% for country in countries %}
+                                    <option value="{{ country.id }}">{{ country.country_name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label required">State</label>
+                            <div class="select-wrapper">
+                                <select name="state" id="state" class="form-control" required>
+                                    <option value="">Select State</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label required">City</label>
+                            <input type="text" name="city" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label required">Street</label>
+                            <input type="text" name="street" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label required">Pincode</label>
+                            <input type="text" name="pincode" class="form-control" required>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Employment Details Section -->
+                <div class="form-section" data-section="employment">
+                    <h3 class="section-title">
+                        <i class="fas fa-briefcase"></i>
+                        Employment Details
+                    </h3>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label class="form-label required">Role</label>
+                            <div class="select-wrapper">
+                                <select name="role" class="form-control" required>
+                                    <option value="">Select Role</option>
+                                    {% for role in roles %}
+                                    <option value="{{ role.role_id }}">{{ role.role_name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label required">Department</label>
+                            <div class="select-wrapper">
+                                <select name="dep" class="form-control" required>
+                                    <option value="">Select Department</option>
+                                    {% for department in departments %}
+                                    <option value="{{ department.id }}">{{ department.dep_name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label required">Designation</label>
+                            <input type="text" name="desig" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label required">Employee Status</label>
+                            <div class="select-wrapper">
+                                <select name="employee_status" class="form-control" required>
+                                    <option value="">Choose Status</option>
+                                    <option value="employed">Employed</option>
+                                    <option value="resigned">Resigned</option>
+                                    <option value="maternal_leave">Maternal Leave</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label required ">Manager</label>
+                            <div class="select-wrapper">
+                                <select name="manager" class="form-control">
+                                    <option value="">Select Manager</option>
+                                    <option value="">None</option>
+                                    {% for employee in employees %}
+                                    <option value="{{ employee.emp_id }}">
+                                        {{ employee.emp_fname }} {{ employee.emp_lname }} ({{ employee.emp_id }})
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label required">Salary</label>
+                            <input type="number" step="0.001" name="empsalary" class="form-control" required>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Documents Section -->
+                <div class="form-section" data-section="documents">
+                    <h3 class="section-title">
+                        <i class="fas fa-file-alt"></i>
+                        Documents
+                    </h3>
+                    <div class="form-grid-two-columns">
+                        <div class="form-group">
+                            <label class="form-label required">Resume</label>
+                            <div class="file-input-container" id="resume-container">
+                                <div class="file-upload-text">
+                                    <i class="fas fa-cloud-upload-alt"></i>
+                                    <div>Drag & drop or click to upload</div>
+                                </div>
+                                <div class="file-name-display"></div>
+                                <input type="file" name="resume" class="form-control" id="id_emp_resume"
+                                       accept=".pdf,.doc,.docx" required>
+                            </div>
+                            {% if form.instance.emp_resume %}
+                            <div class="current-file">
+                                <i class="fas fa-file-pdf"></i>
+                                <span>Current file:</span>
+                                <a href="{{ form.instance.emp_resume.url }}" target="_blank">
+                                    {{ form.instance.emp_resume.name }}
+                                </a>
+                            </div>
+                            {% endif %}
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label required">Other Certification</label>
+                            <div class="file-input-container" id="certif-container">
+                                <div class="file-upload-text">
+                                    <i class="fas fa-cloud-upload-alt"></i>
+                                    <div>Drag & drop or click to upload</div>
+                                </div>
+                                <div class="file-name-display"></div>
+                                <input type="file" name="certif" class="form-control" id="id_emp_certif"
+                                       accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" required>
+                            </div>
+                            {% if form.instance.emp_certif %}
+                            <div class="current-file">
+                                <i class="fas fa-file-certificate"></i>
+                                <span>Current file:</span>
+                                <a href="{{ form.instance.emp_certif.url }}" target="_blank">
+                                    {{ form.instance.emp_certif.name }}
+                                </a>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <button type="submit" class="submit-btn">
+                    <i class="fas fa-user-plus"></i>
+                    Register
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Utility Functions
+        function validateField(field) {
+            if (!field) return false;
+
+            let isValid = false;
+
+            if (field.type === 'file') {
+                isValid = field.files && field.files.length > 0;
+            } else if (field.tagName === 'SELECT') {
+                isValid = field.value && field.value.trim() !== '';
+            } else {
+                isValid = field.value && field.value.trim() !== '';
+            }
+
+            field.classList.toggle('is-invalid', !isValid);
+
+            // Show/hide error message if it exists
+            const errorFeedback = field.closest('.form-group').querySelector('.error-feedback');
+            if (errorFeedback) {
+                errorFeedback.style.display = isValid ? 'none' : 'block';
+            }
+
+            return isValid;
+        }
+
+        // Progress Tracking
+        function updateProgress() {
+            const sections = {
+                'basic-info': ['empid', 'sal', 'fname', 'lname'],
+                'validity': ['empvalidfrom', 'empvalidto'],
+                'contact-info': ['empcemail', 'emppemail', 'empphone', 'empcpname', 'empcpph', 'empcpemail', 'empcprelation'],
+                'address': ['country', 'state', 'city', 'street', 'pincode'],
+                'employment': ['role', 'dep', 'desig', 'employee_status', 'manager', 'empsalary'],
+                'documents': ['resume', 'certif']
+            };
+
+            let firstIncompleteFound = false;
+
+            // Reset all steps
+            document.querySelectorAll('.progress-step').forEach(step => {
+                step.classList.remove('active', 'completed');
+            });
+
+            Object.entries(sections).forEach(([section, fields]) => {
+                const progressStep = document.querySelector(`.progress-step[data-section="${section}"]`);
+                if (!progressStep) return;
+
+                const isComplete = fields.every(fieldName => {
+                    const field = document.querySelector(`[name="${fieldName}"]`);
+                    return field && validateField(field);
+                });
+
+                if (isComplete) {
+                    progressStep.classList.add('completed');
+                } else if (!firstIncompleteFound) {
+                    progressStep.classList.add('active');
+                    firstIncompleteFound = true;
+                }
+            });
+
+            // If all sections are complete, mark the last one as completed
+            if (!firstIncompleteFound) {
+                const lastStep = document.querySelector('.progress-step:last-child');
+                if (lastStep) {
+                    lastStep.classList.add('completed');
+                }
+            }
+        }
+
+        // File Upload Handling
+        function initializeFileUploads() {
+            document.querySelectorAll('.file-input-container').forEach(container => {
+                const input = container.querySelector('input[type="file"]');
+                const display = container.querySelector('.file-name-display');
+                const maxSize = 5 * 1024 * 1024; // 5MB
+
+                function handleFile(file) {
+                    if (file.size > maxSize) {
+                        alert('File size should not exceed 5MB');
+                        input.value = '';
+                        display.textContent = '';
+                        container.classList.remove('has-file');
+                        return false;
+                    }
+
+                    display.textContent = file.name;
+                    container.classList.add('has-file');
+                    validateField(input);
+                    updateProgress();
+                    return true;
+                }
+
+                // File input change handler
+                input.addEventListener('change', function() {
+                    if (this.files && this.files[0]) {
+                        handleFile(this.files[0]);
+                    }
+                });
+
+                // Drag and drop handlers
+                container.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    container.classList.add('dragover');
+                });
+
+                container.addEventListener('dragleave', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    container.classList.remove('dragover');
+                });
+
+                container.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    container.classList.remove('dragover');
+
+                    if (e.dataTransfer.files.length) {
+                        handleFile(e.dataTransfer.files[0]);
+                    }
+                });
+            });
+        }
+
+            // Country-State Handling
+        function initializeCountryStateHandling() {
+            const countrySelect = document.getElementById('country');
+            const stateSelect = document.getElementById('state');
+
+            if (countrySelect && stateSelect) {
+                countrySelect.addEventListener('change', function() {
+                    const countryId = this.value;
+                    const stateWrapper = stateSelect.closest('.select-wrapper');
+
+                    // Reset and disable state select while loading
+                    stateSelect.innerHTML = '<option value="">Select State</option>';
+                    stateSelect.disabled = true;
+
+                    if (countryId) {
+                        stateWrapper.classList.add('loading');
+
+                        $.ajax({
+                            url: "{% url 'get_states' %}",
+                            data: { 'country_id': countryId },
+                            method: 'GET',
+                            dataType: 'json',
+                            success: function(response) {
+                                stateSelect.innerHTML = '<option value="">Select State</option>';
+
+                                if (Array.isArray(response)) {
+                                    response.forEach(state => {
+                                        const option = new Option(state.name, state.id);
+                                        stateSelect.add(option);
+                                    });
+                                }
+                            },
+                            error: function(xhr, status, error) {
+                                console.error('Error fetching states:', error);
+                                alert('Error loading states. Please try again.');
+                            },
+                            complete: function() {
+                                stateSelect.disabled = false;
+                                stateWrapper.classList.remove('loading');
+                                validateField(stateSelect);
+                                updateProgress();
+                            }
+                        });
+                    } else {
+                        stateSelect.disabled = false;
+                        validateField(stateSelect);
+                        updateProgress();
+                    }
+                });
+            }
+        }
+
+        // Form Validation
+        function initializeFormValidation() {
+            const form = document.getElementById('employeeForm');
+
+            if (!form) return;
+
+            // Add validation on input/change for all fields
+            form.querySelectorAll('input, select').forEach(field => {
+                // Immediate validation for all fields except file inputs
+                if (field.type !== 'file') {
+                    field.addEventListener('input', function() {
+                        validateField(this);
+                        updateProgress();
+                    });
+                }
+
+                // Validation on change for all fields
+                field.addEventListener('change', function() {
+                    validateField(this);
+                    updateProgress();
+                });
+
+                // Special handling for select elements
+                if (field.tagName === 'SELECT') {
+                    field.addEventListener('focus', function() {
+                        this.closest('.select-wrapper')?.classList.add('focused');
+                    });
+
+                    field.addEventListener('blur', function() {
+                        this.closest('.select-wrapper')?.classList.remove('focused');
+                        validateField(this);
+                    });
+                }
+            });
+
+            // Form submission handling
+            form.addEventListener('submit', function(e) {
+                e.preventDefault();
+
+                const requiredFields = this.querySelectorAll('[required]');
+                let isValid = true;
+                let firstInvalidField = null;
+
+                requiredFields.forEach(field => {
+                    if (!validateField(field)) {
+                        isValid = false;
+                        if (!firstInvalidField) {
+                            firstInvalidField = field;
+                        }
+                    }
+                });
+
+                if (!isValid) {
+                    // Show error message
+                    alert('Please fill in all required fields correctly.');
+
+                    // Scroll to and focus the first invalid field
+                    if (firstInvalidField) {
+                        firstInvalidField.scrollIntoView({
+                            behavior: 'smooth',
+                            block: 'center'
+                        });
+                        setTimeout(() => {
+                            firstInvalidField.focus();
+                        }, 500);
+                    }
+                    return;
+                }
+
+                // If form is valid, show loading state and submit
+                const submitButton = this.querySelector('button[type="submit"]');
+                if (submitButton) {
+                    submitButton.disabled = true;
+                    submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+                }
+
+                this.submit();
+            });
+        }
+
+        // Section Navigation
+        function initializeSectionNavigation() {
+            document.querySelectorAll('.progress-step').forEach(step => {
+                step.addEventListener('click', function() {
+                    const targetSection = this.getAttribute('data-section');
+                    const targetElement = document.querySelector(`.form-section[data-section="${targetSection}"]`);
+
+                    if (targetElement) {
+                        targetElement.scrollIntoView({
+                            behavior: 'smooth',
+                            block: 'center'
+                        });
+                    }
+                });
+            });
+        }
+
+        // Initialize all components
+        function initializeAll() {
+            initializeFileUploads();
+            initializeCountryStateHandling();
+            initializeFormValidation();
+            initializeSectionNavigation();
+            updateProgress();
+
+            // Add scroll spy functionality
+            window.addEventListener('scroll', function() {
+                const sections = document.querySelectorAll('.form-section');
+                let currentSection = '';
+
+                sections.forEach(section => {
+                    const rect = section.getBoundingClientRect();
+                    if (rect.top <= window.innerHeight / 2 && rect.bottom >= window.innerHeight / 2) {
+                        currentSection = section.getAttribute('data-section');
+                    }
+                });
+
+                if (currentSection) {
+                    document.querySelectorAll('.progress-step').forEach(step => {
+                        step.classList.toggle('active', step.getAttribute('data-section') === currentSection);
+                    });
+                }
+            });
+        }
+
+        // Start initialization
+        initializeAll();
+    });
+</script>
+{% endblock %}

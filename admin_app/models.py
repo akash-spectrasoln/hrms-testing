@@ -5,29 +5,6 @@ from .models import *
 # Create your models here.
 
 
-
-# class Employees(models.Model):
-#     emp_id=models.CharField(max_length=10)
-#     emp_fname=models.CharField(max_length=50)
-#     emp_mname=models.CharField(max_length=50)
-#     emp_lname=models.CharField(max_length=50)
-#     emp_val_from = models.DateField()
-#     emp_val_to=models.DateField()
-#     emp_email=models.EmailField()
-#     emp_pemail=models.EmailField()
-#     emp_mob_ph=models.BigIntegerField()
-#     emp_off_ph=models.BigIntegerField()
-#     emp_home_ph=models.BigIntegerField()
-#     emp_homeaddr=models.CharField(max_length=80)
-#     emp_home_street=models.CharField(max_length=80)
-#     emp_home_city=models.CharField(max_length=80)
-#     emp_resume=models.FileField(upload_to='documents/')
-#     emp_certificate=models.FileField(upload_to='documents/')
-
-
-
-
-
 class Role(models.Model):
     role_id = models.CharField(max_length=100, unique=True, primary_key=True)
 
@@ -68,47 +45,6 @@ class Department(models.Model):
     def __str__(self):
         return self.dep_name
 
-#
-# class Employees(models.Model):
-#     EMPLOYEE_STATUS_CHOICES = [
-#         ('employed', 'Employed'),
-#         ('resigned', 'Resigned'),
-#     ]
-#     emp_id=models.CharField(max_length=10,unique=True)
-#     sal=models.ForeignKey(Salutation,on_delete=models.CASCADE)
-#     emp_fname=models.CharField(max_length=50)
-#     emp_mname=models.CharField(max_length=50)
-#     emp_lname=models.CharField(max_length=50)
-#     emp_email = models.EmailField(unique=True)
-#     emp_pemail=models.EmailField()
-#     emp_mob_ph=models.CharField(max_length=15)
-#     emp_off_ph=models.CharField(max_length=15)
-#     emp_home_ph=models.CharField(max_length=15)
-#     emp_val_from = models.DateField()
-#     emp_val_to = models.DateField()
-#     country = models.ForeignKey(Country, on_delete=models.CASCADE)
-#     state = models.ForeignKey(state, on_delete=models.CASCADE)
-#     emp_addr=models.CharField(max_length=150)
-#     emp_home_street=models.CharField(max_length=80)
-#     emp_home_city=models.CharField(max_length=80)
-#     role = models.ForeignKey(Role, on_delete=models.CASCADE)
-#     dep = models.ForeignKey(Department, on_delete=models.CASCADE)
-#     designation = models.CharField(max_length=100)
-#     employee_manager = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True,
-#                                          related_name='employees_managed')
-#     employee_status = models.CharField(max_length=10, choices=EMPLOYEE_STATUS_CHOICES, default='employed')
-#     # Self-referencing ForeignKey to link the employee to a manager (another employee)
-#     emp_cp_name = models.CharField(max_length=100)
-#     emp_cp_ph = models.CharField(max_length=15)
-#     emp_cp_email = models.EmailField()
-#     emp_cp_relation = models.CharField(max_length=100)
-#     emp_base = models.DecimalField(max_digits=10, decimal_places=2)
-#
-#     emp_resume=models.FileField(upload_to='documents/')
-#     emp_certif=models.FileField(upload_to='documents/')
-#
-#     def __str__(self):
-#         return f"{self.emp_fname} {self.emp_lname} (ID: {self.emp_id})"
 
 
 
@@ -205,12 +141,14 @@ class Holiday(models.Model):
 
 
 #
-# employee_app/models.py
+# below is the leave request model
+
+
 from django.db import models
 from django.contrib.auth.models import User  # Assuming employee is a User model
 from .models import Holiday
+from .utils import calculate_leave_days  # Import the function from utils page
 
-from .utils import calculate_leave_days  # Import the function
 
 class LeaveRequest(models.Model):
     # LEAVE_TYPES = [
@@ -280,24 +218,8 @@ class LeaveRequest(models.Model):
         verbose_name_plural = "Leave Requests"
 
 
-# from django.db import models
-# from .models import Employees  # Assuming your employee details are in the `Employees` model
+#floating holiday model is implemented below
 
-# class LeaveRequest(models.Model):
-#     employee = models.ForeignKey(Employees, on_delete=models.CASCADE)  # Link to employee
-#     start_date = models.DateField()  # Start date of the leave
-#     end_date = models.DateField()    # End date of the leave
-#     reason = models.TextField()      # Reason for the leave
-#     status = models.CharField(max_length=20, default="Pending")  # Pending/Approved/Rejected
-#
-#     def __str__(self):
-#         return f"Leave Request by {self.employee.email} from {self.start_date} to {self.end_date}"
-#
-#     class Meta:
-#         verbose_name = "Leave Request"
-#         verbose_name_plural = "Leave Requests"
-
-#
 from datetime import datetime
 class FloatingHoliday(models.Model):
     name = models.CharField(max_length=100)  # e.g., New Year, Maha Shivaratri, etc.

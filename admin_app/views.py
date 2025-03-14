@@ -24,6 +24,9 @@ def admin_index(request):
 
 # adding employees view
 
+
+from django.contrib import messages
+
 def add_employee(request):
     if request.method == 'POST':
         emp_id = request.POST.get('empid')
@@ -163,6 +166,7 @@ def add_employee(request):
         )
         data.save()
         # return HttpResponse("Details added successfully.")
+        messages.success(request, "Employee added successfully!")
         return redirect('add_employee')
 
     # Fetch roles, departments, states, countries, and employees for the dropdown
@@ -177,7 +181,7 @@ def add_employee(request):
     default_valid_from = date.today()
     default_valid_to = date(9999, 12, 31)
 
-    return render(request, 'sample4.html', {
+    return render(request, 'add_employee.html', {
         'roles': roles,
         'departments': departments,
         'states': states,
@@ -365,6 +369,8 @@ def export_employees_to_excel(request):
     return response
 
 
+
+# below is the views for displaying all the uploaded employees
 
 def list_employees(request):
     #
@@ -559,6 +565,8 @@ from .forms import EmployeeEditForm
 
 
 
+# below is the view for to edit the added employees
+
 from django.views.generic.edit import UpdateView
 from django.urls import reverse_lazy
 from django.contrib import messages
@@ -590,7 +598,7 @@ class EmployeeUpdateView(UpdateView):
             employee.emp_certif = certif_file
 
         employee.save()  # Save updated employee details
-        messages.success(self.request, "Employee details updated successfully.")
+        messages.success(self.request, " ✅ Employee details updated successfully.")
         return super().form_valid(form)
 
     def form_invalid(self, form):
@@ -614,22 +622,54 @@ class EmployeeUpdateView(UpdateView):
 
 
 
+# from django.views.generic import DeleteView
+# from .models import Employees
+#
+# class EmployeeDeleteView(DeleteView):
+#     model = Employees
+#     template_name = 'delete_employee.html'
+#     context_object_name = 'data'
+#     success_url = reverse_lazy('employee_list')  # Redirect after delete
+#
+#     #soft delete logic mentioned below
+#
+#     def delete(self, request, *args, **kwargs):
+#         """Mark the employee as deleted instead of deleting from the database."""
+#         self.object = self.get_object()
+#         self.object.delete()  # Call the soft delete method in the model
+#
+#
+#         return redirect(self.success_url)
+
+
+
+
+
+from django.urls import reverse_lazy
+from django.shortcuts import get_object_or_404, redirect
 from django.views.generic import DeleteView
+from django.contrib import messages
 from .models import Employees
 
 class EmployeeDeleteView(DeleteView):
     model = Employees
     template_name = 'delete_employee.html'
     context_object_name = 'data'
-    success_url = reverse_lazy('employee_list')  # Redirect after delete
+    success_url = reverse_lazy('employee_list')  # Redirect URL after delete
 
-    #soft delete logic mentioned below
+    def post(self, request, *args, **kwargs):
+        """Handle POST request for soft delete and show a success message."""
+        employee = get_object_or_404(Employees, pk=self.kwargs['pk'])  # Fetch employee
+        emp_name = f"{employee.emp_fname} {employee.emp_lname}"  # Get full name
 
-    def delete(self, request, *args, **kwargs):
-        """Mark the employee as deleted instead of deleting from the database."""
-        self.object = self.get_object()
-        self.object.delete()  # Call the soft delete method in the model
-        return redirect(self.success_url)
+        if not employee.is_delete:
+            employee.is_delete = True  # Soft delete
+            employee.save()
+            messages.success(request, f"✅ Employee {emp_name} has been deleted.")  # Success message
+        else:
+            messages.info(request, "ℹ️ This employee is already deleted.")  # Already deleted message
+
+        return redirect(self.success_url)  # Redirect to employee list
 
 
 
@@ -644,7 +684,7 @@ def restore_employee(request, pk):
     if employee.is_delete:
         employee.is_delete = False
         employee.save()
-        messages.success(request, f"Employee {employee.emp_fname} {employee.emp_lname} has been restored.")
+        messages.success(request, f"✅ Employee {employee.emp_fname} {employee.emp_lname} has been restored.")
     else:
         messages.info(request, "This employee is already active.")
     return redirect('employee_list')
@@ -1227,11 +1267,11 @@ def add_holidays(request):
 
             if leave_type == 'fixed':
                 Holiday.objects.create(date=selected_date, name=name, day=selected_day, year=selected_year)
-                messages.success(request, "Fixed holiday added successfully!")
+                messages.success(request, "✅ Fixed holiday added successfully!")
 
             elif leave_type == 'floating':
                 FloatingHoliday.objects.create(name=name, date=selected_date, year=selected_year)
-                messages.success(request, "Floating holiday added successfully!")
+                messages.success(request, "✅ Floating holiday added successfully!")
 
             return redirect('add_holidays')  # Redirect to form after submission
 

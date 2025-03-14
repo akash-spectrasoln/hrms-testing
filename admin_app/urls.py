@@ -22,9 +22,8 @@ path('accept_leave_request/<int:leave_request_id>/', accept_leave_request, name=
 path('reject_leave_request/<int:leave_request_id>/', reject_leave_request, name='reject_leave_request'),
 #
 # path('employee/update/<int:pk>/', EmployeeUpdateView.as_view(), name='employee_update'),
-
-    path('employee/<int:pk>/edit/', EmployeeUpdateView.as_view(), name='employee_edit'),
-    path('ajax/load-states/', load_states, name='load_states'),  # This is for AJAX dynamic state loading
+path('employee/<int:pk>/edit/', EmployeeUpdateView.as_view(), name='employee_edit'),
+path('ajax/load-states/', load_states, name='load_states'),  # This is for AJAX dynamic state loading
 
 
 #     path('register/', register_admin, name='register_admin'),  # URL for admin registration
@@ -55,8 +54,8 @@ path('admin_password_reset_complete/',
          auth_views.PasswordResetCompleteView.as_view(template_name='adminpage_password_reset_complete.html'),
          name='adminpage_password_reset_complete'),
 
-    # path("leave-requests/", admin_leave_requests, name="admin_leave_requests"),
-    path("filter-leave-requests/", filter_leave_requests, name="filter_leave_requests"),
+# path("leave-requests/", admin_leave_requests, name="admin_leave_requests"),
+path("filter-leave-requests/", filter_leave_requests, name="filter_leave_requests"),
 
 ]
 
