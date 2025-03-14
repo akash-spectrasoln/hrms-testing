@@ -558,7 +558,7 @@
                             <label class="form-label required">Salutation</label>
                             <div class="select-wrapper">
                                 <select name="sal" class="form-control" required>
-                                    <option value="">Select</option>
+                                    <option value="" disabled selected>Select</option>
                                     {% for sal in salutations %}
                                     <option value="{{ sal.id }}">{{ sal.sal_name }}</option>
                                     {% endfor %}
@@ -646,7 +646,7 @@
                             <label class="form-label required">Emergency Contact Relationship</label>
                             <div class="select-wrapper">
                                 <select name="empcprelation" class="form-control" required>
-                                    <option value="">Choose Relation</option>
+                                    <option value="" disabled selected>Choose Relation</option>
                                     <option value="Mother">Mother</option>
                                     <option value="Father">Father</option>
                                     <option value="Brother">Brother</option>
@@ -712,7 +712,7 @@
                             <label class="form-label required">Role</label>
                             <div class="select-wrapper">
                                 <select name="role" class="form-control" required>
-                                    <option value="">Select Role</option>
+                                    <option value="" disabled selected>Select Role</option>
                                     {% for role in roles %}
                                     <option value="{{ role.role_id }}">{{ role.role_name }}</option>
                                     {% endfor %}
@@ -723,7 +723,7 @@
                             <label class="form-label required">Department</label>
                             <div class="select-wrapper">
                                 <select name="dep" class="form-control" required>
-                                    <option value="">Select Department</option>
+                                    <option value="" disabled selected >Select Department</option>
                                     {% for department in departments %}
                                     <option value="{{ department.id }}">{{ department.dep_name }}</option>
                                     {% endfor %}
@@ -738,7 +738,7 @@
                             <label class="form-label required">Employee Status</label>
                             <div class="select-wrapper">
                                 <select name="employee_status" class="form-control" required>
-                                    <option value="">Choose Status</option>
+                                    <option value="" disabled selected>Choose Status</option>
                                     <option value="employed">Employed</option>
                                     <option value="resigned">Resigned</option>
                                     <option value="maternal_leave">Maternal Leave</option>
@@ -749,7 +749,7 @@
                             <label class="form-label required ">Manager</label>
                             <div class="select-wrapper">
                                 <select name="manager" class="form-control">
-                                    <option value="">Select Manager</option>
+                                    <option value="" disabled selected>Select Manager</option>
                                     <option value="">None</option>
                                     {% for employee in employees %}
                                     <option value="{{ employee.emp_id }}">
@@ -830,192 +830,255 @@
 {% block scripts %}
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        // Utility Functions
-        function validateField(field) {
-            if (!field) return false;
+document.addEventListener('DOMContentLoaded', function() {
+    // Utility Functions
+    function validateField(field) {
+        if (!field) return false;
 
-            let isValid = false;
+        // Special handling for manager field
+        if (field.name === 'manager') {
+            // Always consider manager field valid, including empty or "None" option
+            return true;
+        }
 
-            if (field.type === 'file') {
-                isValid = field.files && field.files.length > 0;
-            } else if (field.tagName === 'SELECT') {
+        let isValid = false;
+
+        if (field.type === 'file') {
+            isValid = field.files && field.files.length > 0;
+        } else if (field.tagName === 'SELECT') {
+            // For required select fields
+            if (field.hasAttribute('required')) {
                 isValid = field.value && field.value.trim() !== '';
             } else {
-                isValid = field.value && field.value.trim() !== '';
+                // For non-required select fields like manager
+                isValid = true;
             }
-
-            field.classList.toggle('is-invalid', !isValid);
-
-            // Show/hide error message if it exists
-            const errorFeedback = field.closest('.form-group').querySelector('.error-feedback');
-            if (errorFeedback) {
-                errorFeedback.style.display = isValid ? 'none' : 'block';
-            }
-
-            return isValid;
+        } else {
+            isValid = field.value && field.value.trim() !== '';
         }
 
-        // Progress Tracking
-        function updateProgress() {
-            const sections = {
-                'basic-info': ['empid', 'sal', 'fname', 'lname'],
-                'validity': ['empvalidfrom', 'empvalidto'],
-                'contact-info': ['empcemail', 'emppemail', 'empphone', 'empcpname', 'empcpph', 'empcpemail', 'empcprelation'],
-                'address': ['country', 'state', 'city', 'street', 'pincode'],
-                'employment': ['role', 'dep', 'desig', 'employee_status', 'manager', 'empsalary'],
-                'documents': ['resume', 'certif']
-            };
+        field.classList.toggle('is-invalid', !isValid);
 
-            let firstIncompleteFound = false;
+        // Show/hide error message if it exists
+        const errorFeedback = field.closest('.form-group').querySelector('.error-feedback');
+        if (errorFeedback) {
+            errorFeedback.style.display = isValid ? 'none' : 'block';
+        }
 
-            // Reset all steps
-            document.querySelectorAll('.progress-step').forEach(step => {
-                step.classList.remove('active', 'completed');
+        return isValid;
+    }
+
+    // Progress Tracking
+    function updateProgress() {
+        const sections = {
+            'basic-info': ['empid', 'sal', 'fname', 'lname'],
+            'validity': ['empvalidfrom', 'empvalidto'],
+            'contact-info': ['empcemail', 'emppemail', 'empphone', 'empcpname', 'empcpph', 'empcpemail', 'empcprelation'],
+            'address': ['country', 'state', 'city', 'street', 'pincode'],
+            'employment': ['role', 'dep', 'desig', 'employee_status', 'empsalary', 'manager'],
+            'documents': ['resume', 'certif']
+        };
+
+        let firstIncompleteFound = false;
+
+        // Reset all steps
+        document.querySelectorAll('.progress-step').forEach(step => {
+            step.classList.remove('active', 'completed');
+        });
+
+        Object.entries(sections).forEach(([section, fields]) => {
+            const progressStep = document.querySelector(`.progress-step[data-section="${section}"]`);
+            if (!progressStep) return;
+
+            const isComplete = fields.every(fieldName => {
+                const field = document.querySelector(`[name="${fieldName}"]`);
+
+                // Special handling for manager field
+                if (fieldName === 'manager') {
+                    // Consider it valid if it's either a selected value or empty
+                    return field && (field.value !== '' || field.value === '');
+                }
+
+                return field && validateField(field);
             });
 
-            Object.entries(sections).forEach(([section, fields]) => {
-                const progressStep = document.querySelector(`.progress-step[data-section="${section}"]`);
-                if (!progressStep) return;
+            if (isComplete) {
+                progressStep.classList.add('completed');
+            } else if (!firstIncompleteFound) {
+                progressStep.classList.add('active');
+                firstIncompleteFound = true;
+            }
+        });
 
-                const isComplete = fields.every(fieldName => {
-                    const field = document.querySelector(`[name="${fieldName}"]`);
-                    return field && validateField(field);
-                });
+        // If all sections are complete, mark the last one as completed
+        if (!firstIncompleteFound) {
+            const lastStep = document.querySelector('.progress-step:last-child');
+            if (lastStep) {
+                lastStep.classList.add('completed');
+            }
+        }
+    }
 
-                if (isComplete) {
-                    progressStep.classList.add('completed');
-                } else if (!firstIncompleteFound) {
-                    progressStep.classList.add('active');
-                    firstIncompleteFound = true;
+    // File Upload Handling
+    function initializeFileUploads() {
+        document.querySelectorAll('.file-input-container').forEach(container => {
+            const input = container.querySelector('input[type="file"]');
+            const display = container.querySelector('.file-name-display');
+            const uploadText = container.querySelector('.file-upload-text');
+            const maxSize = 5 * 1024 * 1024; // 5MB
+
+            function handleFile(file) {
+                if (!file) return false;
+
+                if (file.size > maxSize) {
+                    alert('File size should not exceed 5MB');
+                    input.value = '';
+                    display.textContent = '';
+                    container.classList.remove('has-file');
+                    return false;
+                }
+
+                // Create a new FileList with the single file
+                const dataTransfer = new DataTransfer();
+                dataTransfer.items.add(file);
+                input.files = dataTransfer.files;
+
+                display.textContent = file.name;
+                container.classList.add('has-file');
+                validateField(input);
+                updateProgress();
+                return true;
+            }
+
+            // File input change handler
+            input.addEventListener('change', function(e) {
+                if (this.files && this.files[0]) {
+                    handleFile(this.files[0]);
                 }
             });
 
-            // If all sections are complete, mark the last one as completed
-            if (!firstIncompleteFound) {
-                const lastStep = document.querySelector('.progress-step:last-child');
-                if (lastStep) {
-                    lastStep.classList.add('completed');
-                }
-            }
-        }
-
-        // File Upload Handling
-        function initializeFileUploads() {
-            document.querySelectorAll('.file-input-container').forEach(container => {
-                const input = container.querySelector('input[type="file"]');
-                const display = container.querySelector('.file-name-display');
-                const maxSize = 5 * 1024 * 1024; // 5MB
-
-                function handleFile(file) {
-                    if (file.size > maxSize) {
-                        alert('File size should not exceed 5MB');
-                        input.value = '';
-                        display.textContent = '';
-                        container.classList.remove('has-file');
-                        return false;
-                    }
-
-                    display.textContent = file.name;
-                    container.classList.add('has-file');
-                    validateField(input);
-                    updateProgress();
-                    return true;
-                }
-
-                // File input change handler
-                input.addEventListener('change', function() {
-                    if (this.files && this.files[0]) {
-                        handleFile(this.files[0]);
-                    }
-                });
-
-                // Drag and drop handlers
-                container.addEventListener('dragover', (e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    container.classList.add('dragover');
-                });
-
-                container.addEventListener('dragleave', (e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    container.classList.remove('dragover');
-                });
-
-                container.addEventListener('drop', (e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    container.classList.remove('dragover');
-
-                    if (e.dataTransfer.files.length) {
-                        handleFile(e.dataTransfer.files[0]);
-                    }
-                });
+            // Drag and drop handlers
+            container.addEventListener('dragenter', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                container.classList.add('dragover');
             });
-        }
 
-            // Country-State Handling
-        function initializeCountryStateHandling() {
-            const countrySelect = document.getElementById('country');
-            const stateSelect = document.getElementById('state');
+            container.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                container.classList.add('dragover');
+            });
 
-            if (countrySelect && stateSelect) {
-                countrySelect.addEventListener('change', function() {
-                    const countryId = this.value;
-                    const stateWrapper = stateSelect.closest('.select-wrapper');
+            container.addEventListener('dragleave', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                container.classList.remove('dragover');
+            });
 
-                    // Reset and disable state select while loading
-                    stateSelect.innerHTML = '<option value="">Select State</option>';
-                    stateSelect.disabled = true;
+            container.addEventListener('drop', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                container.classList.remove('dragover');
 
-                    if (countryId) {
-                        stateWrapper.classList.add('loading');
+                // Get the first file from the dropped files
+                const droppedFiles = e.dataTransfer.files;
+                if (droppedFiles.length > 0) {
+                    const file = droppedFiles[0];
 
-                        $.ajax({
-                            url: "{% url 'get_states' %}",
-                            data: { 'country_id': countryId },
-                            method: 'GET',
-                            dataType: 'json',
-                            success: function(response) {
-                                stateSelect.innerHTML = '<option value="">Select State</option>';
+                    // Check file type based on the input's accept attribute
+                    const acceptedTypes = input.accept.split(',');
+                    const fileExtension = '.' + file.name.split('.').pop().toLowerCase();
 
-                                if (Array.isArray(response)) {
-                                    response.forEach(state => {
-                                        const option = new Option(state.name, state.id);
-                                        stateSelect.add(option);
-                                    });
-                                }
-                            },
-                            error: function(xhr, status, error) {
-                                console.error('Error fetching states:', error);
-                                alert('Error loading states. Please try again.');
-                            },
-                            complete: function() {
-                                stateSelect.disabled = false;
-                                stateWrapper.classList.remove('loading');
-                                validateField(stateSelect);
-                                updateProgress();
-                            }
-                        });
+                    if (acceptedTypes.some(type => fileExtension === type)) {
+                        handleFile(file);
                     } else {
-                        stateSelect.disabled = false;
-                        validateField(stateSelect);
-                        updateProgress();
+                        alert(`Please upload a file with one of these extensions: ${acceptedTypes.join(', ')}`);
                     }
-                });
+                }
+            });
+
+            // Prevent default drag behaviors on the entire document
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                document.body.addEventListener(eventName, preventDefaults, false);
+            });
+
+            function preventDefaults(e) {
+                e.preventDefault();
+                e.stopPropagation();
             }
+        });
+    }
+
+    // Country-State Handling
+    function initializeCountryStateHandling() {
+        const countrySelect = document.getElementById('country');
+        const stateSelect = document.getElementById('state');
+
+        if (countrySelect && stateSelect) {
+            countrySelect.addEventListener('change', function() {
+                const countryId = this.value;
+                const stateWrapper = stateSelect.closest('.select-wrapper');
+
+                // Reset and disable state select while loading
+                stateSelect.innerHTML = '<option value="">Select State</option>';
+                stateSelect.disabled = true;
+
+                if (countryId) {
+                    stateWrapper.classList.add('loading');
+
+                    $.ajax({
+                        url: "{% url 'get_states' %}",
+                        data: { 'country_id': countryId },
+                        method: 'GET',
+                        dataType: 'json',
+                        success: function(response) {
+                            stateSelect.innerHTML = '<option value="">Select State</option>';
+
+                            if (Array.isArray(response)) {
+                                response.forEach(state => {
+                                    const option = new Option(state.name, state.id);
+                                    stateSelect.add(option);
+                                });
+                            }
+                        },
+                        error: function(xhr, status, error) {
+                            console.error('Error fetching states:', error);
+                            alert('Error loading states. Please try again.');
+                        },
+                        complete: function() {
+                            stateSelect.disabled = false;
+                            stateWrapper.classList.remove('loading');
+                            validateField(stateSelect);
+                            updateProgress();
+                        }
+                    });
+                } else {
+                    stateSelect.disabled = false;
+                    validateField(stateSelect);
+                    updateProgress();
+                }
+            });
         }
+    }
 
-        // Form Validation
-        function initializeFormValidation() {
-            const form = document.getElementById('employeeForm');
+    // Form Validation
+    function initializeFormValidation() {
+        const form = document.getElementById('employeeForm');
 
-            if (!form) return;
+        if (!form) return;
 
-            // Add validation on input/change for all fields
-            form.querySelectorAll('input, select').forEach(field => {
-                // Immediate validation for all fields except file inputs
+        // Add validation on input/change for all fields
+        form.querySelectorAll('input, select').forEach(field => {
+            // Special handling for manager field
+            if (field.name === 'manager') {
+                field.addEventListener('change', function() {
+                    // Always consider manager field valid
+                    validateField(this);
+                    updateProgress();
+                });
+            } else {
+                // Existing validation logic for other fields
                 if (field.type !== 'file') {
                     field.addEventListener('input', function() {
                         validateField(this);
@@ -1023,117 +1086,129 @@
                     });
                 }
 
-                // Validation on change for all fields
                 field.addEventListener('change', function() {
                     validateField(this);
                     updateProgress();
                 });
+            }
 
-                // Special handling for select elements
-                if (field.tagName === 'SELECT') {
-                    field.addEventListener('focus', function() {
-                        this.closest('.select-wrapper')?.classList.add('focused');
+            // Special handling for select elements
+            if (field.tagName === 'SELECT') {
+                field.addEventListener('focus', function() {
+                    this.closest('.select-wrapper')?.classList.add('focused');
+                });
+
+                field.addEventListener('blur', function() {
+                    this.closest('.select-wrapper')?.classList.remove('focused');
+                    validateField(this);
+                });
+            }
+        });
+
+        // Form submission handling
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            const requiredFields = this.querySelectorAll('[required]');
+            let isValid = true;
+            let firstInvalidField = null;
+
+            requiredFields.forEach(field => {
+                // Skip validation for manager field
+                if (field.name === 'manager') return;
+
+                if (!validateField(field)) {
+                    isValid = false;
+                    if (!firstInvalidField) {
+                        firstInvalidField = field;
+                    }
+                }
+            });
+
+            // Additional check for manager field
+            const managerField = document.querySelector('select[name="manager"]');
+            if (managerField) {
+                // If the selected value is an empty string, set it to null or an appropriate identifier
+                if (managerField.value === '') {
+                    managerField.value = 'None';
+                }
+            }
+
+            if (!isValid) {
+                // Show error message
+                alert('Please fill in all required fields correctly.');
+
+                // Scroll to and focus the first invalid field
+                if (firstInvalidField) {
+                    firstInvalidField.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'center'
                     });
-
-                    field.addEventListener('blur', function() {
-                        this.closest('.select-wrapper')?.classList.remove('focused');
-                        validateField(this);
-                    });
+                    setTimeout(() => {
+                        firstInvalidField.focus();
+                    }, 500);
                 }
-            });
+                return;
+            }
 
-            // Form submission handling
-            form.addEventListener('submit', function(e) {
-                e.preventDefault();
+            // If form is valid, show loading state and submit
+            const submitButton = this.querySelector('button[type="submit"]');
+            if (submitButton) {
+                submitButton.disabled = true;
+                submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+            }
 
-                const requiredFields = this.querySelectorAll('[required]');
-                let isValid = true;
-                let firstInvalidField = null;
+            this.submit();
+        });
+    }
 
-                requiredFields.forEach(field => {
-                    if (!validateField(field)) {
-                        isValid = false;
-                        if (!firstInvalidField) {
-                            firstInvalidField = field;
-                        }
-                    }
-                });
+    // Section Navigation
+    function initializeSectionNavigation() {
+        document.querySelectorAll('.progress-step').forEach(step => {
+            step.addEventListener('click', function() {
+                const targetSection = this.getAttribute('data-section');
+                const targetElement = document.querySelector(`.form-section[data-section="${targetSection}"]`);
 
-                if (!isValid) {
-                    // Show error message
-                    alert('Please fill in all required fields correctly.');
-
-                    // Scroll to and focus the first invalid field
-                    if (firstInvalidField) {
-                        firstInvalidField.scrollIntoView({
-                            behavior: 'smooth',
-                            block: 'center'
-                        });
-                        setTimeout(() => {
-                            firstInvalidField.focus();
-                        }, 500);
-                    }
-                    return;
-                }
-
-                // If form is valid, show loading state and submit
-                const submitButton = this.querySelector('button[type="submit"]');
-                if (submitButton) {
-                    submitButton.disabled = true;
-                    submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
-                }
-
-                this.submit();
-            });
-        }
-
-        // Section Navigation
-        function initializeSectionNavigation() {
-            document.querySelectorAll('.progress-step').forEach(step => {
-                step.addEventListener('click', function() {
-                    const targetSection = this.getAttribute('data-section');
-                    const targetElement = document.querySelector(`.form-section[data-section="${targetSection}"]`);
-
-                    if (targetElement) {
-                        targetElement.scrollIntoView({
-                            behavior: 'smooth',
-                            block: 'center'
-                        });
-                    }
-                });
-            });
-        }
-
-        // Initialize all components
-        function initializeAll() {
-            initializeFileUploads();
-            initializeCountryStateHandling();
-            initializeFormValidation();
-            initializeSectionNavigation();
-            updateProgress();
-
-            // Add scroll spy functionality
-            window.addEventListener('scroll', function() {
-                const sections = document.querySelectorAll('.form-section');
-                let currentSection = '';
-
-                sections.forEach(section => {
-                    const rect = section.getBoundingClientRect();
-                    if (rect.top <= window.innerHeight / 2 && rect.bottom >= window.innerHeight / 2) {
-                        currentSection = section.getAttribute('data-section');
-                    }
-                });
-
-                if (currentSection) {
-                    document.querySelectorAll('.progress-step').forEach(step => {
-                        step.classList.toggle('active', step.getAttribute('data-section') === currentSection);
+                if (targetElement) {
+                    targetElement.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'center'
                     });
                 }
             });
-        }
+        });
+    }
 
-        // Start initialization
-        initializeAll();
-    });
+    // Initialize all components
+    function initializeAll() {
+        initializeFileUploads();
+        initializeCountryStateHandling();
+        initializeFormValidation();
+        initializeSectionNavigation();
+        updateProgress();
+
+        // Add scroll spy functionality
+        window.addEventListener('scroll', function() {
+            const sections = document.querySelectorAll('.form-section');
+            let currentSection = '';
+
+            sections.forEach(section => {
+                const rect = section.getBoundingClientRect();
+                if (rect.top <= window.innerHeight / 2 && rect.bottom >= window.innerHeight / 2) {
+                    currentSection = section.getAttribute('data-section');
+                }
+            });
+
+            if (currentSection) {
+                document.querySelectorAll('.progress-step').forEach(step => {
+                    step.classList.toggle('active', step.getAttribute('data-section') === currentSection);
+                });
+            }
+        });
+    }
+
+    // Start initialization
+    initializeAll();
+});
 </script>
 {% endblock %}
