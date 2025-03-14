@@ -182,8 +182,8 @@ DEFAULT_FROM_EMAIL = 'ajaykmani2001@gmail.com'
 
 import os
 
-# STATIC_URL = '/static/'
-# STATICFILES_DIRS = [
-#     os.path.join(BASE_DIR, 'static'),  # Ensure this exists
-# ]
+STATIC_URL = '/static/'
+STATICFILES_DIRS = [
+    os.path.join(BASE_DIR, 'static'),  # Ensure this exists
+]
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')  # For collectstatic
