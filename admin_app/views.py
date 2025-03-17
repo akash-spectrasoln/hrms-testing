@@ -577,8 +577,32 @@ from .forms import EmployeeEditForm
 class EmployeeUpdateView(UpdateView):
     model = Employees
     form_class = EmployeeEditForm
-    template_name = 'employee_update.html'
+    template_name = 'employeeupdate.html'
     success_url = reverse_lazy('employee_list')
+
+    def get_context_data(self, **kwargs):
+        # Call the base implementation first to get the context
+        context = super().get_context_data(**kwargs)
+
+        # Add the salutations queryset to the context
+        context['salutations'] = Salutation.objects.all()
+
+        # Add roles, departments, and managers to the context
+        context['roles'] = Role.objects.all()  # Fetch all roles
+        context['departments'] = Department.objects.all()  # Fetch all departments
+        # Fetch employees who are managers (i.e., they manage other employees)
+        context['managers'] = Employees.objects.filter(employees_managed__isnull=False).distinct()
+
+        # Get the current employee being edited
+        employee = self.object
+
+        # Add country and state data
+        context['countries'] = Country.objects.all()  # Fetch all countries
+        context['selected_country'] = employee.country if employee.country else None  # Pre-select country
+        context['states'] = state.objects.filter(
+            country=employee.country) if employee.country else []  # States based on selected country
+        context['selected_state'] = employee.state if employee.state else None  # Pre-select state
+        return context
 
     def form_valid(self, form):
         employee = form.save(commit=False)  # Don't save to DB yet
@@ -610,13 +634,13 @@ class EmployeeUpdateView(UpdateView):
 
 
 
-
+#
 # from django.http import JsonResponse
 # from .models import state
 #
 # def get_states(request):
 #     country_id = request.GET.get('country_id')
-#     states = State.objects.filter(country_id=country_id).values('id', 'name')
+#     states = state.objects.filter(country_id=country_id).values('id', 'name')
 #     return JsonResponse({'states': list(states)})
 
 
@@ -1146,6 +1170,7 @@ def accept_leave_request(request, leave_request_id):
 
         # Send email notification
         send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [employee_email])
+        messages.success(request, "The leave request has been accepted.")
 
         return redirect('leave_request_display')
 
@@ -1174,6 +1199,7 @@ def reject_leave_request(request, leave_request_id):
 
         # Send email
         send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [employee_email])
+        messages.success(request, "The leave request has been rejected.")
 
         return redirect('leave_request_display')  # Redirect back to the display page
 
@@ -1365,7 +1391,7 @@ def admin_leave_requests(request):
         for leave_request in leave_requests
     ]
 
-    return render(request, "leaverequestdisplay.html", {
+    return render(request, "requestdisp.html", {
         "leave_requests_data": leave_requests_data,
         "available_years": sorted(available_years, reverse=True),  # Ensure years are sorted in descending order
     })

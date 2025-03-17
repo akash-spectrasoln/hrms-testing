@@ -15,7 +15,7 @@ class Command(BaseCommand):
             self.stdout.write(f"Inserted role: {role}")
 
         # Insert salutations
-        salutations = ["Mr.", "Mrs."]
+        salutations = ["Mr.", "Mrs.","Miss."]
         for salutation in salutations:
             Salutation.objects.get_or_create(sal_name=salutation)
             self.stdout.write(f"Inserted salutation: {salutation}")

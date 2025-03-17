@@ -21,7 +21,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = 'django-insecure-0^uf$ncl^q&^-^%$gquf!84c&v%=%a1&j94pww++7g6dwd0z0('
-
+#
 # SECURITY WARNING: don't run with debug turned on in production!
 # DEBUG = True
 DEBUG = False
@@ -126,7 +126,9 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.1/howto/static-files/
 
-STATIC_URL = 'static/'
+
+#
+# STATIC_URL = 'static/'
 
 # Add the following to make Django aware of your static files directory
 
@@ -180,10 +182,47 @@ DEFAULT_FROM_EMAIL = 'ajaykmani2001@gmail.com'
 
 
 
+# import os
+#
+# STATIC_URL = '/static/'
+# STATICFILES_DIRS = [
+#     os.path.join(BASE_DIR, 'static'),  # Ensure this exists
+# ]
+# STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')  # For collectstatic
+
+
+
+
+
+
+#
+# import os
+#
+# STATIC_URL = '/static/'
+#
+# # Collect static files from these directories
+# STATICFILES_DIRS = [
+#     os.path.join(BASE_DIR, 'admin_app/static'),
+#     os.path.join(BASE_DIR, 'employee_app/static'),
+# ]
+#
+# # This is where collectstatic will copy all static files
+# STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+
+
+
+
+
 import os
 
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
 STATIC_URL = '/static/'
+
+# Centralized static folder (Remove per-app static directories)
 STATICFILES_DIRS = [
-    os.path.join(BASE_DIR, 'static'),  # Ensure this exists
+    os.path.join(BASE_DIR, 'static'),  # Use only the main static folder
 ]
-STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')  # For collectstatic
+
+# Collectstatic will copy all static files here (used in production)
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
