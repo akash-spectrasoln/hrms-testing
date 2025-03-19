@@ -1,6 +1,7 @@
 
 from django import forms
 from .models import Employees, Country, state
+import random
 
 STATUS_CHOICES = (
     ('employed', 'Employed'),
@@ -29,7 +30,7 @@ class EmployeeEditForm(forms.ModelForm):
             'emp_mob_ph', 'emp_off_ph', 'emp_home_ph', 'emp_val_from', 'emp_val_to', 'country', 'state',
             'emp_home_street', 'emp_home_city', 'pincode', 'role', 'dep', 'designation',
             'employee_manager', 'employee_status', 'emp_cp_name', 'emp_cp_ph', 'emp_cp_email',
-            'emp_cp_relation', 'emp_base', 'emp_resume', 'emp_certif'
+            'emp_cp_relation', 'emp_base', 'emp_resume', 'emp_certif','employee_type'
 
         ]
         widgets = {
@@ -52,6 +53,16 @@ class EmployeeEditForm(forms.ModelForm):
     def save(self, commit=True):
         instance = super().save(commit=False)
         instance.employee_status = self.cleaned_data['employee_status']
+
+        # Update emp_id prefix if employee_type changes
+        if 'employee_type' in self.changed_data:  # Check if employee_type was changed
+            new_type = self.cleaned_data['employee_type']
+            if instance.emp_id:  # Extract numeric part from old ID
+                existing_number = ''.join(filter(str.isdigit, instance.emp_id))
+            else:
+                existing_number = str(random.randint(1000, 9999))  # Generate a random number if missing
+
+            instance.emp_id = f"{new_type}{existing_number}"  # Set new Employee ID
 
         if commit:
             instance.save()

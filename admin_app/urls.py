@@ -35,7 +35,7 @@ path('admin_login/', admin_login, name='admin_login'),
 
 # Admin Dashboard (After successful login)
 path('admin_dashboard/', admin_dashboard, name='admin_dashboard'),
-path('create_admin/', create_admin_user, name='create_admin_user'),  # Add this line
+# path('create_admin/', create_admin_user, name='create_admin_user'),  # Add this line
 path('change_password/', change_password, name='admin_change_password'),
 # Forgot Password - Enter Email
 path('admin_password_reset/', auth_views.PasswordResetView.as_view(template_name='admin_password_reset.html'),

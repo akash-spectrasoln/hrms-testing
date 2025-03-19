@@ -567,12 +567,26 @@
                         <i class="fas fa-user"></i>
                         Basic Information
                     </h3>
+                    <!-- Employee Type -->
+<div class="form-group">
+    <label class="form-label required">Employee Type</label>
+    <div class="select-wrapper">
+        <select id="employee_type" name="employee_type" class="form-control" required>
+            <option value="" disabled>Select Employee Type</option>
+            <option value="C-" {% if form.instance.employee_type == "C-" %}selected{% endif %}>Contractor</option>
+            <option value="I-" {% if form.instance.employee_type == "I-" %}selected{% endif %}>Intern</option>
+            <option value="E-" {% if form.instance.employee_type == "E-" %}selected{% endif %}>Employee</option>
+        </select>
+    </div>
+</div>
+
                     <div class="form-grid-two-columns">
-                        <!-- Employee ID -->
-                        <div class="form-group">
-                            <label class="form-label required">Employee ID</label>
-                            <input type="text" name="empid" class="form-control" value="{{ form.instance.emp_id }}" required>
-                        </div>
+                       <!-- Employee ID (Read-only) -->
+<div class="form-group">
+    <label class="form-label required">Employee ID</label>
+    <input type="text" id="empid" name="empid" class="form-control" value="{{ form.instance.emp_id }}" readonly required>
+</div>
+
 
                         <!-- Salutation Field -->
                         <div class="form-group">
@@ -892,7 +906,7 @@
 
                 <button type="submit" class="submit-btn">
                     <i class="fas fa-save"></i>
-                    Save Changes
+                    Save
                 </button>
             </form>
         </div>
@@ -962,6 +976,35 @@
             });
         }
     }
+
+
+
+
+ // Employee Type & ID Handling
+    function initializeEmployeeIDHandling() {
+        const empTypeField = document.querySelector('select[name="employee_type"]');
+        const empIdField = document.querySelector('input[name="empid"]');
+
+        if (!empTypeField || !empIdField) return;
+
+        function updateEmployeeID() {
+            let empType = empTypeField.value;
+            if (!empType) return;
+
+            let currentEmpID = empIdField.value;
+            let empNumber = currentEmpID.replace(/^[A-Z]-/, ''); // Remove old prefix
+
+            if (!empNumber || isNaN(empNumber)) {
+                // Generate a new 4-digit number if no valid number exists
+                empNumber = Math.floor(1000 + Math.random() * 9000);
+            }
+
+            empIdField.value = `${empType}${empNumber}`; // Update Employee ID
+        }
+
+        empTypeField.addEventListener('change', updateEmployeeID);
+    }
+
 
     // Initialize all components
     function initializeAll() {

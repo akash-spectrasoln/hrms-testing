@@ -571,28 +571,81 @@ body {
                 {% csrf_token %}
 
                 <!-- Basic Information Section -->
-                <div class="form-section" data-section="basic-info">
-                    <h3 class="section-title">
-                        <i class="fas fa-user"></i>
-                        Basic Information
-                    </h3>
-                    <div class="form-grid-two-columns">
-                        <div class="form-group">
-                            <label class="form-label required">Employee ID</label>
-                            <input type="text" name="empid" class="form-control" required>
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label required">Salutation</label>
-                            <div class="select-wrapper">
-                                <select name="sal" class="form-control" required>
-                                    <option value="" disabled selected>Select</option>
-                                    {% for sal in salutations %}
-                                    <option value="{{ sal.id }}">{{ sal.sal_name }}</option>
-                                    {% endfor %}
-                                </select>
-                            </div>
-                        </div>
-                    </div>
+<div class="form-section" data-section="basic-info">
+    <h3 class="section-title">
+        <i class="fas fa-user"></i>
+        Basic Information
+    </h3>
+    <div class="form-grid-three-columns">
+        <!-- Employee Type Dropdown -->
+        <div class="form-group">
+            <label class="form-label required">Employee Type</label>
+            <div class="select-wrapper">
+                <select id="employee_type" name="employee_type" class="form-control" required onchange="generateEmployeeID()">
+                    <option value="" disabled selected>Select Employee Type</option>
+                    <option value="C-">Contractor</option>
+                    <option value="I-">Intern</option>
+                    <option value="E-">Employee</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Employee ID Field -->
+        <div class="form-group">
+            <label class="form-label required">Employee ID</label>
+            <input type="text" id="empid" name="empid" class="form-control"  required>
+        </div>
+
+        <!-- Salutation Dropdown -->
+        <div class="form-group">
+            <label class="form-label required">Salutation</label>
+            <div class="select-wrapper">
+                <select name="sal" class="form-control" required>
+                    <option value="" disabled selected>Select</option>
+                    {% for sal in salutations %}
+                    <option value="{{ sal.id }}">{{ sal.sal_name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+    </div>
+
+
+                         <!-- Employee Type Dropdown -->
+<!--        <div class="form-group">-->
+<!--            <label class="form-label required">Employee Type</label>-->
+<!--            <div class="select-wrapper">-->
+<!--                <select id="employee_type" name="employee_type" class="form-control" required onchange="generateEmployeeID()">-->
+<!--                    <option value="" disabled selected>Select Employee Type</option>-->
+<!--                    <option value="C-">Contractor</option>-->
+<!--                    <option value="I-">Intern</option>-->
+<!--                    <option value="E-">Employee</option>-->
+<!--                </select>-->
+<!--            </div>-->
+<!--        </div>-->
+
+
+
+
+
+
+
+<!--                        <div class="form-group">-->
+<!--                            <label class="form-label required">Employee ID</label>-->
+<!--                            <input type="text" id="empid" name="empid" class="form-control" readonly required>-->
+<!--                        </div>-->
+<!--                        <div class="form-group">-->
+<!--                            <label class="form-label required">Salutation</label>-->
+<!--                            <div class="select-wrapper">-->
+<!--                                <select name="sal" class="form-control" required>-->
+<!--                                    <option value="" disabled selected>Select</option>-->
+<!--                                    {% for sal in salutations %}-->
+<!--                                    <option value="{{ sal.id }}">{{ sal.sal_name }}</option>-->
+<!--                                    {% endfor %}-->
+<!--                                </select>-->
+<!--                            </div>-->
+<!--                        </div>-->
+<!--                    </div>-->
 
                     <div class="form-grid-three-columns">
                         <div class="form-group">
@@ -946,6 +999,9 @@ body {
             }
         }
 
+
+
+
         // File Upload Handling
         function initializeFileUploads() {
             document.querySelectorAll('.file-input-container').forEach(container => {
@@ -1236,6 +1292,39 @@ body {
 
         // Start initialization
         initializeAll();
+
+
+// Employee ID Generation
+function initializeEmployeeIDGeneration() {
+    const empTypeField = document.getElementById("employee_type"); // Correct ID
+    const empIdField = document.getElementById("empid");
+
+    if (!empTypeField || !empIdField) return;
+
+    function generateEmployeeID() {
+        const empType = empTypeField.value;
+        if (!empType) return;
+
+        // Generate a random 4-digit number
+        const randomNum = Math.floor(1000 + Math.random() * 9000);
+
+        // Set Employee ID
+        empIdField.value = `${empType}${randomNum}`; // Removed extra "-" for correct format
+    }
+
+    // Attach event listener for employee type selection
+    empTypeField.addEventListener("change", generateEmployeeID);
+}
+
+// Initialize Employee ID Generation
+initializeEmployeeIDGeneration();
+
+
+
+
+
+
+
     });
 </script>
 {% endblock %}

@@ -212,17 +212,65 @@ DEFAULT_FROM_EMAIL = 'ajaykmani2001@gmail.com'
 
 
 
+#
+# import os
+# from pathlib import Path
+#
+# BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+#
+# STATIC_URL = '/static/'
+#
+# # Centralized static folder (Remove per-app static directories)
+# STATICFILES_DIRS = [
+#     os.path.join(BASE_DIR, 'static'),  # Use only the main static folder
+# ]
+#
+# # Collectstatic will copy all static files here (used in production)
+# STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+#
+
+
+
 
 import os
+from pathlib import Path
 
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+# Base directory of the project
+BASE_DIR = Path(__file__).resolve().parent.parent
 
+# URL for serving static files
 STATIC_URL = '/static/'
 
-# Centralized static folder (Remove per-app static directories)
+# Static files directory (for development)
 STATICFILES_DIRS = [
-    os.path.join(BASE_DIR, 'static'),  # Use only the main static folder
+    BASE_DIR / "static",  # Ensure this points to the correct folder
 ]
 
-# Collectstatic will copy all static files here (used in production)
-STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+# Directory where 'collectstatic' will collect static files (for production)
+STATIC_ROOT = BASE_DIR / "staticfiles"
+
+# Optional: Ensure static files are correctly found in production
+STATICFILES_FINDERS = [
+    "django.contrib.staticfiles.finders.FileSystemFinder",
+    "django.contrib.staticfiles.finders.AppDirectoriesFinder",
+]
+
+
+
+
+
+
+
+
+
+
+import os
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
+
+# Retrieve admin credentials
+ADMIN_USERNAME = os.getenv('ADMIN_USERNAME')
+ADMIN_EMAIL = os.getenv('ADMIN_EMAIL')
+ADMIN_PASSWORD = os.getenv('ADMIN_PASSWORD')

@@ -29,6 +29,7 @@ from django.contrib import messages
 
 def add_employee(request):
     if request.method == 'POST':
+        employee_type = request.POST.get('employee_type')  # Get employee type
         emp_id = request.POST.get('empid')
         sal_id = request.POST.get('sal')  # Get selected salutation
         f_name = request.POST.get('fname')
@@ -607,6 +608,14 @@ class EmployeeUpdateView(UpdateView):
     def form_valid(self, form):
         employee = form.save(commit=False)  # Don't save to DB yet
 
+        # Check if Employee Type is changed
+        new_employee_type = form.cleaned_data.get("employee_type")
+        if new_employee_type and new_employee_type != employee.employee_type:
+            # Generate a new Employee ID with the new type
+            unique_number = employee.emp_id[-4:]  # Extract last 4 digits from existing ID
+            employee.emp_id = f"{new_employee_type}{unique_number}"
+
+
         # Handle file upload for emp_resume
         resume_file = self.request.FILES.get('emp_resume')
         if resume_file:
@@ -736,27 +745,29 @@ class DeletedEmployeeListView(ListView):
 #
 
 
+#
+# from django.shortcuts import render, redirect
+# from django.contrib.auth import authenticate, login
+# from django.contrib import messages
+#
+# def admin_login(request):
+#     if request.method == 'POST':
+#         username = request.POST.get('username')  # Admin username
+#         password = request.POST.get('password')  # Admin password
+#
+#         # Authenticate the user using username and password
+#         user = authenticate(request, username=username, password=password)
+#
+#         if user is not None and (user.is_staff or user.is_superuser):
+#             login(request, user)  # Log the admin user in
+#             return redirect('adminbase')  # Redirect to the admin dashboard
+#         else:
+#             messages.error(request, 'Invalid credentials or insufficient permissions')
+#             return redirect('admin_login')  # Redirect back to login page
+#
+#     return render(request, 'admin_login.html')  # Render the login page
+#
 
-from django.shortcuts import render, redirect
-from django.contrib.auth import authenticate, login
-from django.contrib import messages
-
-def admin_login(request):
-    if request.method == 'POST':
-        username = request.POST.get('username')  # Admin username
-        password = request.POST.get('password')  # Admin password
-
-        # Authenticate the user using username and password
-        user = authenticate(request, username=username, password=password)
-
-        if user is not None and (user.is_staff or user.is_superuser):
-            login(request, user)  # Log the admin user in
-            return redirect('adminbase')  # Redirect to the admin dashboard
-        else:
-            messages.error(request, 'Invalid credentials or insufficient permissions')
-            return redirect('admin_login')  # Redirect back to login page
-
-    return render(request, 'admin_login.html')  # Render the login page
 
 
 # Admin Dashboard View (after successful login)
@@ -766,17 +777,17 @@ from django.contrib.auth.decorators import login_required
 def admin_dashboard(request):
     return render(request, 'admin_dashboard.html')  # Render the admin dashboard page
 
-
-from django.contrib.auth.models import User
-from django.http import HttpResponse
-
-def create_admin_user(request):
-    # Check if the user is not already created
-    if not User.objects.filter(username='admin@example.com').exists():
-        admin_user = User.objects.create_superuser('admin@example.com', 'admin@example.com', 'admin_password')
-        return HttpResponse('Admin user created successfully!')
-    else:
-        return HttpResponse('Admin user already exists!')
+#
+# from django.contrib.auth.models import User
+# from django.http import HttpResponse
+#
+# def create_admin_user(request):
+#     # Check if the user is not already created
+#     if not User.objects.filter(username='admin@example.com').exists():
+#         admin_user = User.objects.create_superuser('admin@example.com', 'admin@example.com', 'admin_password')
+#         return HttpResponse('Admin user created successfully!')
+#     else:
+#         return HttpResponse('Admin user already exists!')
 
 
 #
@@ -1468,3 +1479,41 @@ def filter_leave_requests(request):
     ]
 
     return JsonResponse(filtered_data, safe=False)
+
+
+
+
+
+from django.shortcuts import render, redirect
+from django.contrib.auth import authenticate, login
+from django.contrib.auth.models import User
+from django.contrib import messages
+
+
+def admin_login(request):
+    if request.method == 'POST':
+        identifier = request.POST.get('username')  # Username or email
+        password = request.POST.get('password')
+
+        # Check if it's an email or username
+        user = None
+        if '@' in identifier:  # If email
+            try:
+                user = User.objects.get(email=identifier)
+                username = user.username  # Get username from email
+            except User.DoesNotExist:
+                messages.error(request, 'Invalid email or username')
+                return redirect('admin_login')
+        else:
+            username = identifier  # Treat input as username
+
+        # Authenticate
+        user = authenticate(request, username=username, password=password)
+
+        if user is not None and (user.is_staff or user.is_superuser):
+            login(request, user)
+            return redirect('adminbase')  # Redirect to admin dashboard
+        else:
+            messages.error(request, 'Invalid credentials or insufficient permissions')
+
+    return render(request, 'admin_login.html')  # Render login page
