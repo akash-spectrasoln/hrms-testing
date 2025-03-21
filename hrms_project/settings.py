@@ -27,12 +27,12 @@ DEBUG = True
 # DEBUG = False
 
 STATIC_URL = '/static/'
-STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+STATIC_ROOT = os.path.join(BASE_DIR, 'static')
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 STATICFILES_DIRS = [
-    os.path.join(BASE_DIR, 'static')
+    os.path.join(BASE_DIR, 'staticfiles')
 ]
 
 # ALLOWED_HOSTS = []
@@ -158,10 +158,10 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 import os
 
-# MEDIA_URL and MEDIA_ROOT settings
-MEDIA_URL = '/media/'  # URL prefix for serving media files
-MEDIA_ROOT = os.path.join(BASE_DIR, 'media')  # Folder where media files are stored
-
+# # MEDIA_URL and MEDIA_ROOT settings
+# MEDIA_URL = '/media/'  # URL prefix for serving media files
+# MEDIA_ROOT = os.path.join(BASE_DIR, 'media')  # Folder where media files are stored
+#
 
 
 
