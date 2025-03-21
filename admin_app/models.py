@@ -51,6 +51,7 @@ class Department(models.Model):
 from django.contrib.auth.hashers import make_password, check_password
 import random
 
+import re
 
 
 from django.contrib.auth.models import User
@@ -64,7 +65,7 @@ class Employees(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="employee_profile", null=True, blank=True)
 
     # Employee Type Field
-    employee_type = models.CharField(max_length=2, choices=EMPLOYEE_TYPE_CHOICES, verbose_name="Employee Type",null=True)
+    employee_type = models.CharField(max_length=3, choices=EMPLOYEE_TYPE_CHOICES, verbose_name="Employee Type",null=True)
 
 
     emp_id=models.CharField(max_length=10,unique=True)
@@ -123,41 +124,20 @@ class Employees(models.Model):
     # created_by = models.ForeignKey(User, related_name='created_employees', on_delete=models.SET_NULL, null=True)
     # modified_by = models.ForeignKey(User, related_name='modified_employees', on_delete=models.SET_NULL, null=True)
 
+
     def save(self, *args, **kwargs):
-        # If the employee doesn't have a user, create one
+
+
         if not self.user:
-            user = User.objects.create_user(username=self.emp_email, email=self.emp_email,
-                                            password="defaultpassword")  # Generate password or use a default one
-            self.user = user
-        super().save(*args, **kwargs)
+            self.user, created = User.objects.get_or_create(
+                username=self.emp_email,
+                defaults={'email': self.emp_email, 'password': 'defaultpassword'}
+            )
 
-    def __str__(self):
-        return f"{self.emp_fname} {self.emp_lname} (ID: {self.emp_id})"
-
-
-
-# function for generating unique id written below
-    def generate_unique_id(self):
-        """Generate a unique Employee ID based on type."""
-        while True:
-            unique_number = random.randint(1000, 9999)  # Generate a 4-digit number
-            new_id = f"{self.employee_type}{unique_number}"
-            if not Employees.objects.filter(emp_id=new_id).exists():  # Ensure uniqueness
-                return new_id
-
-    def save(self, *args, **kwargs):
-        if not self.emp_id:  # Generate ID only if not set
-            self.emp_id = self.generate_unique_id()
         super().save(*args, **kwargs)
 
     def __str__(self):
         return f"{self.emp_id} ({self.get_employee_type_display()})"
-
-
-
-
-
-
 
 #
 # leave management section

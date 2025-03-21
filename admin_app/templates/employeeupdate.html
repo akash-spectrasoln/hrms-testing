@@ -521,6 +521,8 @@
 </style>
 {% endblock %}
 
+
+
 {% block content %}
 <div class="container">
     <div class="main-content">
@@ -567,63 +569,64 @@
                         <i class="fas fa-user"></i>
                         Basic Information
                     </h3>
-                    <!-- Employee Type -->
-<div class="form-group">
-    <label class="form-label required">Employee Type</label>
-    <div class="select-wrapper">
-        <select id="employee_type" name="employee_type" class="form-control" required>
-            <option value="" disabled>Select Employee Type</option>
-            <option value="C-" {% if form.instance.employee_type == "C-" %}selected{% endif %}>Contractor</option>
-            <option value="I-" {% if form.instance.employee_type == "I-" %}selected{% endif %}>Intern</option>
-            <option value="E-" {% if form.instance.employee_type == "E-" %}selected{% endif %}>Employee</option>
-        </select>
+
+
+                    <div class="form-grid-three-columns">
+    <!-- Employee Type -->
+    <div class="form-group">
+        <label class="form-label required">Employee Type</label>
+        <div class="select-wrapper">
+            <select id="employee_type" name="employee_type" class="form-control" required>
+                <option value="" disabled>Select Employee Type</option>
+                <option value="C-" {% if form.instance.employee_type == "C-" %}selected{% endif %}>Contractor</option>
+                <option value="I-" {% if form.instance.employee_type == "I-" %}selected{% endif %}>Intern</option>
+                <option value="E-" {% if form.instance.employee_type == "E-" %}selected{% endif %}>Employee</option>
+            </select>
+        </div>
+    </div>
+
+    <!-- Employee ID (Read-only) -->
+    <div class="form-group">
+        <label class="form-label required">Employee ID</label>
+        <input type="text" id="empid" name="emp_id" class="form-control" value="{{ form.instance.emp_id }}" readonly required>
+    </div>
+
+    <!-- Salutation Field -->
+    <div class="form-group">
+        <label class="form-label required">Salutation</label>
+        <div class="select-wrapper">
+            <select name="sal" class="form-control" required>
+                <option value="" disabled>Select</option>
+                {% for sal in salutations %}
+                    <option value="{{ sal.id }}" {% if form.instance.sal.id == sal.id %}selected{% endif %}>
+                        {{ sal.sal_name }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
     </div>
 </div>
 
-                    <div class="form-grid-two-columns">
-                       <!-- Employee ID (Read-only) -->
-<div class="form-group">
-    <label class="form-label required">Employee ID</label>
-    <input type="text" id="empid" name="empid" class="form-control" value="{{ form.instance.emp_id }}" readonly required>
+<div class="form-grid-three-columns">
+    <!-- First Name -->
+    <div class="form-group">
+        <label class="form-label required">First Name</label>
+        <input type="text" name="emp_fname" class="form-control" value="{{ form.instance.emp_fname }}" required>
+    </div>
+
+    <!-- Middle Name -->
+    <div class="form-group">
+        <label class="form-label">Middle Name</label>
+        <input type="text" name="emp_mname" class="form-control" value="{{ form.instance.emp_mname }}">
+    </div>
+
+    <!-- Last Name -->
+    <div class="form-group">
+        <label class="form-label required">Last Name</label>
+        <input type="text" name="emp_lname" class="form-control" value="{{ form.instance.emp_lname }}" required>
+    </div>
 </div>
 
-
-                        <!-- Salutation Field -->
-                        <div class="form-group">
-                            <label class="form-label required">Salutation</label>
-                            <div class="select-wrapper">
-                                <select name="sal" class="form-control" required>
-                                    <option value="" disabled selected>Select</option>
-                                    {% for sal in salutations %}
-                                        <option value="{{ sal.id }}" {% if form.instance.sal.id == sal.id %}selected{% endif %}>
-                                            {{ sal.sal_name }}
-                                        </option>
-                                    {% endfor %}
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="form-grid-three-columns">
-                        <!-- First Name -->
-                        <div class="form-group">
-                            <label class="form-label required">First Name</label>
-                            <input type="text" name="fname" class="form-control" value="{{ form.instance.emp_fname }}" required>
-                        </div>
-
-                        <!-- Middle Name -->
-                        <div class="form-group">
-                            <label class="form-label">Middle Name</label>
-                            <input type="text" name="mname" class="form-control" value="{{ form.instance.emp_mname }}">
-                        </div>
-
-                        <!-- Last Name -->
-                        <div class="form-group">
-                            <label class="form-label required">Last Name</label>
-                            <input type="text" name="lname" class="form-control" value="{{ form.instance.emp_lname }}" required>
-                        </div>
-                    </div>
-                </div>
 
                 <!-- Validity Period Section -->
                 <div class="form-section" data-section="validity">
@@ -655,19 +658,19 @@
                         <!-- Company Email -->
                         <div class="form-group">
                             <label class="form-label required">Company Email</label>
-                            <input type="email" name="empcemail" class="form-control" value="{{ form.instance.emp_email }}" required>
+                            <input type="email" name="emp_email" class="form-control" value="{{ form.instance.emp_email }}" required>
                         </div>
 
                         <!-- Personal Email -->
                         <div class="form-group">
                             <label class="form-label required">Personal Email</label>
-                            <input type="email" name="emppemail" class="form-control" value="{{ form.instance.emp_pemail }}" required>
+                            <input type="email" name="emp_pemail" class="form-control" value="{{ form.instance.emp_pemail }}" required>
                         </div>
 
                         <!-- Personal Phone -->
                         <div class="form-group">
                             <label class="form-label required">Personal Phone</label>
-                            <input type="tel" name="empphone" class="form-control" value="{{ form.instance.emp_mob_ph }}" required>
+                            <input type="tel" name="emp_mob_ph" class="form-control" value="{{ form.instance.emp_mob_ph }}" required>
                         </div>
 
                         <!-- Office Phone -->
@@ -685,26 +688,26 @@
                         <!-- Emergency Contact Name -->
                         <div class="form-group">
                             <label class="form-label required">Emergency Contact Name</label>
-                            <input type="text" name="empcpname" class="form-control" value="{{ form.instance.emp_cp_name }}" required>
+                            <input type="text" name="emp_cp_name" class="form-control" value="{{ form.instance.emp_cp_name }}" required>
                         </div>
 
                         <!-- Emergency Contact Phone -->
                         <div class="form-group">
                             <label class="form-label required">Emergency Contact Phone</label>
-                            <input type="tel" name="empcpph" class="form-control" value="{{ form.instance.emp_cp_ph }}" required>
+                            <input type="tel" name="emp_cp_ph" class="form-control" value="{{ form.instance.emp_cp_ph }}" required>
                         </div>
 
                         <!-- Emergency Contact Email -->
                         <div class="form-group">
                             <label class="form-label required">Emergency Contact Email</label>
-                            <input type="email" name="empcpemail" class="form-control" value="{{ form.instance.emp_cp_email }}" required>
+                            <input type="email" name="emp_cp_email" class="form-control" value="{{ form.instance.emp_cp_email }}" required>
                         </div>
 
                         <!-- Emergency Contact Relationship -->
                         <div class="form-group">
                             <label class="form-label required">Emergency Contact Relationship</label>
                             <div class="select-wrapper">
-                                <select name="empcprelation" class="form-control" required>
+                                <select name="emp_cp_relation" class="form-control" required>
                                     <option value="" disabled selected>Choose Relation</option>
                                     <option value="Mother" {% if form.instance.emp_cp_relation == 'Mother' %}selected{% endif %}>Mother</option>
                                     <option value="Father" {% if form.instance.emp_cp_relation == 'Father' %}selected{% endif %}>Father</option>
@@ -758,13 +761,13 @@
                         <!-- City -->
                         <div class="form-group">
                             <label class="form-label required">City</label>
-                            <input type="text" name="city" class="form-control" value="{{ form.instance.emp_home_city }}" required>
+                            <input type="text" name="emp_home_city" class="form-control" value="{{ form.instance.emp_home_city }}" required>
                         </div>
 
                         <!-- Street -->
                         <div class="form-group">
                             <label class="form-label required">Street</label>
-                            <input type="text" name="street" class="form-control" value="{{ form.instance.emp_home_street }}" required>
+                            <input type="text" name="emp_home_street" class="form-control" value="{{ form.instance.emp_home_street }}" required>
                         </div>
 
                         <!-- Pincode -->
@@ -797,20 +800,29 @@
                             </div>
                         </div>
 
+
+
+
+
+
+
+
                         <!-- Department -->
-                        <div class="form-group">
-                            <label class="form-label required">Department</label>
-                            <div class="select-wrapper">
-                                <select name="department" class="form-control" required>
-                                    <option value="" disabled selected>Select Department</option>
-                                    {% for department in departments %}
-                                        <option value="{{ department.id }}" {% if form.instance.department.id == department.id %}selected{% endif %}>
-                                            {{ department.dep_name }}
-                                        </option>
-                                    {% endfor %}
-                                </select>
-                            </div>
-                        </div>
+<div class="form-group">
+    <label class="form-label required">Department</label>
+    <div class="select-wrapper">
+        <select name="dep" class="form-control" required>
+            <option value="" disabled>Select Department</option>
+            {% for department in departments %}
+                <option value="{{ department.id }}"
+                    {% if form.instance.dep and form.instance.dep.id == department.id %}selected{% endif %}>
+                    {{ department.dep_name }}
+                </option>
+            {% endfor %}
+        </select>
+    </div>
+</div>
+
 
                         <!-- Designation -->
                         <div class="form-group">
@@ -832,24 +844,34 @@
                         </div>
 
                         <!-- Manager -->
-                        <div class="form-group">
-                            <label class="form-label required">Manager</label>
-                            <div class="select-wrapper">
-                                <select name="manager" class="form-control" required>
-                                    <option value="" disabled selected>Select Manager</option>
-                                    {% for manager in managers %}
-                                        <option value="{{ manager.id }}" {% if form.instance.manager.id == manager.id %}selected{% endif %}>
-                                            {{ manager.emp_fname }} {{ manager.emp_lname }} ({{ manager.emp_id }})
-                                        </option>
-                                    {% endfor %}
-                                </select>
-                            </div>
-                        </div>
+
+
+ <div class="form-group">
+    <label class="form-label required">Manager</label>
+    <div class="select-wrapper">
+        <select name="employee_manager" class="form-control">
+            <!-- Ensure "None" is selectable and preselected when there is no manager -->
+            <option value="" {% if not form.instance.employee_manager %}selected{% endif %}>None</option>
+
+            {% for manager in managers %}
+                <option value="{{ manager.id }}"
+                    {% if form.instance.employee_manager and form.instance.employee_manager.id == manager.id %}
+                        selected
+                    {% endif %}>
+                    {{ manager.emp_fname }} {{ manager.emp_lname }} ({{ manager.emp_id }})
+                </option>
+            {% endfor %}
+        </select>
+    </div>
+</div>
+
+
 
                         <!-- Salary -->
                         <div class="form-group">
                             <label class="form-label required">Salary</label>
-                            <input type="text" name="salary" class="form-control" value="{{ form.instance.salary }}" required>
+                           <input type="text" name="emp_base" class="form-control" value="{{ form.instance.emp_base|default_if_none:'' }}" required>
+
                         </div>
                     </div>
                 </div>

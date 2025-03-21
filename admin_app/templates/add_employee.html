@@ -581,7 +581,7 @@ body {
         <div class="form-group">
             <label class="form-label required">Employee Type</label>
             <div class="select-wrapper">
-                <select id="employee_type" name="employee_type" class="form-control" required onchange="generateEmployeeID()">
+                <select id="employee_type" name="employee_type" class="form-control" required >
                     <option value="" disabled selected>Select Employee Type</option>
                     <option value="C-">Contractor</option>
                     <option value="I-">Intern</option>
@@ -590,10 +590,12 @@ body {
             </div>
         </div>
 
+
+
         <!-- Employee ID Field -->
         <div class="form-group">
             <label class="form-label required">Employee ID</label>
-            <input type="text" id="empid" name="empid" class="form-control"  required>
+            <input type="text" id="emp_id" name="emp_id" class="form-control"  readonly required>
         </div>
 
         <!-- Salutation Dropdown -->
@@ -664,6 +666,7 @@ body {
                 </div>
 
                 <!-- Validity Period Section -->
+
                 <div class="form-section" data-section="validity">
                     <h3 class="section-title">
                         <i class="fas fa-calendar"></i>
@@ -673,15 +676,31 @@ body {
                         <div class="form-group">
                             <label class="form-label required">Valid From</label>
                             <input type="date" name="empvalidfrom" class="form-control"
-                                   value="{{ default_valid_from|date:'Y-m-d' }}" required>
+                                   value="{{ default_valid_from|date:'Y-m-d' }}"  id="empvalidfrom" required>
                         </div>
                         <div class="form-group">
                             <label class="form-label required">Valid To</label>
                             <input type="date" name="empvalidto" class="form-control"
-                                   value="{{ default_valid_to|date:'Y-m-d' }}" required>
+                                   value="{{ default_valid_to|date:'Y-m-d' }}"  id="empvalidto" required>
                         </div>
                     </div>
+
                 </div>
+
+<!--                    <div class="form-grid-two-columns">-->
+<!--    <div class="form-group">-->
+<!--        <label class="form-label required">Valid From</label>-->
+<!--        <input type="date" name="empvalidfrom" class="form-control"-->
+<!--               value="{{ default_valid_from }}" required >-->
+<!--    </div>-->
+<!--    <div class="form-group">-->
+<!--        <label class="form-label required">Valid To</label>-->
+<!--        <input type="date" name="empvalidto" class="form-control"-->
+<!--               value="{{ default_valid_to }}" required >-->
+<!--    </div>-->
+<!--</div>-->
+
+
 
                 <!-- Contact Information Section -->
                 <div class="form-section" data-section="contact-info">
@@ -825,20 +844,42 @@ body {
                                 </select>
                             </div>
                         </div>
+<!--                        <div class="form-group">-->
+<!--                            <label class="form-label required ">Manager</label>-->
+<!--                            <div class="select-wrapper">-->
+<!--                                <select name="manager" class="form-control">-->
+<!--                                    <option value="" disabled selected>Select Manager</option>-->
+<!--                                    <option value="">None</option>-->
+<!--                                    {% for employee in employees %}-->
+<!--                                    <option value="{{ employee.emp_id }}">-->
+<!--                                        {{ employee.emp_fname }} {{ employee.emp_lname }} ({{ employee.emp_id }})-->
+<!--                                    </option>-->
+<!--                                    {% endfor %}-->
+<!--                                </select>-->
+<!--                            </div>-->
+<!--                        </div>-->
+
                         <div class="form-group">
-                            <label class="form-label required ">Manager</label>
-                            <div class="select-wrapper">
-                                <select name="manager" class="form-control">
-                                    <option value="" disabled selected>Select Manager</option>
-                                    <option value="">None</option>
-                                    {% for employee in employees %}
-                                    <option value="{{ employee.emp_id }}">
-                                        {{ employee.emp_fname }} {{ employee.emp_lname }} ({{ employee.emp_id }})
-                                    </option>
-                                    {% endfor %}
-                                </select>
-                            </div>
-                        </div>
+    <label class="form-label required">Manager</label>
+    <div class="select-wrapper">
+        <select name="employee_manager" class="form-control">
+            <!-- "None" option -->
+            <option value="" {% if form.instance.employee_manager is None %}selected{% endif %}>None</option>
+
+            <!-- Loop through all employees (managers) -->
+            {% for employee in employees %}
+                <option value="{{ employee.id }}"
+                    {% if form.instance.employee_manager and form.instance.employee_manager.id == employee.id %}
+                        selected
+                    {% endif %}>
+                    {{ employee.emp_fname }} {{ employee.emp_lname }} ({{ employee.emp_id }})
+                </option>
+            {% endfor %}
+        </select>
+    </div>
+</div>
+
+
                         <div class="form-group">
                             <label class="form-label required">Salary</label>
                             <input type="number" step="0.001" name="empsalary" class="form-control" required>
@@ -1290,41 +1331,66 @@ body {
             });
         }
 
-        // Start initialization
-        initializeAll();
 
 
-// Employee ID Generation
-function initializeEmployeeIDGeneration() {
-    const empTypeField = document.getElementById("employee_type"); // Correct ID
-    const empIdField = document.getElementById("empid");
 
-    if (!empTypeField || !empIdField) return;
 
-    function generateEmployeeID() {
-        const empType = empTypeField.value;
-        if (!empType) return;
+ initializeAll();
+    });
 
-        // Generate a random 4-digit number
-        const randomNum = Math.floor(1000 + Math.random() * 9000);
 
-        // Set Employee ID
-        empIdField.value = `${empType}${randomNum}`; // Removed extra "-" for correct format
+
+
+
+document.addEventListener("DOMContentLoaded", function () {
+    const empTypeField = document.getElementById("employee_type");
+    const empIdField = document.getElementById("emp_id");
+
+    if (empTypeField) {
+        empTypeField.addEventListener("change", fetchEmployeeID);
     }
 
-    // Attach event listener for employee type selection
-    empTypeField.addEventListener("change", generateEmployeeID);
-}
+    async function fetchEmployeeID() {
+        let empType = empTypeField.value.trim();
 
-// Initialize Employee ID Generation
-initializeEmployeeIDGeneration();
+        console.log("🔹 Selected Employee Type:", empType);
+
+        if (!empType) {
+            console.warn("⚠️ No Employee Type selected. Clearing Employee ID field.");
+            empIdField.value = "";
+            return;
+        }
+
+        console.log("📡 Fetching Employee ID for:", empType);
+
+        try {
+            let response = await fetch(`/admin_app/generate-emp-id/?employee_type=${empType}`, {
+                method: "GET",
+                cache: "no-cache",  // 🚀 Prevents caching issues
+            });
+
+            if (!response.ok) {
+                throw new Error(`❌ HTTP Error! Status: ${response.status}`);
+            }
+
+            let data = await response.json();
+            console.log("✅ Response from server:", data);
+
+            if (data.emp_id) {
+                empIdField.value = data.emp_id;
+            } else {
+                console.error("❌ Error: Employee ID not received!");
+                empIdField.value = "";
+            }
+        } catch (error) {
+            console.error("❌ Error fetching Employee ID:", error);
+            alert("⚠️ Failed to generate Employee ID. Please try again.");
+        }
+    }
+});
 
 
 
 
-
-
-
-    });
 </script>
 {% endblock %}

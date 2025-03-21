@@ -57,6 +57,8 @@ path('admin_password_reset_complete/',
 # path("leave-requests/", admin_leave_requests, name="admin_leave_requests"),
 path("filter-leave-requests/", filter_leave_requests, name="filter_leave_requests"),
 
+path('generate-emp-id/', generate_emp_id, name='generate_emp_id'),
+
 ]
 
 

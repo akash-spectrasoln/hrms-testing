@@ -3,6 +3,7 @@ from django import forms
 from .models import Employees, Country, state
 import random
 
+
 STATUS_CHOICES = (
     ('employed', 'Employed'),
     ('resigned', 'Resigned'),
@@ -23,6 +24,15 @@ class EmployeeEditForm(forms.ModelForm):
     emp_off_ph = forms.CharField(required=False)
     emp_home_ph = forms.CharField(required=False)
 
+    employee_manager = forms.ModelChoiceField(
+        queryset=Employees.objects.all(), required=False, empty_label="None"
+    )
+
+    employee_type = forms.ChoiceField(
+        choices=Employees.EMPLOYEE_TYPE_CHOICES,
+        required=True,
+        widget=forms.Select(attrs={'class': 'form-control'})
+    )
     class Meta:
         model = Employees
         fields = [
@@ -30,7 +40,7 @@ class EmployeeEditForm(forms.ModelForm):
             'emp_mob_ph', 'emp_off_ph', 'emp_home_ph', 'emp_val_from', 'emp_val_to', 'country', 'state',
             'emp_home_street', 'emp_home_city', 'pincode', 'role', 'dep', 'designation',
             'employee_manager', 'employee_status', 'emp_cp_name', 'emp_cp_ph', 'emp_cp_email',
-            'emp_cp_relation', 'emp_base', 'emp_resume', 'emp_certif','employee_type'
+            'emp_cp_relation', 'emp_base', 'emp_resume', 'emp_certif','employee_type',
 
         ]
         widgets = {
@@ -53,6 +63,10 @@ class EmployeeEditForm(forms.ModelForm):
     def save(self, commit=True):
         instance = super().save(commit=False)
         instance.employee_status = self.cleaned_data['employee_status']
+
+        # Preserve existing salary value
+        if 'emp_base' in self.cleaned_data:
+            instance.emp_base = self.cleaned_data['emp_base']
 
         # Update emp_id prefix if employee_type changes
         if 'employee_type' in self.changed_data:  # Check if employee_type was changed

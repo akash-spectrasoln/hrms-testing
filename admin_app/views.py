@@ -31,6 +31,10 @@ def add_employee(request):
     if request.method == 'POST':
         employee_type = request.POST.get('employee_type')  # Get employee type
         emp_id = request.POST.get('empid')
+        print("DEBUG: Received emp_id ->", emp_id)
+
+        if not emp_id:
+            return HttpResponse("Employee ID is missing", status=400)
         sal_id = request.POST.get('sal')  # Get selected salutation
         f_name = request.POST.get('fname')
         m_name = request.POST.get('mname')
@@ -65,6 +69,11 @@ def add_employee(request):
         # emp_valid_from = datetime.strptime(emp_valid_from, '%Y-%m-%d').date()
         # emp_valid_to = datetime.strptime(emp_valid_to, '%Y-%m-%d').date()
 
+        # Ensure Employee ID is provided
+        if not emp_id:
+            return HttpResponse("Employee ID is missing", status=400)
+
+
         # Set default dates if not provided
         if not emp_valid_from:
             emp_valid_from = date.today()
@@ -75,6 +84,22 @@ def add_employee(request):
             emp_valid_to = date(9999, 12, 31)
         else:
             emp_valid_to = datetime.strptime(emp_valid_to, '%Y-%m-%d').date()
+
+
+
+        #
+        # # Set default dates if not provided
+        # if not emp_valid_from:
+        #     emp_valid_from = date.today()
+        # else:
+        #     emp_valid_from = datetime.strptime(emp_valid_from, '%Y-%m-%d').date()
+        #
+        # if not emp_valid_to:
+        #     emp_valid_to = date(9999, 12, 31)
+        # else:
+        #     emp_valid_to = datetime.strptime(emp_valid_to, '%Y-%m-%d').date()
+
+
 
         # Validate inputs
         if not role_id:
@@ -133,6 +158,7 @@ def add_employee(request):
         # Save employee
         data = Employees(
             emp_id=emp_id,
+            employee_type=employee_type,
             sal=sal,
             emp_fname=f_name,
             emp_mname=m_name,
@@ -178,6 +204,8 @@ def add_employee(request):
     salutations = Salutation.objects.all()  # Fetch salutations for the dropdown
     employees = Employees.objects.all()  # All employees to select a manager
 
+
+
     # Provide default dates for the form
     default_valid_from = date.today()
     default_valid_to = date(9999, 12, 31)
@@ -190,7 +218,8 @@ def add_employee(request):
         'salutations':salutations,  # Pass salutations to the template
         'employees': employees , # Pass employees to the template for selecting manager
         'default_valid_from': default_valid_from,
-        'default_valid_to': default_valid_to
+        'default_valid_to': default_valid_to,
+
     })
 
 
@@ -574,6 +603,9 @@ from django.contrib import messages
 from django.core.files.storage import default_storage
 from .models import Employees
 from .forms import EmployeeEditForm
+from .models import Salutation, Role, Department,state
+
+
 
 class EmployeeUpdateView(UpdateView):
     model = Employees
@@ -636,9 +668,9 @@ class EmployeeUpdateView(UpdateView):
 
     def form_invalid(self, form):
         print("Form Errors:", form.errors.as_json())  # Print detailed errors
+        print("Request POST Data:", self.request.POST)  # Print all form data
         messages.error(self.request, "There was an error updating the employee details.")
         return super().form_invalid(form)
-
 
 
 
@@ -1517,3 +1549,38 @@ def admin_login(request):
             messages.error(request, 'Invalid credentials or insufficient permissions')
 
     return render(request, 'admin_login.html')  # Render login page
+
+
+
+
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from .models import Employees # Import your Employee model
+
+@csrf_exempt
+def generate_emp_id(request):
+    """
+    Generates a unique Employee ID based on the selected employee type.
+    """
+    if request.method == "GET":
+        employee_type = request.GET.get("employee_type", "").strip()
+
+        if not employee_type:
+            return JsonResponse({"error": "Missing employee_type parameter"}, status=400)
+
+        # Get the latest employee ID of the given type
+        last_employee = Employees.objects.filter(emp_id__startswith=employee_type).order_by("-emp_id").first()
+
+        if last_employee:
+            # Extract the numeric part and increment
+            last_number = int(last_employee.emp_id.split("-")[1])
+            new_number = last_number + 1
+        else:
+            new_number = 100000 # Start from 1000 if no previous records exist
+
+        # Generate the new Employee ID
+        new_emp_id = f"{employee_type}{new_number}"
+
+        return JsonResponse({"emp_id": new_emp_id})
+
+    return JsonResponse({"error": "Invalid request method"}, status=405)
