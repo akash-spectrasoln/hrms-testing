@@ -9,7 +9,7 @@ https://docs.djangoproject.com/en/5.1/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.1/ref/settings/
 """
-
+import os
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -23,9 +23,17 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-0^uf$ncl^q&^-^%$gquf!84c&v%=%a1&j94pww++7g6dwd0z0('
 #
 # SECURITY WARNING: don't run with debug turned on in production!
-# DEBUG = True
-DEBUG = False
+DEBUG = True
+# DEBUG = False
 
+STATIC_URL = '/static/'
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
+STATICFILES_DIRS = [
+    os.path.join(BASE_DIR, 'static')
+]
 
 # ALLOWED_HOSTS = []
 # ALLOWED_HOSTS = ["35.225.224.226", "127.0.0.1"]
@@ -239,22 +247,39 @@ from pathlib import Path
 # Base directory of the project
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# URL for serving static files
-STATIC_URL = '/static/'
+# # URL for serving static files
+# STATIC_URL = '/static/'
+#
+# # Static files directory (for development)
+# STATICFILES_DIRS = [
+#     BASE_DIR / "static",  # Ensure this points to the correct folder
+# ]
+#
+# # Directory where 'collectstatic' will collect static files (for production)
+# STATIC_ROOT = BASE_DIR / "staticfiles"
 
-# Static files directory (for development)
-STATICFILES_DIRS = [
-    BASE_DIR / "static",  # Ensure this points to the correct folder
-]
 
-# Directory where 'collectstatic' will collect static files (for production)
-STATIC_ROOT = BASE_DIR / "staticfiles"
 
-# Optional: Ensure static files are correctly found in production
-STATICFILES_FINDERS = [
-    "django.contrib.staticfiles.finders.FileSystemFinder",
-    "django.contrib.staticfiles.finders.AppDirectoriesFinder",
-]
+
+#
+# STATIC_URL = '/static/'
+#
+# # STATIC_ROOT = os.path.join(BASE_DIR, 'static')
+#
+# STATICFILES_DIRS = [
+#
+#     os.path.join(BASE_DIR, 'static'),
+#
+# ]
+#
+# STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+#
+
+# # Optional: Ensure static files are correctly found in production
+# STATICFILES_FINDERS = [
+#     "django.contrib.staticfiles.finders.FileSystemFinder",
+#     "django.contrib.staticfiles.finders.AppDirectoriesFinder",
+# ]
 
 
 
