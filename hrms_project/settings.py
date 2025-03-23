@@ -27,12 +27,12 @@ DEBUG = True
 # DEBUG = False
 
 STATIC_URL = '/static/'
-STATIC_ROOT = os.path.join(BASE_DIR, 'static')
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 STATICFILES_DIRS = [
-    os.path.join(BASE_DIR, 'staticfiles')
+    os.path.join(BASE_DIR, 'static')
 ]
 
 # ALLOWED_HOSTS = []
@@ -70,7 +70,7 @@ ROOT_URLCONF = 'hrms_project.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [os.path.join(BASE_DIR, 'admin_app','templates'),os.path.join(BASE_DIR, 'employee_app','templates')],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
