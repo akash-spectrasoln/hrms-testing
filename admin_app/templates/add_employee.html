@@ -1,6 +1,6 @@
 
 {% extends 'admin_partials/admin_base.html' %}
-
+{% load static %}
 {% block styles %}
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
@@ -861,9 +861,9 @@ body {
 <!--                        </div>-->
 
                         <div class="form-group">
-    <label class="form-label required">Manager</label>
+    <label class="form-label ">Manager</label>
     <div class="select-wrapper">
-        <select name="employee_manager" class="form-control">
+        <select name="manager" class="form-control"  >
             <!-- "None" option -->
             <option value="" {% if form.instance.employee_manager is None %}selected{% endif %}>None</option>
 
@@ -993,7 +993,7 @@ body {
         // Progress Tracking
         function updateProgress() {
             const sections = {
-                'basic-info': ['empid', 'sal', 'fname', 'lname'],
+                'basic-info': ['emp_id', 'sal', 'fname', 'lname'],
                 'validity': ['empvalidfrom', 'empvalidto'],
                 'contact-info': ['empcemail', 'emppemail', 'empphone', 'empcpname', 'empcpph', 'empcpemail', 'empcprelation'],
                 'address': ['country', 'state', 'city', 'street', 'pincode'],
@@ -1015,7 +1015,9 @@ body {
                 const isComplete = fields.every(fieldName => {
                     const field = document.querySelector(`[name="${fieldName}"]`);
 
-                    // Special handling for manager field
+
+
+                // Special handling for manager field
                     if (fieldName === 'manager') {
                         // Consider it valid if it's either a selected value or empty
                         return field && (field.value !== '' || field.value === '');

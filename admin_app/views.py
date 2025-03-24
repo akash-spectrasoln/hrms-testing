@@ -30,7 +30,7 @@ from django.contrib import messages
 def add_employee(request):
     if request.method == 'POST':
         employee_type = request.POST.get('employee_type')  # Get employee type
-        emp_id = request.POST.get('empid')
+        emp_id = request.POST.get('emp_id')
         print("DEBUG: Received emp_id ->", emp_id)
 
         if not emp_id:
@@ -145,11 +145,11 @@ def add_employee(request):
 
         # If manager_id is provided, validate the manager exists
         if manager_id:
-            if manager_id.lower() == 'null':  # Check for "None" selection
+            if manager_id.lower() == '':  # Check for "None" selection
                 manager = None
             else:
                 try:
-                    manager = Employees.objects.get(emp_id=manager_id)
+                    manager = Employees.objects.get(id=manager_id)
                 except Employees.DoesNotExist:
                     return HttpResponse("Manager with this ID does not exist", status=400)
         else:
@@ -406,6 +406,14 @@ def list_employees(request):
     #
     # data=Employees.objects.all()
     data = Employees.objects.filter(is_delete=False)  # Only fetch non-deleted employees
+
+
+    for employee in data:
+        if employee.employee_manager:
+            employee.manager_display = f"{employee.employee_manager.emp_id} ({employee.employee_manager.emp_fname} )"
+        else:
+            employee.manager_display = "None"
+
     return render(request,'view_employeeslist.html',{'data':data})
 
 
