@@ -84,8 +84,8 @@ class Employees(models.Model):
     country = models.ForeignKey(Country, on_delete=models.CASCADE)
     state = models.ForeignKey(state, on_delete=models.CASCADE)
     emp_addr=models.CharField(max_length=150,null=True)
-    emp_home_street=models.CharField(max_length=80)
-    emp_home_city=models.CharField(max_length=80)
+    emp_home_street=models.TextField()
+    emp_home_city=models.TextField()
     pincode=models.CharField(max_length=10,null=True)
     role = models.ForeignKey(Role, on_delete=models.CASCADE, to_field="role_id")
 
@@ -101,8 +101,8 @@ class Employees(models.Model):
     emp_cp_relation = models.CharField(max_length=100)
     emp_base = models.DecimalField(max_digits=10, decimal_places=2)
 
-    emp_resume=models.FileField(upload_to='documents/')
-    emp_certif=models.FileField(upload_to='documents/')
+    emp_resume=models.FileField(upload_to='documents/',null=True,blank=True)
+    emp_certif=models.FileField(upload_to='documents/',null=True , blank=True)
     created_on=models.DateTimeField(auto_now_add=True,null=True)
     modified_on=models.DateTimeField(auto_now=True,null=True)
     is_delete = models.BooleanField(default=False)  # New field for soft delete

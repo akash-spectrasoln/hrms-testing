@@ -414,7 +414,7 @@ def list_employees(request):
         else:
             employee.manager_display = "None"
 
-    return render(request,'view_employeeslist.html',{'data':data})
+    return render(request,'list_employees.html',{'data':data})
 
 
 
@@ -760,7 +760,7 @@ def restore_employee(request, pk):
         messages.success(request, f"✅ Employee {employee.emp_fname} {employee.emp_lname} has been restored.")
     else:
         messages.info(request, "This employee is already active.")
-    return redirect('employee_list')
+    return redirect('deleted_employees')
 
 
 
@@ -772,7 +772,7 @@ from .models import Employees
 
 class DeletedEmployeeListView(ListView):
     model = Employees
-    template_name = "deleted_employees_list.html"
+    template_name = "deleted_employees_display.html"
     context_object_name = "employees"
 
     def get_queryset(self):
@@ -1442,7 +1442,7 @@ def admin_leave_requests(request):
         for leave_request in leave_requests
     ]
 
-    return render(request, "requestdisp.html", {
+    return render(request, "leave_request_display.html", {
         "leave_requests_data": leave_requests_data,
         "available_years": sorted(available_years, reverse=True),  # Ensure years are sorted in descending order
     })

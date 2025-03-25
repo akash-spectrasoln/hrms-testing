@@ -23,6 +23,9 @@ class EmployeeEditForm(forms.ModelForm):
     emp_mname = forms.CharField(required=False)
     emp_off_ph = forms.CharField(required=False)
     emp_home_ph = forms.CharField(required=False)
+    emp_resume = forms.FileField(required=False)
+    emp_certif = forms.FileField(required=False)
+    emp_cp_name = forms.CharField(required=False)
 
     employee_manager = forms.ModelChoiceField(
         queryset=Employees.objects.all(), required=False, empty_label="None"

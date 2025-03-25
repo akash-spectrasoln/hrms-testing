@@ -527,6 +527,13 @@ body {
     .form-grid-two-columns,
     .form-grid-three-columns {
         grid-template-
+
+
+
+
+
+
+
 </style>
 {% endblock styles %}
 
@@ -666,7 +673,12 @@ body {
                     </div>
                 </div>
 
-                <!-- Validity Period Section -->
+
+
+
+
+
+                <!-- Validity Period Section  main -->
 
                 <div class="form-section" data-section="validity">
                     <h3 class="section-title">
@@ -688,18 +700,9 @@ body {
 
                 </div>
 
-<!--                    <div class="form-grid-two-columns">-->
-<!--    <div class="form-group">-->
-<!--        <label class="form-label required">Valid From</label>-->
-<!--        <input type="date" name="empvalidfrom" class="form-control"-->
-<!--               value="{{ default_valid_from }}" required >-->
-<!--    </div>-->
-<!--    <div class="form-group">-->
-<!--        <label class="form-label required">Valid To</label>-->
-<!--        <input type="date" name="empvalidto" class="form-control"-->
-<!--               value="{{ default_valid_to }}" required >-->
-<!--    </div>-->
-<!--</div>-->
+
+
+
 
 
 
@@ -731,8 +734,8 @@ body {
                             <input type="tel" name="emphphone" class="form-control">
                         </div>
                         <div class="form-group">
-                            <label class="form-label required">Emergency Contact Name</label>
-                            <input type="text" name="empcpname" class="form-control" required>
+                            <label class="form-label ">Emergency Contact Name</label>
+                            <input type="text" name="empcpname" class="form-control" >
                         </div>
                         <div class="form-group">
                             <label class="form-label required">Emergency Contact Phone</label>
@@ -838,8 +841,8 @@ body {
                             <label class="form-label required">Employee Status</label>
                             <div class="select-wrapper">
                                 <select name="employee_status" class="form-control" required>
-                                    <option value="" disabled selected>Choose Status</option>
-                                    <option value="employed">Employed</option>
+<!--                                    <option value="" disabled selected>Choose Status</option>-->
+                                    <option value="employed" selected>Employed</option>
                                     <option value="resigned">Resigned</option>
                                     <option value="maternal_leave">Maternal Leave</option>
                                 </select>
@@ -896,7 +899,7 @@ body {
                     </h3>
                     <div class="form-grid-two-columns">
                         <div class="form-group">
-                            <label class="form-label required">Resume</label>
+                            <label class="form-label ">Resume</label>
                             <div class="file-input-container" id="resume-container">
                                 <div class="file-upload-text">
                                     <i class="fas fa-cloud-upload-alt"></i>
@@ -904,7 +907,7 @@ body {
                                 </div>
                                 <div class="file-name-display"></div>
                                 <input type="file" name="resume" class="form-control" id="id_emp_resume"
-                                       accept=".pdf,.doc,.docx" required>
+                                       accept=".pdf,.doc,.docx" >
                             </div>
                             {% if form.instance.emp_resume %}
                             <div class="current-file">
@@ -917,7 +920,7 @@ body {
                             {% endif %}
                         </div>
                         <div class="form-group">
-                            <label class="form-label required">Other Certification</label>
+                            <label class="form-label">Other Certification</label>
                             <div class="file-input-container" id="certif-container">
                                 <div class="file-upload-text">
                                     <i class="fas fa-cloud-upload-alt"></i>
@@ -925,7 +928,7 @@ body {
                                 </div>
                                 <div class="file-name-display"></div>
                                 <input type="file" name="certif" class="form-control" id="id_emp_certif"
-                                       accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" required>
+                                       accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" >
                             </div>
                             {% if form.instance.emp_certif %}
                             <div class="current-file">
@@ -963,6 +966,9 @@ body {
                 return true;
             }
 
+
+
+
             let isValid = false;
 
             if (field.type === 'file') {
@@ -995,10 +1001,10 @@ body {
             const sections = {
                 'basic-info': ['emp_id', 'sal', 'fname', 'lname'],
                 'validity': ['empvalidfrom', 'empvalidto'],
-                'contact-info': ['empcemail', 'emppemail', 'empphone', 'empcpname', 'empcpph', 'empcpemail', 'empcprelation'],
+                'contact-info': ['empcemail', 'emppemail', 'empphone', 'empcpph', 'empcpemail', 'empcprelation'],
                 'address': ['country', 'state', 'city', 'street', 'pincode'],
                 'employment': ['role', 'dep', 'desig', 'employee_status', 'empsalary', 'manager'],
-                'documents': ['resume', 'certif']
+                'documents': []
             };
 
             let firstIncompleteFound = false;
@@ -1306,12 +1312,26 @@ body {
             });
         }
 
+
+
+
+
+
+
+
+
+
+
+
+
         // Initialize all components
         function initializeAll() {
+
             initializeFileUploads();
             initializeCountryStateHandling();
             initializeFormValidation();
             initializeSectionNavigation();
+
             updateProgress();
 
             // Add scroll spy functionality
@@ -1391,6 +1411,11 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     }
 });
+
+
+
+
+
 
 
 
