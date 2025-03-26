@@ -205,6 +205,8 @@ def add_employee(request):
         messages.success(request, "Employee added successfully!")
         return redirect('add_employee')
 
+
+
     # Fetch roles, departments, states, countries, and employees for the dropdown
     roles = Role.objects.all()
     departments = Department.objects.all()

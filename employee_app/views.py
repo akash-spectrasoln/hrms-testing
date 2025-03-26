@@ -45,7 +45,7 @@ def employee_login(request):
         else:
             messages.error(request, 'Invalid credentials')
             # return HttpResponse("invalid credentials")
-            return redirect('employee_login')  # Redirect back to login page
+            return redirect('login')  # Redirect back to login page
 
     return render(request, 'emp_login.html')
 
