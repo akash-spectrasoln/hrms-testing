@@ -697,11 +697,11 @@
                             <input type="tel" name="emp_cp_ph" class="form-control" value="{{ form.instance.emp_cp_ph }}" required>
                         </div>
 
-                        <!-- Emergency Contact Email -->
-                        <div class="form-group">
-                            <label class="form-label required">Emergency Contact Email</label>
-                            <input type="email" name="emp_cp_email" class="form-control" value="{{ form.instance.emp_cp_email }}" required>
-                        </div>
+<!--                        &lt;!&ndash; Emergency Contact Email &ndash;&gt;-->
+<!--                        <div class="form-group">-->
+<!--                            <label class="form-label required">Emergency Contact Email</label>-->
+<!--                            <input type="email" name="emp_cp_email" class="form-control" value="{{ form.instance.emp_cp_email }}" required>-->
+<!--                        </div>-->
 
                         <!-- Emergency Contact Relationship -->
                         <div class="form-group">
@@ -786,19 +786,22 @@
                     </h3>
                     <div class="form-grid">
                         <!-- Role -->
-                        <div class="form-group">
-                            <label class="form-label required">Role</label>
-                            <div class="select-wrapper">
-                                <select name="role" class="form-control" required>
-                                    <option value="" disabled selected>Select Role</option>
-                                    {% for role in roles %}
-                                        <option value="{{ role.role_id }}" {% if form.instance.role.role_id == role.role_id %}selected{% endif %}>
-                                            {{ role.role_name }}
-                                        </option>
-                                    {% endfor %}
-                                </select>
-                            </div>
-                        </div>
+
+
+
+<!--                        <div class="form-group">-->
+<!--                            <label class="form-label required">Role</label>-->
+<!--                            <div class="select-wrapper">-->
+<!--                                <select name="role" class="form-control" required>-->
+<!--                                    <option value="" disabled selected>Select Role</option>-->
+<!--                                    {% for role in roles %}-->
+<!--                                        <option value="{{ role.role_id }}" {% if form.instance.role.role_id == role.role_id %}selected{% endif %}>-->
+<!--                                            {{ role.role_name }}-->
+<!--                                        </option>-->
+<!--                                    {% endfor %}-->
+<!--                                </select>-->
+<!--                            </div>-->
+<!--                        </div>-->
 
 
 
@@ -838,7 +841,7 @@
                                     <option value="" disabled selected>Choose Status</option>
                                     <option value="employed" {% if form.instance.employee_status == 'employed' %}selected{% endif %}>Employed</option>
                                     <option value="resigned" {% if form.instance.employee_status == 'resigned' %}selected{% endif %}>Resigned</option>
-                                    <option value="maternal_leave" {% if form.instance.employee_status == 'maternal_leave' %}selected{% endif %}>Maternal Leave</option>
+<!--                                    <option value="maternal_leave" {% if form.instance.employee_status == 'maternal_leave' %}selected{% endif %}>Maternal Leave</option>-->
                                 </select>
                             </div>
                         </div>
@@ -846,26 +849,45 @@
                         <!-- Manager -->
 
 
- <div class="form-group">
-    <label class="form-label required">Manager</label>
+<!-- <div class="form-group">-->
+<!--    <label class="form-label required">Manager</label>-->
+<!--    <div class="select-wrapper">-->
+<!--        <select name="employee_manager" class="form-control">-->
+<!--            &lt;!&ndash; Ensure "None" is selectable and preselected when there is no manager &ndash;&gt;-->
+<!--            <option value="" {% if not form.instance.employee_manager %}selected{% endif %}>None</option>-->
+
+<!--            {% for manager in managers %}-->
+<!--                <option value="{{ manager.id }}"-->
+<!--                    {% if form.instance.employee_manager and form.instance.employee_manager.id == manager.id %}-->
+<!--                        selected-->
+<!--                    {% endif %}>-->
+<!--                    {{ manager.emp_fname }} {{ manager.emp_lname }} ({{ manager.emp_id }})-->
+<!--                </option>-->
+<!--            {% endfor %}-->
+<!--        </select>-->
+<!--    </div>-->
+<!--</div>-->
+
+
+
+
+
+                        <div class="form-group">
+    <label class="form-label">Manager</label>
     <div class="select-wrapper">
         <select name="employee_manager" class="form-control">
-            <!-- Ensure "None" is selectable and preselected when there is no manager -->
-            <option value="" {% if not form.instance.employee_manager %}selected{% endif %}>None</option>
-
-            {% for manager in managers %}
-                <option value="{{ manager.id }}"
-                    {% if form.instance.employee_manager and form.instance.employee_manager.id == manager.id %}
+            <option value="">None</option>
+            {% for employee in employees %}
+                <option value="{{ employee.id }}"
+                    {% if form.instance.employee_manager and form.instance.employee_manager.id == employee.id %}
                         selected
                     {% endif %}>
-                    {{ manager.emp_fname }} {{ manager.emp_lname }} ({{ manager.emp_id }})
+                    {{ employee.emp_fname }} {{ employee.emp_lname }} ({{ employee.emp_id }})
                 </option>
             {% endfor %}
         </select>
     </div>
 </div>
-
-
 
                         <!-- Salary -->
                         <div class="form-group">

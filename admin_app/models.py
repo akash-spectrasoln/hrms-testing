@@ -87,7 +87,7 @@ class Employees(models.Model):
     emp_home_street=models.TextField()
     emp_home_city=models.TextField()
     pincode=models.CharField(max_length=10,null=True)
-    role = models.ForeignKey(Role, on_delete=models.CASCADE, to_field="role_id")
+    role = models.ForeignKey(Role, on_delete=models.CASCADE, to_field="role_id", null=True, blank=True)
 
     dep = models.ForeignKey(Department, on_delete=models.CASCADE)
     designation = models.CharField(max_length=100)

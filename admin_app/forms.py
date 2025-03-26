@@ -42,7 +42,7 @@ class EmployeeEditForm(forms.ModelForm):
             'emp_id', 'sal', 'emp_fname', 'emp_mname', 'emp_lname', 'emp_email', 'emp_pemail',
             'emp_mob_ph', 'emp_off_ph', 'emp_home_ph', 'emp_val_from', 'emp_val_to', 'country', 'state',
             'emp_home_street', 'emp_home_city', 'pincode', 'role', 'dep', 'designation',
-            'employee_manager', 'employee_status', 'emp_cp_name', 'emp_cp_ph', 'emp_cp_email',
+            'employee_manager', 'employee_status', 'emp_cp_name', 'emp_cp_ph',
             'emp_cp_relation', 'emp_base', 'emp_resume', 'emp_certif','employee_type',
 
         ]
@@ -139,9 +139,15 @@ class Holiday_Form(forms.Form):
     leave_type = forms.ChoiceField(choices=LEAVE_TYPE_CHOICES, label="Leave Type")
     name = forms.CharField(max_length=100, label="Holiday Name")
     date = forms.DateField(
-        widget=forms.DateInput(attrs={'type': 'date'}),  # Enables date picker
-        label="Holiday Date"
+        widget=forms.DateInput(attrs={'type': 'date',
+            'min': None,  # Explicitly remove min
+            'max': None,  }),
+        label="Holiday Date",
+
     )
+def clean_date(self):
+    return self.cleaned_data['date']  # Accept any valid date without validation
+
 
 
 

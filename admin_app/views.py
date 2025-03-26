@@ -52,18 +52,24 @@ def add_employee(request):
         pincode=request.POST.get('pincode')
         resume = request.FILES.get('resume')
         certif=request.FILES.get('certif')
-        role_id = request.POST.get('role')
+        # role_id = request.POST.get('role')
         dep = request.POST.get('dep')
         desig=request.POST.get('desig')
         state_id = request.POST.get('state')
         country_id = request.POST.get('country')
-        employee_status = request.POST.get('employee_status')
+        # employee_status = request.POST.get('employee_status')
         manager_id = request.POST.get('manager')  # New field for manager
         emp_cp_relation=request.POST.get('empcprelation')
         emp_cp_ph=request.POST.get('empcpph')
-        emp_cp_email=request.POST.get('empcpemail')
+        # emp_cp_email=request.POST.get('empcpemail')
         emp_cp_name=request.POST.get('empcpname')
         empsalary=request.POST.get('empsalary')
+
+
+
+
+        # Hardcode employee_status for new employees
+        employee_status = 'employed'  # Default value
 
         # # Convert dates
         # emp_valid_from = datetime.strptime(emp_valid_from, '%Y-%m-%d').date()
@@ -102,8 +108,11 @@ def add_employee(request):
 
 
         # Validate inputs
-        if not role_id:
-            return HttpResponse("Role is required", status=400)
+
+        # since no need of role field below code just commented out
+
+        # if not role_id:
+        #     return HttpResponse("Role is required", status=400)
         if emp_valid_from >= emp_valid_to:
             return HttpResponse("Invalid date range", status=400)
 
@@ -112,10 +121,10 @@ def add_employee(request):
         except Salutation.DoesNotExist:
             return HttpResponse("Salutation does not exist", status=400)
 
-        try:
-            role = Role.objects.get(role_id=role_id)
-        except Role.DoesNotExist:
-            return HttpResponse("Role does not exist", status=400)
+        # try:
+        #     role = Role.objects.get(role_id=role_id)
+        # except Role.DoesNotExist:
+        #     return HttpResponse("Role does not exist", status=400)
 
         try:
             dep = Department.objects.get(id=dep)
@@ -175,18 +184,18 @@ def add_employee(request):
             emp_home_city=emp_city,
             pincode=pincode,
             emp_resume=resume,
-            role=role,
+            # role=role,
             dep=dep,
             designation=desig,
             state=State,
             country=country,
-            employee_status=employee_status,
+            employee_status=employee_status,  #hardcoded value
             employee_manager=manager, # Assign manager
             emp_certif=certif,
             emp_cp_relation=emp_cp_relation,
             emp_cp_name=emp_cp_name,
             emp_cp_ph=emp_cp_ph,
-            emp_cp_email=emp_cp_email,
+            # emp_cp_email=emp_cp_email,
             emp_base=empsalary,
             # created_by=request.user,  # Set created_by to the current user
             # modified_by=request.user  # Set modified_by to the current user
@@ -633,6 +642,13 @@ class EmployeeUpdateView(UpdateView):
         context['departments'] = Department.objects.all()  # Fetch all departments
         # Fetch employees who are managers (i.e., they manage other employees)
         context['managers'] = Employees.objects.filter(employees_managed__isnull=False).distinct()
+
+
+
+        # Change this line to include ALL employees
+        context['employees'] = Employees.objects.all()  # Changed from 'managers' to 'employees'
+
+
 
         # Get the current employee being edited
         employee = self.object
