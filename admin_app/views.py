@@ -66,6 +66,11 @@ def add_employee(request):
         empsalary=request.POST.get('empsalary')
 
 
+        # Check if email already exists
+        if Employees.objects.filter(emp_email=emp_c_email).exists():
+            messages.error(request, "This company email is already registered!")
+            return redirect('add_employee')
+
 
 
         # Hardcode employee_status for new employees
