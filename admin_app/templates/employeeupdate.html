@@ -687,8 +687,8 @@
 
                         <!-- Emergency Contact Name -->
                         <div class="form-group">
-                            <label class="form-label ">Emergency Contact Name</label>
-                            <input type="text" name="emp_cp_name" class="form-control" value="{{ form.instance.emp_cp_name }}" >
+                            <label class="form-label required ">Emergency Contact Name</label>
+                            <input type="text" name="emp_cp_name" class="form-control" value="{{ form.instance.emp_cp_name }}" required>
                         </div>
 
                         <!-- Emergency Contact Phone -->
@@ -828,10 +828,42 @@
 
 
                         <!-- Designation -->
-                        <div class="form-group">
-                            <label class="form-label required">Designation</label>
-                            <input type="text" name="designation" class="form-control" value="{{ form.instance.designation }}" required>
-                        </div>
+<!--                        <div class="form-group">-->
+<!--                            <label class="form-label required">Designation</label>-->
+<!--                            <input type="text" name="designation" class="form-control" value="{{ form.instance.designation }}" required>-->
+<!--                        </div>-->
+
+
+
+<!--                        <div class="form-group">-->
+<!--    <label class="form-label required">Role</label>-->
+<!--    <div class="select-wrapper">-->
+<!--        <select name="designation" class="form-control" required>-->
+<!--            <option value="" disabled selected>Select Role</option>-->
+<!--            <option value="Salesforce Developer">Salesforce Developer</option>-->
+<!--            <option value="Jr. Software Engineer">Jr. Software Engineer</option>-->
+<!--        </select>-->
+<!--    </div>-->
+<!--</div>-->
+
+
+<!--designation field-->
+
+                       <div class="form-group">
+    <label class="form-label required">Designation</label>
+    <div class="select-wrapper">
+        <select name="designation" class="form-control" required>
+            <option value="" disabled>Select Designation</option>
+            <option value="Salesforce Developer" {% if form.instance.designation == "Salesforce Developer" %}selected{% endif %}>
+                Salesforce Developer
+            </option>
+            <option value="Jr. Software Engineer" {% if form.instance.designation == "Jr. Software Engineer" %}selected{% endif %}>
+                Jr. Software Engineer
+            </option>
+            <!-- Add other designation options here -->
+        </select>
+    </div>
+</div>
 
                         <!-- Employee Status -->
                         <div class="form-group">
@@ -922,6 +954,10 @@
                                 <a href="{{ form.instance.emp_resume.url }}" target="_blank">
                                     {{ form.instance.emp_resume.name }}
                                 </a>
+                                 <label class="delete-checkbox" style="margin-left: 10px;">
+                    <input type="checkbox" name="emp_resume-clear" id="emp_resume-clear_id">
+                    <span style="color: #ef4444; margin-left: 5px;">Delete</span>
+                </label>
                             </div>
                             {% endif %}
                         </div>
@@ -942,6 +978,10 @@
                                 <a href="{{ form.instance.emp_certif.url }}" target="_blank">
                                     {{ form.instance.emp_certif.name }}
                                 </a>
+                                 <label class="delete-checkbox" style="margin-left: 10px;">
+                    <input type="checkbox" name="emp_certif-clear" id="emp_certif-clear_id">
+                    <span style="color: #ef4444; margin-left: 5px;">Delete</span>
+                </label>
                             </div>
                             {% endif %}
                         </div>

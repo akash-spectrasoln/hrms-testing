@@ -111,6 +111,7 @@ class Employees(models.Model):
     emp_total_leaves = models.PositiveIntegerField(default=15)  # Total number of leaves
     emp_used_leaves = models.PositiveIntegerField(default=0)  # Leaves already used
     emp_password = models.CharField(max_length=128, null=True, blank=True)  # Allows existing records to remain valid
+    resignation_date = models.DateField(null=True, blank=True)
 
     def available_leaves(self):
         return self.emp_total_leaves - self.emp_used_leaves  # Calculate available leaves

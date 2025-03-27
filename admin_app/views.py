@@ -425,7 +425,7 @@ def list_employees(request):
         else:
             employee.manager_display = "None"
 
-    return render(request,'list_employees.html',{'data':data})
+    return render(request,'list_employees_working.html',{'data':data})
 
 
 
@@ -616,14 +616,127 @@ from .forms import EmployeeEditForm
 
 # below is the view for to edit the added employees
 
+
+#
+# from django.views.generic.edit import UpdateView
+# from django.urls import reverse_lazy
+# from django.contrib import messages
+# from django.core.files.storage import default_storage
+# from .models import Employees
+# from .forms import EmployeeEditForm
+# from .models import Salutation, Role, Department,state
+#
+#
+#
+# class EmployeeUpdateView(UpdateView):
+#     model = Employees
+#     form_class = EmployeeEditForm
+#     template_name = 'employeeupdate.html'
+#     success_url = reverse_lazy('employee_list')
+#
+#     def get_context_data(self, **kwargs):
+#         # Call the base implementation first to get the context
+#         context = super().get_context_data(**kwargs)
+#
+#         # Add the salutations queryset to the context
+#         context['salutations'] = Salutation.objects.all()
+#
+#         # Add roles, departments, and managers to the context
+#         context['roles'] = Role.objects.all()  # Fetch all roles
+#         context['departments'] = Department.objects.all()  # Fetch all departments
+#         # Fetch employees who are managers (i.e., they manage other employees)
+#         context['managers'] = Employees.objects.filter(employees_managed__isnull=False).distinct()
+#
+#
+#
+#         # Change this line to include ALL employees
+#         context['employees'] = Employees.objects.all()  # Changed from 'managers' to 'employees'
+#
+#
+#
+#         # Get the current employee being edited
+#         employee = self.object
+#
+#         # Add country and state data
+#         context['countries'] = Country.objects.all()  # Fetch all countries
+#         context['selected_country'] = employee.country if employee.country else None  # Pre-select country
+#         context['states'] = state.objects.filter(
+#             country=employee.country) if employee.country else []  # States based on selected country
+#         context['selected_state'] = employee.state if employee.state else None  # Pre-select state
+#         return context
+#
+#     def form_valid(self, form):
+#         employee = form.save(commit=False)  # Don't save to DB yet
+#
+#         # # Check if Employee Status is changed to 'resigned'
+#         # if form.cleaned_data.get('employee_status') == 'resigned':
+#         #     # Automatically set resignation date if not already set
+#         #     if not employee.resignation_date:
+#         #         employee.resignation_date = timezone.now().date()
+#
+#         # Explicit handling of status change
+#         current_status = form.cleaned_data.get('employee_status')
+#
+#         if current_status == 'employed':
+#             # Clear resignation date when changing to employed
+#             employee.resignation_date = None
+#
+#
+#
+#
+#         # Check if Employee Type is changed
+#         new_employee_type = form.cleaned_data.get("employee_type")
+#         if new_employee_type and new_employee_type != employee.employee_type:
+#             # Generate a new Employee ID with the new type
+#             unique_number = employee.emp_id[-4:]  # Extract last 4 digits from existing ID
+#             employee.emp_id = f"{new_employee_type}{unique_number}"
+#
+#
+#         # Handle file upload for emp_resume
+#         resume_file = self.request.FILES.get('emp_resume')
+#         if resume_file:
+#             if employee.emp_resume and hasattr(employee.emp_resume, 'path'):
+#                 default_storage.delete(employee.emp_resume.path)  # Delete old file safely
+#             employee.emp_resume = resume_file
+#
+#         # Handle file upload for emp_certif
+#         certif_file = self.request.FILES.get('emp_certif')
+#         if certif_file:
+#             if employee.emp_certif and hasattr(employee.emp_certif, 'path'):
+#                 default_storage.delete(employee.emp_certif.path)  # Delete old file safely
+#             employee.emp_certif = certif_file
+#
+#         employee.save()  # Save updated employee details
+#         messages.success(self.request, " ✅ Employee details updated successfully.")
+#         return super().form_valid(form)
+#
+#     def form_invalid(self, form):
+#         print("Form Errors:", form.errors.as_json())  # Print detailed errors
+#         print("Request POST Data:", self.request.POST)  # Print all form data
+#         messages.error(self.request, "There was an error updating the employee details.")
+#         return super().form_invalid(form)
+
+
 from django.views.generic.edit import UpdateView
 from django.urls import reverse_lazy
 from django.contrib import messages
 from django.core.files.storage import default_storage
-from .models import Employees
-from .forms import EmployeeEditForm
-from .models import Salutation, Role, Department,state
+from django.utils import timezone
+from django.db import transaction
+from django.core.exceptions import ValidationError
 
+# Import models
+from .models import (
+    Employees, Salutation, Role, Department,
+    Country, state
+)
+from .forms import EmployeeEditForm
+
+import logging
+import traceback
+
+# Configure logging
+logger = logging.getLogger(__name__)
 
 
 class EmployeeUpdateView(UpdateView):
@@ -632,71 +745,152 @@ class EmployeeUpdateView(UpdateView):
     template_name = 'employeeupdate.html'
     success_url = reverse_lazy('employee_list')
 
+    def get_form_kwargs(self):
+        """
+        Pass request to the form for file handling and additional context
+        """
+        kwargs = super().get_form_kwargs()
+        kwargs['request'] = self.request
+        return kwargs
+
     def get_context_data(self, **kwargs):
-        # Call the base implementation first to get the context
-        context = super().get_context_data(**kwargs)
+        """
+        Prepare comprehensive context data for the template
+        """
+        try:
+            context = super().get_context_data(**kwargs)
 
-        # Add the salutations queryset to the context
-        context['salutations'] = Salutation.objects.all()
+            # Add various querysets to the context
+            context['salutations'] = Salutation.objects.all()
+            context['roles'] = Role.objects.all()
+            context['departments'] = Department.objects.all()
 
-        # Add roles, departments, and managers to the context
-        context['roles'] = Role.objects.all()  # Fetch all roles
-        context['departments'] = Department.objects.all()  # Fetch all departments
-        # Fetch employees who are managers (i.e., they manage other employees)
-        context['managers'] = Employees.objects.filter(employees_managed__isnull=False).distinct()
+            # Fetch managers (employees managing others)
+            context['managers'] = Employees.objects.filter(employees_managed__isnull=False).distinct()
 
+            # Include all employees
+            context['employees'] = Employees.objects.all()
 
+            # Get the current employee being edited
+            employee = self.object
 
-        # Change this line to include ALL employees
-        context['employees'] = Employees.objects.all()  # Changed from 'managers' to 'employees'
+            # Add country and state data
+            context['countries'] = Country.objects.all()
+            context['selected_country'] = employee.country if employee.country else None
+            context['states'] = (
+                state.objects.filter(country=employee.country)
+                if employee.country else []
+            )
+            context['selected_state'] = employee.state if employee.state else None
 
+            return context
 
+        except Exception as e:
+            # Comprehensive error logging
+            logger.error(f"Error in get_context_data: {str(e)}")
+            logger.error(traceback.format_exc())
+            messages.error(self.request, f"An error occurred while preparing the form: {str(e)}")
+            raise
 
-        # Get the current employee being edited
-        employee = self.object
-
-        # Add country and state data
-        context['countries'] = Country.objects.all()  # Fetch all countries
-        context['selected_country'] = employee.country if employee.country else None  # Pre-select country
-        context['states'] = state.objects.filter(
-            country=employee.country) if employee.country else []  # States based on selected country
-        context['selected_state'] = employee.state if employee.state else None  # Pre-select state
-        return context
-
+    @transaction.atomic
     def form_valid(self, form):
-        employee = form.save(commit=False)  # Don't save to DB yet
+        """
+        Handle form submission with comprehensive error handling
+        """
+        try:
+            # Save the form with additional processing
+            employee = form.save(commit=False)
 
-        # Check if Employee Type is changed
-        new_employee_type = form.cleaned_data.get("employee_type")
-        if new_employee_type and new_employee_type != employee.employee_type:
-            # Generate a new Employee ID with the new type
-            unique_number = employee.emp_id[-4:]  # Extract last 4 digits from existing ID
-            employee.emp_id = f"{new_employee_type}{unique_number}"
+            # Get current status and employee type
+            current_status = form.cleaned_data.get('employee_status')
+            new_employee_type = form.cleaned_data.get("employee_type")
 
+            # Handle status-specific logic
+            if current_status == 'employed':
+                # Clear resignation date when changing to employed
+                employee.resignation_date = None
+            elif current_status == 'resigned':
+                # Ensure resignation date is set
+                if not employee.resignation_date:
+                    employee.resignation_date = timezone.now().date()
 
-        # Handle file upload for emp_resume
-        resume_file = self.request.FILES.get('emp_resume')
-        if resume_file:
-            if employee.emp_resume and hasattr(employee.emp_resume, 'path'):
-                default_storage.delete(employee.emp_resume.path)  # Delete old file safely
-            employee.emp_resume = resume_file
+            # Handle Employee Type change and ID generation
+            if new_employee_type and new_employee_type != employee.employee_type:
+                unique_number = employee.emp_id[-4:]  # Extract last 4 digits
+                employee.emp_id = f"{new_employee_type}{unique_number}"
 
-        # Handle file upload for emp_certif
-        certif_file = self.request.FILES.get('emp_certif')
-        if certif_file:
-            if employee.emp_certif and hasattr(employee.emp_certif, 'path'):
-                default_storage.delete(employee.emp_certif.path)  # Delete old file safely
-            employee.emp_certif = certif_file
+            # Handle file uploads with robust error checking
+            resume_file = self.request.FILES.get('emp_resume')
+            if resume_file:
+                try:
+                    # Delete existing resume file if it exists
+                    if employee.emp_resume:
+                        default_storage.delete(employee.emp_resume.path)
+                except Exception as file_error:
+                    logger.warning(f"Could not delete old resume: {file_error}")
 
-        employee.save()  # Save updated employee details
-        messages.success(self.request, " ✅ Employee details updated successfully.")
-        return super().form_valid(form)
+                employee.emp_resume = resume_file
+
+            certif_file = self.request.FILES.get('emp_certif')
+            if certif_file:
+                try:
+                    # Delete existing certificate file if it exists
+                    if employee.emp_certif:
+                        default_storage.delete(employee.emp_certif.path)
+                except Exception as file_error:
+                    logger.warning(f"Could not delete old certificate: {file_error}")
+
+                employee.emp_certif = certif_file
+
+            # Save the employee record
+            employee.save()
+
+            # Success message
+            messages.success(self.request, "✅ Employee details updated successfully.")
+
+            return super().form_valid(form)
+
+        except ValidationError as ve:
+            # Handle validation errors
+            messages.error(self.request, f"Validation Error: {str(ve)}")
+            return self.form_invalid(form)
+
+        except Exception as e:
+            # Comprehensive error logging
+            logger.error(f"Unexpected error in form_valid: {str(e)}")
+            logger.error(traceback.format_exc())
+
+            # Rollback the transaction
+            transaction.set_rollback(True)
+
+            # Add error message
+            messages.error(self.request, f"An unexpected error occurred: {str(e)}")
+
+            return self.form_invalid(form)
 
     def form_invalid(self, form):
-        print("Form Errors:", form.errors.as_json())  # Print detailed errors
-        print("Request POST Data:", self.request.POST)  # Print all form data
-        messages.error(self.request, "There was an error updating the employee details.")
+        """
+        Enhanced error handling for invalid form submissions
+        """
+        # Detailed error logging
+        logger.error("Form Validation Failed")
+        logger.error("Form Errors: %s", form.errors)
+        logger.error("POST Data: %s", self.request.POST)
+
+        # Specific error messages for common issues
+        if form.errors:
+            for field, errors in form.errors.items():
+                for error in errors:
+                    messages.error(self.request, f"Error in {field}: {error}")
+
+        # Generic error message
+        messages.error(self.request, "There was an error updating the employee details. Please check the form.")
+
         return super().form_invalid(form)
+
+
+
+
 
 
 
