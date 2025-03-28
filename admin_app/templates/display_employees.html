@@ -1,0 +1,364 @@
+{% extends 'admin_partials/admin_base.html' %}
+{% load static %}
+
+{% block styles %}
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+<style>
+:root {
+    --primary-50: #eff6ff;
+    --primary-100: #dbeafe;
+    --primary-500: #3b82f6;
+    --primary-600: #2563eb;
+    --primary-700: #1d4ed8;
+    --success-50: #f0fdf4;
+    --success-500: #22c55e;
+    --success-600: #16a34a;
+    --neutral-50: #f9fafb;
+    --neutral-100: #f3f4f6;
+    --neutral-200: #e5e7eb;
+    --neutral-300: #d1d5db;
+    --neutral-600: #4b5563;
+    --neutral-700: #374151;
+    --neutral-800: #1f2937;
+    --error-50: #fef2f2;
+    --error-500: #ef4444;
+}
+
+body {
+    font-family: 'Inter', sans-serif;
+    background-color: var(--neutral-50);
+    color: var(--neutral-800);
+    line-height: 1.4;
+    padding-top: 60px;
+}
+
+.container {
+    padding: 10px;
+    margin: 20px auto;
+    max-width: 1400px;
+    width: 100%;
+}
+
+.main-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Compact Filter */
+.compact-filter {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    padding: 12px 15px;
+    margin-bottom: 15px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.compact-filter .form-group {
+    margin-bottom: 0;
+    min-width: 180px;
+    flex: 1;
+}
+
+.compact-filter .form-control {
+    height: 36px;
+    padding: 6px 12px;
+    border-radius: 6px;
+    border: 1px solid var(--neutral-200);
+}
+
+.compact-filter .select-wrapper {
+    position: relative;
+}
+
+.compact-filter .select-wrapper::after {
+    content: '';
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    border-left: 5px solid transparent;
+    border-right: 5px solid transparent;
+    border-top: 5px solid var(--neutral-600);
+    pointer-events: none;
+}
+
+.compact-filter select {
+    width: 100%;
+    height: 36px;
+    padding: 6px 12px;
+    border: 1px solid var(--neutral-200);
+    border-radius: 6px;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+}
+
+.filter-btn {
+    background: var(--primary-600);
+    color: white;
+    border: none;
+    padding: 0 15px;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    cursor: pointer;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    transition: all 0.2s ease;
+}
+
+.filter-btn:hover {
+    background: var(--primary-700);
+}
+
+.reset-btn {
+    background: var(--neutral-200);
+    color: var(--neutral-700);
+}
+
+.reset-btn:hover {
+    background: var(--neutral-300);
+}
+
+/* Employee Table */
+.employee-card {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    padding: 20px;
+}
+
+.table-responsive {
+    width: 100%;
+    overflow-x: auto;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+th {
+    background-color: var(--neutral-100);
+    padding: 12px 15px;
+    text-align: left;
+    font-weight: 600;
+    font-size: 0.85rem;
+    white-space: nowrap;
+}
+
+td {
+    padding: 12px 15px;
+    border-bottom: 1px solid var(--neutral-200);
+    font-size: 0.85rem;
+    white-space: nowrap;
+}
+
+tbody tr:nth-child(even) {
+    background-color: var(--neutral-50);
+}
+
+tbody tr:hover {
+    background-color: var(--primary-50);
+}
+
+.status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+
+.status-badge.employed {
+    background-color: var(--success-50);
+    color: var(--success-600);
+}
+
+.status-badge.resigned {
+    background-color: var(--error-50);
+    color: var(--error-500);
+}
+
+.action-buttons {
+    display: flex;
+    gap: 8px;
+}
+
+.btn {
+    padding: 6px 12px;
+    border-radius: 4px;
+    font-size: 0.85rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    transition: all 0.2s ease;
+}
+
+.btn-primary {
+    background-color: var(--primary-600);
+    color: white;
+}
+
+.btn-primary:hover {
+    background-color: var(--primary-700);
+}
+
+.btn-danger {
+    background-color: var(--error-500);
+    color: white;
+}
+
+.btn-danger:hover {
+    background-color: #dc2626;
+}
+
+.no-data {
+    text-align: center;
+    padding: 20px;
+    color: var(--neutral-600);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .compact-filter {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .compact-filter .form-group {
+        min-width: auto;
+    }
+
+    .action-buttons {
+        flex-direction: column;
+        gap: 5px;
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="main-content">
+        <!-- Compact Filter Form -->
+        <form method="GET" action="{% url 'employee_list' %}" class="compact-filter">
+            <div class="form-group">
+                <input type="text" name="emp_id" class="form-control"
+                       value="{{ request.GET.emp_id }}" placeholder="Employee ID">
+            </div>
+
+            <div class="form-group">
+                <input type="text" name="name" class="form-control"
+                       value="{{ request.GET.name }}" placeholder="Name">
+            </div>
+
+            <div class="form-group">
+                <div class="select-wrapper">
+                    <select name="status" class="form-control">
+                        <option value="all">All Statuses</option>
+                        <option value="employed" {% if not request.GET.status or request.GET.status == 'employed' %}selected{% endif %}>Employed</option>
+                        <option value="resigned" {% if request.GET.status == 'resigned' %}selected{% endif %}>Resigned</option>
+                    </select>
+                </div>
+            </div>
+
+            <button type="submit" class="filter-btn">
+                <i class="fas fa-filter"></i> Filter
+            </button>
+<!--            <a href="{% url 'employee_list' %}" class="filter-btn reset-btn">-->
+<!--                <i class="fas fa-undo"></i>-->
+<!--            </a>-->
+
+            <!-- Change this line in your form -->
+<a href="{% url 'employee_list' %}?status=employed" class="filter-btn reset-btn">
+    <i class="fas fa-undo"></i>
+</a>
+        </form>
+
+        <!-- Employee Table -->
+        <div class="employee-card">
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Name</th>
+                            <th>Email</th>
+                            <th>Phone</th>
+                            <th>Department</th>
+                            <th>Designation</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if data %}
+                            {% for employee in data %}
+                            <tr>
+                                <td>{{ employee.emp_id }}</td>
+                                <td>{{ employee.emp_fname }} {{ employee.emp_lname }}</td>
+                                <td>{{ employee.emp_email }}</td>
+                                <td>{{ employee.emp_mob_ph }}</td>
+                                <td>{{ employee.dep }}</td>
+                                <td>{{ employee.designation }}</td>
+<!--                                <td>-->
+<!--                                    {% if employee.employee_status == 'employed' %}-->
+<!--                                        <span class="status-badge employed">-->
+<!--                                            <i class="fas fa-user-check"></i> Active-->
+<!--                                        </span>-->
+<!--                                    {% else %}-->
+<!--                                        <span class="status-badge resigned">-->
+<!--                                            <i class="fas fa-user-slash"></i> Resigned-->
+<!--                                        </span>-->
+<!--                                    {% endif %}-->
+<!--                                </td>-->
+
+                                <td>
+    {% if employee.employee_status == 'employed' %}
+        <span class="status-badge employed">
+            <i class="fas fa-user-check"></i> Active
+        </span>
+    {% else %}
+        <span class="status-badge resigned"
+              {% if employee.resignation_info %}title="{{ employee.resignation_info }}"{% endif %}>
+            <i class="fas fa-user-slash"></i> Resigned
+        </span>
+    {% endif %}
+</td>
+                                <td>
+                                    <div class="action-buttons">
+                                        <a href="{% url 'employee_edit' employee.pk %}" class="btn btn-primary">
+                                            <i class="fas fa-edit"></i> Edit
+                                        </a>
+                                        <a href="{% url 'employee_delete' employee.id %}" class="btn btn-danger">
+                                            <i class="fas fa-trash"></i> Delete
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr>
+                                <td colspan="8" class="no-data">
+                                    <i class="fas fa-user-slash"></i> No Employees Found
+                                </td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

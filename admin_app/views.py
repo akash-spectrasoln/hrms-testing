@@ -417,25 +417,296 @@ def export_employees_to_excel(request):
 
 
 # below is the views for displaying all the uploaded employees
+#
+# def list_employees(request):
+#     #
+#     # data=Employees.objects.all()
+#     data = Employees.objects.filter(is_delete=False)  # Only fetch non-deleted employees
+#
+#     # Get filter parameters from request
+#     emp_id = request.GET.get('emp_id')
+#     name = request.GET.get('name')
+#     status = request.GET.get('status')
+#
+#     # If status filter is explicitly set, use it (including 'all' option)
+#     if status:
+#         if status == 'all':
+#             data = Employees.objects.filter(is_delete=False)
+#         else:
+#             data = data.filter(employee_status=status)
+#
+#     # Apply filters if they exist
+#     if emp_id:
+#         data = data.filter(emp_id__icontains=emp_id)
+#
+#     if name:
+#         data = data.filter(
+#             Q(emp_fname__icontains=name) |
+#             Q(emp_lname__icontains=name)
+#         )
+#
+#     if status:
+#         data = data.filter(employee_status=status)
+#
+#
+#
+#
+#     for employee in data:
+#         if employee.employee_manager:
+#             employee.manager_display = f"{employee.employee_manager.emp_id} ({employee.employee_manager.emp_fname} )"
+#         else:
+#             employee.manager_display = "None"
+#
+#     return render(request,'display_employees.html',{'data':data})
+#
+
+
+
+from django.db.models import Q
+from django.utils import timezone
+
+
+
+#
+# def list_employees(request):
+#     """
+#     Display filtered employee list with proper default behavior:
+#     - Shows only employed employees by default
+#     - Respects all filter parameters
+#     - Maintains manager display info
+#     """
+#     # Start with base queryset (non-deleted employees)
+#     queryset = Employees.objects.filter(is_delete=False)
+#
+#     # Get all filter parameters from request
+#     emp_id = request.GET.get('emp_id', '').strip()
+#     name = request.GET.get('name', '').strip()
+#     status = request.GET.get('status', 'employed')  # Default to 'employed'
+#
+#     # DEBUG: Print received filters
+#     # print(f"Filters - ID: '{emp_id}', Name: '{name}', Status: '{status}'")
+#
+#     # Apply status filter first
+#     if status == 'all':
+#         # Show all statuses (no additional filter)
+#         pass
+#     else:
+#         # Filter by specific status (defaults to 'employed')
+#         queryset = queryset.filter(employee_status=status)
+#
+#     # Apply ID filter if specified
+#     if emp_id:
+#         queryset = queryset.filter(emp_id__icontains=emp_id)
+#
+#     # Apply name filter if specified
+#     if name:
+#         queryset = queryset.filter(
+#             Q(emp_fname__icontains=name) |
+#             Q(emp_lname__icontains=name)
+#         )
+#
+#     # Optimize query by selecting related manager info
+#     queryset = queryset.select_related('employee_manager')
+#
+#     # Prepare final data with manager display info
+#     employees = []
+#     for employee in queryset:
+#         if employee.employee_manager:
+#             manager_display = (
+#                 f"{employee.employee_manager.emp_id} "
+#                 f"({employee.employee_manager.emp_fname})"
+#             )
+#         else:
+#             manager_display = "None"
+#
+#         employees.append({
+#             'object': employee,
+#             'manager_display': manager_display,
+#             # Include all original fields you need in template
+#         })
+#
+#     context = {
+#         'data': queryset,  # Original queryset if template needs it
+#         'employees': employees,  # Enhanced data with manager info
+#         'current_filters': {
+#             'emp_id': emp_id,
+#             'name': name,
+#             'status': status
+#         }
+#     }
+#
+#     return render(request, 'display_employees.html', context)
+
+
+from django.db.models import Q
+from django.utils import timezone
+
+#
+# def list_employees(request):
+#     # Start with base queryset (non-deleted employees)
+#     queryset = Employees.objects.filter(is_delete=False)
+#
+#     # Get filter parameters with defaults
+#     emp_id = request.GET.get('emp_id', '').strip()
+#     name = request.GET.get('name', '').strip()
+#     status = request.GET.get('status', 'employed')  # Default to employed
+#
+#     # Apply status filter
+#     if status == 'all':
+#         pass  # Show all statuses
+#     else:
+#         queryset = queryset.filter(employee_status=status)
+#
+#     # Apply other filters
+#     if emp_id:
+#         queryset = queryset.filter(emp_id__icontains=emp_id)
+#     if name:
+#         queryset = queryset.filter(
+#             Q(emp_fname__icontains=name) |
+#             Q(emp_lname__icontains=name)
+#         )
+#
+#     # Prepare data with resignation info
+#     today = timezone.now().date()
+#     employee_data = []
+#
+#     for employee in queryset.select_related('employee_manager'):
+#         # Manager info
+#         manager_display = (
+#             f"{employee.employee_manager.emp_id} ({employee.employee_manager.emp_fname})"
+#             if employee.employee_manager else "None"
+#         )
+#
+#         # Resignation info
+#         resignation_info = None
+#         if (employee.employee_status == 'resigned' and
+#                 hasattr(employee, 'resignation_date') and
+#                 employee.resignation_date):
+#             formatted_date = employee.resignation_date.strftime('%b %d, %Y')
+#             days_ago = (today - employee.resignation_date).days
+#             resignation_info = f"Resigned on {formatted_date} ({days_ago} days ago)"
+#
+#         employee_data.append({
+#             'pk': employee.pk,
+#             'emp_id': employee.emp_id,
+#             'emp_fname': employee.emp_fname,
+#             'emp_lname': employee.emp_lname,
+#             'emp_email': employee.emp_email,
+#             'emp_mob_ph': employee.emp_mob_ph,
+#             'dep': employee.dep,
+#             'designation': employee.designation,
+#             'employee_status': employee.employee_status,
+#             'manager_display': manager_display,
+#             'resignation_info': resignation_info,
+#             'resignation_date': employee.resignation_date if hasattr(employee, 'resignation_date') else None
+#         })
+#
+#     context = {
+#         'data': employee_data,
+#         'current_filters': {
+#             'emp_id': emp_id,
+#             'name': name,
+#             'status': status
+#         }
+#     }
+#
+#     return render(request, 'display_employees.html', context)
+#
+#
+
+
+from django.db.models import Q
+from django.utils import timezone
+
 
 def list_employees(request):
-    #
-    # data=Employees.objects.all()
-    data = Employees.objects.filter(is_delete=False)  # Only fetch non-deleted employees
+    # Start with base queryset
+    queryset = Employees.objects.filter(is_delete=False)
+
+    # Get filter parameters
+    emp_id = request.GET.get('emp_id', '').strip()
+    name = request.GET.get('name', '').strip()
+    status = request.GET.get('status', 'employed')  # Default to employed
+
+    # Apply status filter
+    if status == 'all':
+        pass  # Show all statuses
+    else:
+        queryset = queryset.filter(employee_status=status)
+
+    # Apply other filters
+    if emp_id:
+        queryset = queryset.filter(emp_id__icontains=emp_id)
+    if name:
+        queryset = queryset.filter(
+            Q(emp_fname__icontains=name) |
+            Q(emp_lname__icontains=name)
+        )
+
+    # Prepare employee data
+    today = timezone.now().date()
+    employee_list = []
+
+    for employee in queryset.select_related('employee_manager', 'dep'):
+        # Skip if no primary key
+        if not employee.pk:
+            continue
+
+        # Manager info
+        manager_display = (
+            f"{employee.employee_manager.emp_id} ({employee.employee_manager.emp_fname})"
+            if employee.employee_manager else "None"
+        )
+
+        # Resignation info
+        resignation_tooltip = ""
+        if (employee.employee_status == 'resigned' and
+                hasattr(employee, 'resignation_date') and
+                employee.resignation_date):
+            formatted_date = employee.resignation_date.strftime('%b %d, %Y')
+            days_ago = (today - employee.resignation_date).days
+            resignation_tooltip = f"Resigned on {formatted_date} ({days_ago} days ago)"
+
+        employee_list.append({
+            'pk': employee.pk,
+            'emp_id': employee.emp_id,
+            'emp_fname': employee.emp_fname,
+            'emp_lname': employee.emp_lname,
+            'emp_email': employee.emp_email,
+            'emp_mob_ph': employee.emp_mob_ph,
+            'dep': employee.dep.dep_name if employee.dep else "",
+            'designation': employee.designation,
+            'employee_status': employee.employee_status,
+            'manager_display': manager_display,
+            'resignation_tooltip': resignation_tooltip,
+            'resignation_date': employee.resignation_date if hasattr(employee, 'resignation_date') else None
+        })
+
+    context = {
+        'employee_list': employee_list,
+        'current_filters': {
+            'emp_id': emp_id,
+            'name': name,
+            'status': status
+        }
+    }
+
+    return render(request, 'employees_display.html', context)
 
 
-    for employee in data:
-        if employee.employee_manager:
-            employee.manager_display = f"{employee.employee_manager.emp_id} ({employee.employee_manager.emp_fname} )"
-        else:
-            employee.manager_display = "None"
-
-    return render(request,'list_employees_working.html',{'data':data})
 
 
 
-#
-#
+
+
+
+
+
+
+
+
+
+
 # from .models import Employees, state, Country
 # from django.views.generic import UpdateView
 # from django.shortcuts import get_object_or_404
@@ -1559,13 +1830,28 @@ def add_holidays(request):
             selected_year = selected_date.year
             selected_day = selected_date.strftime("%A")  # Get day name (e.g., Monday)
 
+            # if leave_type == 'fixed':
+            #     Holiday.objects.create(date=selected_date, name=name, day=selected_day, year=selected_year)
+            #     messages.success(request, "✅ Fixed holiday added successfully!")
+            #
+            # elif leave_type == 'floating':
+            #     FloatingHoliday.objects.create(name=name, date=selected_date, year=selected_year)
+            #     messages.success(request, "✅ Floating holiday added successfully!")
+
+            # Check if the holiday already exists
             if leave_type == 'fixed':
-                Holiday.objects.create(date=selected_date, name=name, day=selected_day, year=selected_year)
-                messages.success(request, "✅ Fixed holiday added successfully!")
+                if Holiday.objects.filter(date=selected_date).exists():
+                    messages.warning(request, "⚠️ The date you have entered is already added as a Fixed Holiday.")
+                else:
+                    Holiday.objects.create(date=selected_date, name=name, day=selected_day, year=selected_year)
+                    messages.success(request, "✅ Fixed holiday added successfully!")
 
             elif leave_type == 'floating':
-                FloatingHoliday.objects.create(name=name, date=selected_date, year=selected_year)
-                messages.success(request, "✅ Floating holiday added successfully!")
+                if FloatingHoliday.objects.filter(date=selected_date).exists():
+                    messages.warning(request, "⚠️ The date you have entered is already added as a Floating Holiday.")
+                else:
+                    FloatingHoliday.objects.create(name=name, date=selected_date, year=selected_year)
+                    messages.success(request, "✅ Floating holiday added successfully!")
 
             return redirect('add_holidays')  # Redirect to form after submission
 
