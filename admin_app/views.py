@@ -691,7 +691,7 @@ def list_employees(request):
         }
     }
 
-    return render(request, 'employees_display.html', context)
+    return render(request, 'list_employees.html', context)
 
 
 

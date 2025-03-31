@@ -5,7 +5,6 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 <style>
-/* Root Variables */
 :root {
     --primary-50: #eff6ff;
     --primary-100: #dbeafe;
@@ -26,96 +25,123 @@
     --error-500: #ef4444;
 }
 
-/* Base Styles */
 body {
     font-family: 'Inter', sans-serif;
     background-color: var(--neutral-50);
     color: var(--neutral-800);
     line-height: 1.4;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
     padding-top: 60px;
 }
 
-/* Container and Layout */
 .container {
     padding: 10px;
-    margin: 40px auto;
-    max-width: 1400px; /* Increased max-width for better table display */
+    margin: 20px auto;
+    max-width: 1400px;
     width: 100%;
-    min-height: calc(100vh - 80px);
-    display: flex;
-    flex-direction: column;
-}
-
-/* Add space between navbar and content */
-.navbar + .container,
-.navbar + div .container,
-.navbar ~ .container:first-of-type {
-    margin-top: 100px;
 }
 
 .main-content {
     flex: 1;
     display: flex;
     flex-direction: column;
-    padding: 20px 0;
 }
 
-/* Employee List Card */
+/* Compact Filter */
+.compact-filter {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    padding: 12px 15px;
+    margin-bottom: 15px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.compact-filter .form-group {
+    margin-bottom: 0;
+    min-width: 180px;
+    flex: 1;
+}
+
+.compact-filter .form-control {
+    height: 36px;
+    padding: 6px 12px;
+    border-radius: 6px;
+    border: 1px solid var(--neutral-200);
+    transition: border-color 0.2s ease;
+}
+
+.compact-filter .form-control:focus {
+    border-color: var(--primary-500);
+    outline: none;
+}
+
+.compact-filter .select-wrapper {
+    position: relative;
+}
+
+.compact-filter .select-wrapper::after {
+    content: '';
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    border-left: 5px solid transparent;
+    border-right: 5px solid transparent;
+    border-top: 5px solid var(--neutral-600);
+    pointer-events: none;
+}
+
+.compact-filter select {
+    width: 100%;
+    height: 36px;
+    padding: 6px 12px;
+    border: 1px solid var(--neutral-200);
+    border-radius: 6px;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    transition: border-color 0.2s ease;
+}
+
+.compact-filter select:focus {
+    border-color: var(--primary-500);
+    outline: none;
+}
+
+/* Employee Table */
 .employee-card {
     background: white;
     border-radius: 12px;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-    padding: 25px 20px;
-    width: 100%;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    padding: 20px;
 }
 
-/* Card Header */
-.card-header {
-    background: linear-gradient(135deg, var(--primary-600), var(--primary-700));
-
-    margin: -25px -20px 15px -20px;
-    padding: 15px;
-    border-radius: 12px 12px 0 0;
-    text-align: center;
-    color: white;
-}
-
-.card-title {
-    font-size: 1.4rem;
-    margin: 0;
-    font-weight: 600;
-}
-
-/* Table Styling - No scrolling */
 .table-responsive {
     width: 100%;
-    overflow: visible; /* Changed from auto to visible */
-    margin-top: 20px;
+    overflow-x: auto;
 }
 
 table {
     width: 100%;
     border-collapse: collapse;
-    table-layout: auto; /* Changed to auto for better column width distribution */
 }
 
 th {
     background-color: var(--neutral-100);
-    color: var(--neutral-800);
     padding: 12px 15px;
-    font-weight: 600;
     text-align: left;
+    font-weight: 600;
     font-size: 0.85rem;
-    border-bottom: 2px solid var(--neutral-200);
     white-space: nowrap;
 }
 
 td {
     padding: 12px 15px;
     border-bottom: 1px solid var(--neutral-200);
-    color: var(--neutral-700);
     font-size: 0.85rem;
     white-space: nowrap;
 }
@@ -128,7 +154,26 @@ tbody tr:hover {
     background-color: var(--primary-50);
 }
 
-/* Action Buttons */
+.status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+
+.status-badge.employed {
+    background-color: var(--success-50);
+    color: var(--success-600);
+}
+
+.status-badge.resigned {
+    background-color: var(--error-50);
+    color: var(--error-500);
+}
+
 .action-buttons {
     display: flex;
     gap: 8px;
@@ -138,13 +183,10 @@ tbody tr:hover {
     padding: 6px 12px;
     border-radius: 4px;
     font-size: 0.85rem;
-    font-weight: 500;
     display: inline-flex;
     align-items: center;
     gap: 5px;
     transition: all 0.2s ease;
-    cursor: pointer;
-    border: none;
 }
 
 .btn-primary {
@@ -154,7 +196,6 @@ tbody tr:hover {
 
 .btn-primary:hover {
     background-color: var(--primary-700);
-    transform: translateY(-1px);
 }
 
 .btn-danger {
@@ -164,114 +205,28 @@ tbody tr:hover {
 
 .btn-danger:hover {
     background-color: #dc2626;
-    transform: translateY(-1px);
 }
 
-/* No Data Message */
 .no-data {
     text-align: center;
     padding: 20px;
     color: var(--neutral-600);
-    font-size: 0.9rem;
 }
 
-/* Responsive Design */
-@media (max-width: 1200px) {
-    .container {
-        max-width: 95%;
-    }
-}
-
-@media (max-width: 992px) {
-    /* Show fewer columns on medium screens */
-    table {
-        display: block;
-        overflow-x: auto;
-        white-space: nowrap;
-    }
-
-    th, td {
-        min-width: 120px;
-    }
-}
-
+/* Responsive */
 @media (max-width: 768px) {
-    body {
-        padding-top: 50px;
+    .compact-filter {
+        flex-direction: column;
+        align-items: stretch;
     }
 
-    .container {
-        margin: 10px 5px;
-        padding: 5px;
-    }
-
-    .navbar + .container,
-    .navbar + div .container,
-    .navbar ~ .container:first-of-type {
-        margin-top: 80px;
-    }
-
-    .employee-card {
-        padding: 15px 10px;
-        margin-top: 15px;
-    }
-
-    .card-header {
-        margin: -15px -10px 10px -10px;
-        padding: 12px;
-    }
-
-    th, td {
-        padding: 10px 12px;
-        font-size: 0.8rem;
+    .compact-filter .form-group {
+        min-width: auto;
     }
 
     .action-buttons {
         flex-direction: column;
         gap: 5px;
-    }
-
-    .btn {
-        padding: 5px 10px;
-        font-size: 0.8rem;
-    }
-}
-
-@media (max-width: 576px) {
-    /* Stack table cells vertically on small screens */
-    table {
-        display: block;
-    }
-
-    thead {
-        display: none;
-    }
-
-    tr {
-        display: block;
-        margin-bottom: 15px;
-        border: 1px solid var(--neutral-200);
-        border-radius: 8px;
-    }
-
-    td {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 8px 12px;
-        border-bottom: 1px solid var(--neutral-200);
-    }
-
-    td:before {
-        content: attr(data-label);
-        font-weight: 600;
-        color: var(--neutral-600);
-        margin-right: 10px;
-    }
-
-    .action-buttons {
-        flex-direction: row;
-        justify-content: flex-end;
     }
 }
 </style>
@@ -280,13 +235,31 @@ tbody tr:hover {
 {% block content %}
 <div class="container">
     <div class="main-content">
-        <div class="employee-card">
-            <!-- Card Header -->
-            <div class="card-header">
-                <h2 class="card-title">Employee List</h2>
+        <!-- Compact Filter Form -->
+        <form method="GET" action="{% url 'employee_list' %}" class="compact-filter" id="employeeFilterForm">
+            <div class="form-group">
+                <input type="text" name="emp_id" class="form-control"
+                       value="{{ request.GET.emp_id }}" placeholder="Employee ID" id="empIdInput">
             </div>
 
-            <!-- Employee Table -->
+            <div class="form-group">
+                <input type="text" name="name" class="form-control"
+                       value="{{ request.GET.name }}" placeholder="Name" id="nameInput">
+            </div>
+
+            <div class="form-group">
+                <div class="select-wrapper">
+                    <select name="status" class="form-control" id="statusSelect">
+                        <option value="all">All Statuses</option>
+                        <option value="employed" {% if not request.GET.status or request.GET.status == 'employed' %}selected{% endif %}>Employed</option>
+                        <option value="resigned" {% if request.GET.status == 'resigned' %}selected{% endif %}>Resigned</option>
+                    </select>
+                </div>
+            </div>
+        </form>
+
+        <!-- Employee Table -->
+        <div class="employee-card">
             <div class="table-responsive">
                 <table>
                     <thead>
@@ -302,22 +275,33 @@ tbody tr:hover {
                         </tr>
                     </thead>
                     <tbody>
-                        {% if data %}
-                            {% for employee in data %}
+                        {% if employee_list %}
+                            {% for employee in employee_list %}
                             <tr>
-                                <td data-label="ID">{{ employee.emp_id }}</td>
-                                <td data-label="Name">{{ employee.emp_fname }} {{ employee.emp_lname }}</td>
-                                <td data-label="Email">{{ employee.emp_email }}</td>
-                                <td data-label="Phone">{{ employee.emp_mob_ph }}</td>
-                                <td data-label="Department">{{ employee.dep }}</td>
-                                <td data-label="Designation">{{ employee.designation }}</td>
-                                <td data-label="Status">{{ employee.employee_status }}</td>
-                                <td data-label="Actions">
+                                <td>{{ employee.emp_id }}</td>
+                                <td>{{ employee.emp_fname }} {{ employee.emp_lname }}</td>
+                                <td>{{ employee.emp_email }}</td>
+                                <td>{{ employee.emp_mob_ph }}</td>
+                                <td>{{ employee.dep }}</td>
+                                <td>{{ employee.designation }}</td>
+                                <td>
+                                    {% if employee.employee_status == 'employed' %}
+                                        <span class="status-badge employed">
+                                            <i class="fas fa-user-check"></i> Active
+                                        </span>
+                                    {% else %}
+                                        <span class="status-badge resigned"
+                                              {% if employee.resignation_tooltip %}title="{{ employee.resignation_tooltip }}"{% endif %}>
+                                            <i class="fas fa-user-slash"></i> Resigned
+                                        </span>
+                                    {% endif %}
+                                </td>
+                                <td>
                                     <div class="action-buttons">
                                         <a href="{% url 'employee_edit' employee.pk %}" class="btn btn-primary">
                                             <i class="fas fa-edit"></i> Edit
                                         </a>
-                                        <a href="{% url 'employee_delete' employee.id %}" class="btn btn-danger">
+                                        <a href="{% url 'employee_delete' employee.pk %}" class="btn btn-danger">
                                             <i class="fas fa-trash"></i> Delete
                                         </a>
                                     </div>
@@ -337,4 +321,30 @@ tbody tr:hover {
         </div>
     </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('employeeFilterForm');
+    const empIdInput = document.getElementById('empIdInput');
+    const nameInput = document.getElementById('nameInput');
+    const statusSelect = document.getElementById('statusSelect');
+    
+    // Function to submit the form
+    function submitForm() {
+        form.submit();
+    }
+    
+    // Add event listeners for input changes with debounce
+    let debounceTimer;
+    
+    function debounceSubmit() {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(submitForm, 500); // 500ms delay
+    }
+    
+    empIdInput.addEventListener('input', debounceSubmit);
+    nameInput.addEventListener('input', debounceSubmit);
+    statusSelect.addEventListener('change', submitForm);
+});
+</script>
 {% endblock %}
