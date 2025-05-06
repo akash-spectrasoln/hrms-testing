@@ -469,6 +469,7 @@
         flatpickr(startDateInput, {
             dateFormat: "Y-m-d",
             minDate: "today",
+            appendTo: document.body,  // <-- same here
             onDayCreate: function (dObj, dStr, fp, dayElem) {
                 const dayString = dayElem.dateObj.toLocaleDateString('en-CA');
                 if (dayElem.dateObj.getDay() === 6 || dayElem.dateObj.getDay() === 0) {
@@ -487,6 +488,7 @@
         flatpickr(endDateInput, {
             dateFormat: "Y-m-d",
             minDate: "today",
+            appendTo: document.body,  // <-- same here
             onDayCreate: function (dObj, dStr, fp, dayElem) {
                 const dayString = dayElem.dateObj.toLocaleDateString('en-CA');
                 if (dayElem.dateObj.getDay() === 6 || dayElem.dateObj.getDay() === 0) {
