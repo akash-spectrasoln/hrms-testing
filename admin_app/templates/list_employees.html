@@ -3,7 +3,8 @@
 
 {% block styles %}
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+<link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
 <style>
 :root {
     --primary-50: #eff6ff;
@@ -36,7 +37,7 @@ body {
 .container {
     padding: 10px;
     margin: 20px auto;
-    max-width: 1400px;
+    max-width: 100%;
     width: 100%;
 }
 
@@ -46,112 +47,36 @@ body {
     flex-direction: column;
 }
 
-/* Compact Filter */
-.compact-filter {
-    background: white;
+.card {
+    border: none;
     border-radius: 12px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-    padding: 12px 15px;
-    margin-bottom: 15px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 10px;
-    flex-wrap: wrap;
-}
-
-.compact-filter .form-group {
-    margin-bottom: 0;
-    min-width: 180px;
-    flex: 1;
-}
-
-.compact-filter .form-control {
-    height: 36px;
-    padding: 6px 12px;
-    border-radius: 6px;
-    border: 1px solid var(--neutral-200);
-    transition: border-color 0.2s ease;
-}
-
-.compact-filter .form-control:focus {
-    border-color: var(--primary-500);
-    outline: none;
-}
-
-.compact-filter .select-wrapper {
-    position: relative;
-}
-
-.compact-filter .select-wrapper::after {
-    content: '';
-    position: absolute;
-    right: 10px;
-    top: 50%;
-    transform: translateY(-50%);
-    border-left: 5px solid transparent;
-    border-right: 5px solid transparent;
-    border-top: 5px solid var(--neutral-600);
-    pointer-events: none;
-}
-
-.compact-filter select {
-    width: 100%;
-    height: 36px;
-    padding: 6px 12px;
-    border: 1px solid var(--neutral-200);
-    border-radius: 6px;
-    -webkit-appearance: none;
-    -moz-appearance: none;
-    appearance: none;
-    transition: border-color 0.2s ease;
-}
-
-.compact-filter select:focus {
-    border-color: var(--primary-500);
-    outline: none;
-}
-
-/* Employee Table */
-.employee-card {
-    background: white;
-    border-radius: 12px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-    padding: 20px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
 .table-responsive {
-    width: 100%;
     overflow-x: auto;
 }
 
-table {
-    width: 100%;
-    border-collapse: collapse;
+.table {
+   
+    margin-bottom: 0;
+    border-radius: 12px;
+    overflow: hidden;
 }
 
-th {
+.table th, .table td {
+    vertical-align: middle;
+    white-space: nowrap;
+}
+
+.table th {
     background-color: var(--neutral-100);
-    padding: 12px 15px;
-    text-align: left;
     font-weight: 600;
-    font-size: 0.85rem;
-    white-space: nowrap;
+    font-size: 0.9rem;
 }
 
-td {
-    padding: 12px 15px;
-    border-bottom: 1px solid var(--neutral-200);
-    font-size: 0.85rem;
-    white-space: nowrap;
-}
-
-tbody tr:nth-child(even) {
-    background-color: var(--neutral-50);
-}
-
-tbody tr:hover {
-    background-color: var(--primary-50);
+.table td {
+    font-size: 0.9rem;
 }
 
 .status-badge {
@@ -174,60 +99,10 @@ tbody tr:hover {
     color: var(--error-500);
 }
 
-.action-buttons {
-    display: flex;
-    gap: 8px;
-}
-
-.btn {
-    padding: 6px 12px;
-    border-radius: 4px;
-    font-size: 0.85rem;
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    transition: all 0.2s ease;
-}
-
-.btn-primary {
-    background-color: var(--primary-600);
-    color: white;
-}
-
-.btn-primary:hover {
-    background-color: var(--primary-700);
-}
-
-.btn-danger {
-    background-color: var(--error-500);
-    color: white;
-}
-
-.btn-danger:hover {
-    background-color: #dc2626;
-}
-
 .no-data {
     text-align: center;
     padding: 20px;
     color: var(--neutral-600);
-}
-
-/* Responsive */
-@media (max-width: 768px) {
-    .compact-filter {
-        flex-direction: column;
-        align-items: stretch;
-    }
-
-    .compact-filter .form-group {
-        min-width: auto;
-    }
-
-    .action-buttons {
-        flex-direction: column;
-        gap: 5px;
-    }
 }
 </style>
 {% endblock %}
@@ -236,92 +111,92 @@ tbody tr:hover {
 <div class="container">
     <div class="main-content">
         <!-- Compact Filter Form -->
-        <form method="GET" action="{% url 'employee_list' %}" class="compact-filter" id="employeeFilterForm">
-            <div class="form-group">
-                <input type="text" name="emp_id" class="form-control"
-                       value="{{ request.GET.emp_id }}" placeholder="Employee ID" id="empIdInput">
+        <form method="GET" action="{% url 'employee_list' %}" class="form-inline mb-3" id="employeeFilterForm">
+            <div class="form-group mr-2">
+                <input type="text" name="employee_id" class="form-control form-control-sm" value="{{ request.GET.employee_id }}" placeholder="Employee ID" id="empIdInput">
             </div>
 
-            <div class="form-group">
-                <input type="text" name="name" class="form-control"
-                       value="{{ request.GET.name }}" placeholder="Name" id="nameInput">
+            <div class="form-group mr-2">
+                <input type="text" name="name" class="form-control form-control-sm" value="{{ request.GET.name }}" placeholder="Name" id="nameInput">
             </div>
 
-            <div class="form-group">
-                <div class="select-wrapper">
-                    <select name="status" class="form-control" id="statusSelect">
-                        <option value="all">All Statuses</option>
-                        <option value="employed" {% if not request.GET.status or request.GET.status == 'employed' %}selected{% endif %}>Employed</option>
-                        <option value="resigned" {% if request.GET.status == 'resigned' %}selected{% endif %}>Resigned</option>
-                    </select>
-                </div>
+            <div class="form-group mr-2">
+                <select name="employee_status" class="form-control form-control-sm" id="statusSelect">
+                    <option value="all">All Statuses</option>
+                    <option value="employed" {% if not request.GET.employee_status or request.GET.employee_status == 'employed' %}selected{% endif %}>Employed</option>
+                    <option value="resigned" {% if request.GET.employee_status == 'resigned' %}selected{% endif %}>Resigned</option>
+                </select>
             </div>
         </form>
 
         <!-- Employee Table -->
-        <div class="employee-card">
-            <div class="table-responsive">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>ID</th>
-                            <th>Name</th>
-                            <th>Email</th>
-                            <th>Phone</th>
-                            <th>Department</th>
-                            <th>Designation</th>
-                            <th>Status</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% if employee_list %}
-                            {% for employee in employee_list %}
+        <div class="card">
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
                             <tr>
-                                <td>{{ employee.emp_id }}</td>
-                                <td>{{ employee.emp_fname }} {{ employee.emp_lname }}</td>
-                                <td>{{ employee.emp_email }}</td>
-                                <td>{{ employee.emp_mob_ph }}</td>
-                                <td>{{ employee.dep }}</td>
-                                <td>{{ employee.designation }}</td>
-                                <td>
-                                    {% if employee.employee_status == 'employed' %}
-                                        <span class="status-badge employed">
-                                            <i class="fas fa-user-check"></i> Active
-                                        </span>
-                                    {% else %}
-                                        <span class="status-badge resigned"
-                                              {% if employee.resignation_tooltip %}title="{{ employee.resignation_tooltip }}"{% endif %}>
-                                            <i class="fas fa-user-slash"></i> Resigned
-                                        </span>
-                                    {% endif %}
-                                </td>
-                                <td>
-                                    <div class="action-buttons">
-                                        <a href="{% url 'employee_edit' employee.pk %}" class="btn btn-primary">
-                                            <i class="fas fa-edit"></i> Edit
-                                        </a>
-                                        <a href="{% url 'employee_delete' employee.pk %}" class="btn btn-danger">
-                                            <i class="fas fa-trash"></i> Delete
-                                        </a>
-                                    </div>
-                                </td>
+                                <th>ID</th>
+                                <th>Name</th>
+                                <th>Email</th>
+                                <th>Phone</th>
+                                <th>Department</th>
+                                <th>Designation</th>
+                                <th>Status</th>
+                                <th>Actions</th>
                             </tr>
-                            {% endfor %}
-                        {% else %}
-                            <tr>
-                                <td colspan="8" class="no-data">
-                                    <i class="fas fa-user-slash"></i> No Employees Found
-                                </td>
-                            </tr>
-                        {% endif %}
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody>
+                            {% if employee_list %}
+                                {% for employee in employee_list %}
+                                <tr>
+                                    <td>{{ employee.employee_id }}</td>
+                                    <td>{{ employee.first_name }} {{ employee.last_name }}</td>
+                                    <td>{{ employee.company_email }}</td>
+                                    <td>{{ employee.mobile_phone }}</td>
+                                    <td>{{ employee.department }}</td>
+                                    <td>{{ employee.designation }}</td>
+                                    <td>
+                                        {% if employee.employee_status == 'employed' %}
+                                            <span class="status-badge employed">
+                                                <i class="fas fa-user-check"></i> Active
+                                            </span>
+                                        {% else %}
+                                            <span class="status-badge resigned"
+                                                  {% if employee.resignation_date %}title="Resigned on {{ employee.resignation_date }}"{% endif %}>
+                                                <i class="fas fa-user-slash"></i> Resigned
+                                            </span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div class="btn-group mr-2" role="group">
+                                            <a href="{% url 'employee_edit' employee.pk %}" class="btn btn-primary btn-sm">
+                                                <i class="fas fa-edit"></i> 
+                                            </a>
+                                            <a href="{% url 'employee_delete' employee.pk %}" class="btn btn-danger btn-sm">
+                                                <i class="fas fa-trash"></i> 
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            {% else %}
+                                <tr>
+                                    <td colspan="8" class="no-data">
+                                        <i class="fas fa-user-slash"></i> No Employees Found
+                                    </td>
+                                </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </div>
 </div>
 
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.bundle.min.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const form = document.getElementById('employeeFilterForm');

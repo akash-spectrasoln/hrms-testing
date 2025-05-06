@@ -1,191 +1,623 @@
-{% extends 'emp_index.html' %}
-
-<title>Request Leave</title>
+{% extends 'partials/base.html' %}
 
 {% block styles %}
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
     <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #1a1a1a;
-            margin: 0;
-            padding: 0;
+        .leave-request-content {
+            position: fixed;
+            top: 72px;
+            left: 250px;
+            right: 0;
+            bottom: 0;
+            overflow-y: auto;
+            background-color: #f4f4f9;
             display: flex;
             justify-content: center;
             align-items: center;
-            min-height: 100vh;
-            color: #ffffff;
+            padding: 20px;
+            z-index: 1;
         }
 
-        .container {
-            background-color: #2d2d2d;
-            border-radius: 12px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
-            padding: 40px;
-            width: 600px;
-            margin: 60px 0;
-        }
-
-        h2 {
-            text-align: center;
-            color: #60a5fa;
-            margin-bottom: 35px;
-            font-weight: 600;
-            font-size: 24px;
-        }
-
-        form {
-            display: flex;
-            flex-direction: column;
-            gap: 25px;
-        }
-
-        label {
-            font-weight: 500;
-            margin-bottom: 8px;
-            color: #e5e5e5;
-            display: block;
-            font-size: 15px;
-        }
-
-        input[type="date"],
-        textarea,
-        select {
-            padding: 14px;
-            border: 1px solid #404040;
-            border-radius: 8px;
+        .form-container {
+            max-width: 450px;
             width: 100%;
-            font-size: 15px;
-            box-sizing: border-box;
-            background-color: #1a1a1a;
-            color: #ffffff;
-            transition: border-color 0.3s ease;
-        }
-
-        input[type="date"]:focus,
-        textarea:focus,
-        select:focus {
-            border-color: #60a5fa;
-            outline: none;
-            box-shadow: 0 0 0 2px rgba(96, 165, 250, 0.2);
-        }
-
-        textarea {
-            resize: vertical;
-            min-height: 120px;
-        }
-
-        button {
-            padding: 14px;
-            border: none;
+            background-color: #ffffff;
             border-radius: 8px;
-            background-color: #60a5fa;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            padding: 15px;
+            margin: 0 auto;
+        }
+
+        .page-header {
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #e6e6e6;
+            text-align: center;
+        }
+
+        .page-title {
+            color: #2c3e50;
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin: 0;
+        }
+
+        .form-group {
+            margin-bottom: 10px;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 4px;
+            color: #2c3e50;
+            font-weight: 500;
+            font-size: 0.85rem;
+        }
+
+        .form-input,
+        .form-select,
+        .form-textarea {
+            width: 100%;
+            padding: 6px 8px;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            background-color: #ffffff;
+            color: #2c3e50;
+            transition: all 0.3s ease;
+        }
+
+        .form-input:focus,
+        .form-select:focus,
+        .form-textarea:focus {
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+            outline: none;
+        }
+
+        .form-textarea {
+            min-height: 60px;
+            resize: vertical;
+        }
+
+        .form-select {
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%233b82f6' viewBox='0 0 16 16'%3E%3Cpath d='M8 10l4-4H4z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 8px center;
+            padding-right: 30px;
+        }
+
+        .submit-button {
+            width: auto;
+            min-width: 120px;
+            padding: 8px 16px;
+            background-color: #3b82f6;
             color: #ffffff;
-            font-size: 16px;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.95rem;
             font-weight: 500;
             cursor: pointer;
             transition: all 0.3s ease;
-            margin-top: 10px;
+            margin: 10px auto 0;
+            display: block;
         }
 
-        button:hover {
+        .submit-button:hover {
+            background-color: #2563eb;
+        }
+
+        .error-message {
+            color: #dc2626;
+            font-size: 0.8rem;
+            margin-top: 3px;
+        }
+
+        .messages {
+            margin-bottom: 10px;
+        }
+
+        .message {
+            padding: 8px;
+            border-radius: 4px;
+            margin-bottom: 8px;
+            font-size: 0.85rem;
+        }
+
+        .success {
+            background-color: #d1fae5;
+            color: #065f46;
+            border: 1px solid #a7f3d0;
+        }
+
+        .error {
+            background-color: #fee2e2;
+            color: #991b1b;
+            border: 1px solid #fecaca;
+        }
+
+        /* Flatpickr calendar customization */
+        .flatpickr-calendar {
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            border: 1px solid #e2e8f0;
+        }
+
+        .flatpickr-day {
+            border-radius: 4px;
+        }
+
+        .flatpickr-day.selected,
+        .flatpickr-day.startRange,
+        .flatpickr-day.endRange {
+            background: #3b82f6;
+            border-color: #3b82f6;
+        }
+
+        .flatpickr-day.selected:hover,
+        .flatpickr-day.startRange:hover,
+        .flatpickr-day.endRange:hover {
+            background: #2563eb;
+            border-color: #2563eb;
+        }
+
+        .flatpickr-day.today {
+            border-color: #3b82f6;
+        }
+
+        .holiday {
+            background-color: #fee2e2 !important;
+            border-radius: 4px;
+        }
+
+        .floating-holiday {
+            background-color: #e0e7ff !important; /* light indigo */
+            border-radius: 4px;
+        }
+
+        .weekend {
+            background-color: #f3f4f6 !important;
+            border-radius: 4px;
+        }
+
+        .pending-leave {
+            background-color: #fef9c3 !important; /* light yellow */
+            border-radius: 4px;
+        }
+
+        .approved-leave {
+            background-color: #bbf7d0 !important; /* light green */
+            border-radius: 4px;
+        }
+
+        @media (max-width: 1024px) {
+            .leave-request-content {
+                left: 200px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .leave-request-content {
+                left: 0;
+            }
+            .form-container {
+                margin: 0 auto;
+                padding: 15px;
+            }
+        }
+
+        .color-indicators {
+            margin: 20px 0;
+            padding: 10px;
+            background-color: #f8fafc;
+            border-radius: 6px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .indicator-title {
+            font-size: 0.85rem;
+            color: #64748b;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+
+        .indicator-container {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+        }
+
+        .indicator {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .indicator-color {
+            width: 16px;
+            height: 16px;
+            border-radius: 4px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .indicator-text {
+            font-size: 0.8rem;
+            color: #475569;
+        }
+
+        .holiday-indicator {
+            background-color: #fee2e2;
+        }
+
+        .floating-holiday-indicator {
+            background-color: #e0e7ff;
+        }
+
+        .weekend-indicator {
+            background-color: #f3f4f6;
+        }
+
+        .pending-leave-indicator {
+            background-color: #fef9c3;
+        }
+
+        .approved-leave-indicator {
+            background-color: #bbf7d0;
+        }
+
+        /* Modal styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.4);
+        }
+        .modal-content {
+            background-color: #fefefe;
+            margin: 15% auto;
+            padding: 20px;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            width: 80%;
+            max-width: 500px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .modal-title {
+            color: #2c3e50;
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+        .modal-body {
+            margin-bottom: 20px;
+            color: #4b5563;
+            font-size: 0.9rem;
+        }
+        .modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+        .modal-button {
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .confirm-button {
             background-color: #3b82f6;
-            transform: translateY(-1px);
+            color: white;
+            border: none;
+        }
+        .confirm-button:hover {
+            background-color: #2563eb;
+        }
+        .cancel-button {
+            background-color: #f3f4f6;
+            color: #4b5563;
+            border: 1px solid #e5e7eb;
+        }
+        .cancel-button:hover {
+            background-color: #e5e7eb;
         }
     </style>
 {% endblock %}
 
-{% block scripts %}
-<script>
-    const floatingHolidayDates = {{ floating_holidays|safe }};
-    const holidayDates = {{ holidays|safe }};
-
-    function updateDateSelection() {
-        const leaveType = document.getElementById("id_leave_type").value;
-        const startDateInput = document.getElementById("id_start_date");
-        const endDateInput = document.getElementById("id_end_date");
-
-        startDateInput.disabled = false;
-        endDateInput.disabled = false;
-
-        const disableDates = (inputField, dates) => {
-            inputField.addEventListener("input", () => {
-                const selectedDate = new Date(inputField.value);
-                const formattedDate = selectedDate.toISOString().split("T")[0];
-
-                if (dates.includes(formattedDate)) {
-                    alert(`The selected date (${formattedDate}) is not available for ${leaveType}.`);
-                    inputField.value = "";
-                }
-            });
-        };
-
-
-        if (leaveType === "Floating Leave") {
-            disableDates(startDateInput, holidayDates);
-            disableDates(endDateInput, holidayDates);
-        } else if (leaveType === "Casual Leave") {
-            disableDates(startDateInput, floatingHolidayDates);
-            disableDates(endDateInput, floatingHolidayDates);
-        }
-    }
-
-    document.addEventListener("DOMContentLoaded", () => {
-        document.getElementById("id_leave_type").addEventListener("change", updateDateSelection);
-    });
-</script>
-{% endblock %}
-
 {% block content %}
-<div class="container">
-    <h2>Request Leave</h2>
-    <form method="post">
-        {% csrf_token %}
-
-        <div>
-            <label for="id_leave_type">Leave Type</label>
-            <select id="id_leave_type" name="leave_type">
-                <option value="Floating Leave">Floating Leave</option>
-                <option value="Casual Leave">Casual Leave</option>
-            </select>
+<div class="leave-request-content">
+    <div class="form-container">
+        <div class="page-header">
+            <h2 class="page-title">Request Leave</h2>
         </div>
 
-        <div>
-            {{ form.start_date.label_tag }}
-            {{ form.start_date }}
-            {% if form.start_date.errors %}
+        {% if messages %}
+        <div class="messages">
+            {% for message in messages %}
+            <div class="message {{ message.tags }}">
+                {{ message }}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <form method="post" id="leave-request-form" autocomplete="off">
+            {% csrf_token %}
+
+            <div class="color-indicators">
+                <div class="indicator-title">Colour Indicators:</div>
+                <div class="indicator-container">
+                    <div class="indicator"><span class="indicator-color holiday-indicator"></span><span class="indicator-text">Holiday</span></div>
+                    <div class="indicator"><span class="indicator-color floating-holiday-indicator"></span><span class="indicator-text">Floating Holiday</span></div>
+                    <div class="indicator"><span class="indicator-color weekend-indicator"></span><span class="indicator-text">Weekend</span></div>
+                    <div class="indicator"><span class="indicator-color pending-leave-indicator"></span><span class="indicator-text">Pending Leave</span></div>
+                    <div class="indicator"><span class="indicator-color approved-leave-indicator"></span><span class="indicator-text">Approved Leave</span></div>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="id_day_type">Leave Duration</label>
+                <select id="id_day_type" name="day_type" class="form-select" required>
+                    <option value="one">One Day</option>
+                    <option value="multiple">More Than One Day</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="id_leave_type">Leave Type</label>
+                <select id="id_leave_type" name="leave_type" class="form-select" {% if remaining_casual_leaves <= 0 and remaining_floating_leaves <= 0 %}disabled{% endif %}>
+                    <option value="Casual Leave" {% if remaining_casual_leaves <= 0 %}disabled{% endif %}>Casual Leave ({{ remaining_casual_leaves }} left)</option>
+                    <option value="Floating Leave" {% if remaining_floating_leaves <= 0 %}disabled{% endif %}>Floating Leave ({{ remaining_floating_leaves }} left)</option>
+                </select>
+                {% if remaining_casual_leaves <= 0 and remaining_floating_leaves <= 0 %}
+                <div class="error-message">You have exhausted your Casual and Floating Leave entitlements for this year.</div>
+                {% endif %}
+            </div>
+
+            <div class="form-group" id="start-date-group">
+                <label class="form-label" for="id_start_date">Start Date</label>
+                <input type="text" id="id_start_date" name="start_date" class="form-input"
+                       value="{{ form.start_date.value|default:'' }}" required autocomplete="off">
+                {% if form.start_date.errors %}
                 <div class="error-message">
                     {% for error in form.start_date.errors %}
-                        <p>{{ error }}</p>
+                    <p>{{ error }}</p>
                     {% endfor %}
                 </div>
-            {% endif %}
-        </div>
+                {% endif %}
+            </div>
 
-        <div>
-            {{ form.end_date.label_tag }}
-            {{ form.end_date }}
-            {% if form.end_date.errors %}
+            <div class="form-group" id="end-date-group">
+                <label class="form-label" for="id_end_date">End Date</label>
+                <input type="text" id="id_end_date" name="end_date" class="form-input"
+                       value="{{ form.end_date.value|default:'' }}" autocomplete="off">
+                {% if form.end_date.errors %}
                 <div class="error-message">
                     {% for error in form.end_date.errors %}
-                        <p>{{ error }}</p>
+                    <p>{{ error }}</p>
                     {% endfor %}
                 </div>
-            {% endif %}
-        </div>
+                {% endif %}
+            </div>
 
-        <div>
-            {{ form.reason.label_tag }}
-            {{ form.reason }}
-            {% if form.reason.errors %}
+            <div class="form-group">
+                <label class="form-label" for="id_reason">Reason</label>
+                <textarea id="id_reason" name="reason" class="form-textarea" rows="4" required>{{ form.reason.value|default_if_none:'' }}</textarea>
+                {% if form.reason.errors %}
                 <div class="error-message">
                     {% for error in form.reason.errors %}
-                        <p>{{ error }}</p>
+                    <p>{{ error }}</p>
                     {% endfor %}
                 </div>
-            {% endif %}
-        </div>
+                {% endif %}
+            </div>
 
-        <button type="submit">Submit Request</button>
-    </form>
+            <button type="submit" class="submit-button"
+               {% if remaining_casual_leaves <= 0 and remaining_floating_leaves <= 0 %}disabled{% endif %}>Submit Request</button>
+        </form>
+    </div>
 </div>
+
+<!-- Modal for floating holiday conversion -->
+<div id="floatingHolidayModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-title">Floating Holiday Detected</div>
+        <div class="modal-body" id="modal-message"></div>
+        <div class="modal-footer">
+            <button id="cancelButton" class="modal-button cancel-button">Cancel</button>
+            <button id="confirmButton" class="modal-button confirm-button">Convert to Casual Leave</button>
+        </div>
+    </div>
+</div>
+
+{{ holidays|json_script:"holidays-data" }}
+{{ floating_holidays|json_script:"floating-holidays-data" }}
+{{ pending_leave_dates|json_script:"pending-leave-dates-data" }}
+{{ approved_leave_dates|json_script:"approved-leave-dates-data" }}
+
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const holidays = JSON.parse(document.getElementById('holidays-data').textContent);
+        const floatingHolidays = JSON.parse(document.getElementById('floating-holidays-data').textContent);
+        const pendingLeaveDates = JSON.parse(document.getElementById('pending-leave-dates-data').textContent);
+        const approvedLeaveDates = JSON.parse(document.getElementById('approved-leave-dates-data').textContent);
+    
+        const startDateInput = document.getElementById("id_start_date");
+        const endDateInput = document.getElementById("id_end_date");
+        const leaveForm = document.getElementById("leave-request-form");
+        const modal = document.getElementById("floatingHolidayModal");
+        const modalMessage = document.getElementById("modal-message");
+        const confirmButton = document.getElementById("confirmButton");
+        const cancelButton = document.getElementById("cancelButton");
+        const dayTypeSelect = document.getElementById("id_day_type");
+        const endDateGroup = document.getElementById("end-date-group");
+    
+        let today = new Date().toISOString().split('T')[0];
+        startDateInput.value = today;
+    
+        flatpickr(startDateInput, {
+            dateFormat: "Y-m-d",
+            minDate: "today",
+            onDayCreate: function (dObj, dStr, fp, dayElem) {
+                const dayString = dayElem.dateObj.toLocaleDateString('en-CA');
+                if (dayElem.dateObj.getDay() === 6 || dayElem.dateObj.getDay() === 0) {
+                    dayElem.classList.add("weekend");
+                } else if (holidays.includes(dayString)) {
+                    dayElem.classList.add("holiday");
+                } else if (pendingLeaveDates.includes(dayString)) {
+                    dayElem.classList.add("pending-leave");
+                } else if (approvedLeaveDates.includes(dayString)) {
+                    dayElem.classList.add("approved-leave");
+                } else if (floatingHolidays.includes(dayString)) {
+                    dayElem.classList.add("floating-holiday");
+                }
+            }
+        });
+        flatpickr(endDateInput, {
+            dateFormat: "Y-m-d",
+            minDate: "today",
+            onDayCreate: function (dObj, dStr, fp, dayElem) {
+                const dayString = dayElem.dateObj.toLocaleDateString('en-CA');
+                if (dayElem.dateObj.getDay() === 6 || dayElem.dateObj.getDay() === 0) {
+                    dayElem.classList.add("weekend");
+                } else if (holidays.includes(dayString)) {
+                    dayElem.classList.add("holiday");
+                } else if (pendingLeaveDates.includes(dayString)) {
+                    dayElem.classList.add("pending-leave");
+                } else if (approvedLeaveDates.includes(dayString)) {
+                    dayElem.classList.add("approved-leave");
+                } else if (floatingHolidays.includes(dayString)) {
+                    dayElem.classList.add("floating-holiday");
+                }
+            }
+        });
+    
+        // --- UPDATED: Toggle End Date field based on day duration selection ---
+        function toggleDateFields() {
+            if (dayTypeSelect.value === "one") {
+                endDateGroup.style.display = "none";
+                // Always fill end date with start date so it submits!
+                endDateInput.value = startDateInput.value;
+            } else {
+                endDateGroup.style.display = "block";
+            }
+        }
+        toggleDateFields();
+        dayTypeSelect.addEventListener("change", toggleDateFields);
+    
+        // On start date change, if it's "One Day", auto-fill (sync)
+        startDateInput.addEventListener("change", function () {
+            if (dayTypeSelect.value === "one") {
+                endDateInput.value = startDateInput.value;
+            }
+        });
+    
+        // Helper: format date for modal (unchanged)
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            return date.toLocaleDateString('en-US', { 
+                weekday: 'short', 
+                year: 'numeric', 
+                month: 'short', 
+                day: 'numeric' 
+            });
+        }
+    
+        // Modal logic (same as before)
+        function showModal(message, onConfirm, onCancel) {
+            modalMessage.innerHTML = message;
+            modal.style.display = "block";
+            confirmButton.onclick = function() {
+                modal.style.display = "none";
+                onConfirm();
+            };
+            cancelButton.onclick = function() {
+                modal.style.display = "none";
+                if (onCancel) onCancel();
+            };
+        }
+        window.onclick = function(event) {
+            if (event.target === modal) {
+                modal.style.display = "none";
+            }
+        };
+    
+        // --- UPDATED: On submit, end_date is always filled for one-day ---
+        leaveForm.addEventListener("submit", function(event) {
+            // Always fill end date for one-day BEFORE AJAX or submit
+            if (dayTypeSelect.value === "one") {
+                endDateInput.value = startDateInput.value;
+            }
+    
+            if (!document.getElementById('floating_holiday_confirmed')) {
+                event.preventDefault();
+    
+                const startDate = startDateInput.value;
+                const endDate = dayTypeSelect.value === "one" ? startDate : endDateInput.value;
+    
+                if (!startDate || !endDate) {
+                    leaveForm.submit();
+                    return;
+                }
+    
+                fetch("{% url 'check_leave_conflicts' %}", {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                    },
+                    body: `start_date=${startDate}&end_date=${endDate}`
+                })
+                .then(response => response.json())
+                .then(data => {
+                    const conflictDates = data.conflict_dates;
+                    const floatingNotApplied = data.floating_holiday_not_applied;
+    
+                    if (conflictDates.length > 0) {
+                        alert("A leave is already applied for these date(s):\n" + conflictDates.join('\n'));
+                        return;
+                    }
+                    const leaveTypeSelect = document.getElementById("id_leave_type");
+
+                    // Only prompt if Casual Leave is selected
+                    if (floatingNotApplied.length > 0 && leaveTypeSelect.value === "Casual Leave") {
+                        const formattedDates = floatingNotApplied.map(formatDate).join('<br>');
+                        const message = `
+                            <b>Your leave request includes ${floatingNotApplied.length} floating holiday(s):</b><br>
+                            ${formattedDates}<br><br>
+                            Do you want to convert these to <b>Casual Leave</b>?
+                        `;
+                        showModal(message, function() {
+                            // Add hidden input and submit
+                            const hiddenInput = document.createElement('input');
+                            hiddenInput.type = 'hidden';
+                            hiddenInput.name = 'floating_holiday_confirmed';
+                            hiddenInput.id = 'floating_holiday_confirmed';
+                            hiddenInput.value = 'true';
+                            leaveForm.appendChild(hiddenInput);
+                            leaveForm.submit();
+                        }, function() {
+                            // Do nothing, just close modal
+                        });
+                    } else {
+                        // No floating holidays to convert or not Casual Leave, submit form normally
+                        leaveForm.submit();
+                    }
+                });
+            }
+        });
+    });
+    </script>
+
 {% endblock %}

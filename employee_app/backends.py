@@ -10,7 +10,7 @@ class EmailBackend(BaseBackend):
     def authenticate(self, request, username=None, password=None, **kwargs):
         try:
             # Try to get the employee with the matching email
-            employee = Employees.objects.get(emp_email=username)
+            employee = Employees.objects.get(personal_email=username)
 
             # Get the user associated with this employee
             user = get_user_model().objects.get(username=username)

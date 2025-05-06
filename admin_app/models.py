@@ -55,92 +55,125 @@ import re
 
 
 from django.contrib.auth.models import User
+from django.db import models
+from django.contrib.auth.models import User
+
+from django.db import models
+from django.contrib.auth.models import User
+from datetime import date
+
+ # adjust if your policies are in a different file
+
 class Employees(models.Model):
-    # Define Employee Types
     EMPLOYEE_TYPE_CHOICES = [
         ('C-', 'Contractor'),
         ('I-', 'Intern'),
         ('E-', 'Employee'),
     ]
+
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="employee_profile", null=True, blank=True)
-
-    # Employee Type Field
-    employee_type = models.CharField(max_length=3, choices=EMPLOYEE_TYPE_CHOICES, verbose_name="Employee Type",null=True)
-
-
-    emp_id=models.CharField(max_length=10,unique=True)
-    sal=models.ForeignKey(Salutation,on_delete=models.CASCADE)
-    emp_fname=models.CharField(max_length=50,verbose_name="Employee First Name")
-    emp_mname=models.CharField(max_length=50,verbose_name="Employee Middle Name")
-    emp_lname=models.CharField(max_length=50,verbose_name="Employee Last Name")
-    emp_email = models.EmailField(unique=True,verbose_name="Company Email")
-
-    emp_pemail=models.EmailField(verbose_name="Personal Email")
-    emp_mob_ph=models.CharField(max_length=15)
-    emp_off_ph=models.CharField(max_length=15)
-    emp_home_ph=models.CharField(max_length=15)
-    emp_val_from = models.DateField()
-    emp_val_to = models.DateField()
-    country = models.ForeignKey(Country, on_delete=models.CASCADE)
-    state = models.ForeignKey(state, on_delete=models.CASCADE)
-    emp_addr=models.CharField(max_length=150,null=True)
-    emp_home_street=models.TextField()
-    emp_home_city=models.TextField()
-    pincode=models.CharField(max_length=10,null=True)
-    role = models.ForeignKey(Role, on_delete=models.CASCADE, to_field="role_id", null=True, blank=True)
-
-    dep = models.ForeignKey(Department, on_delete=models.CASCADE)
+    employee_type = models.CharField(max_length=3, choices=EMPLOYEE_TYPE_CHOICES, verbose_name="Employee Type", null=True)
+    employee_id = models.CharField(max_length=10, unique=True)
+    salutation = models.ForeignKey('Salutation', on_delete=models.CASCADE)
+    first_name = models.CharField(max_length=50, verbose_name="First Name")
+    middle_name = models.CharField(max_length=50, verbose_name="Middle Name", blank=True)
+    last_name = models.CharField(max_length=50, verbose_name="Last Name")
+    company_email = models.EmailField(unique=True, verbose_name="Company Email")
+    personal_email = models.EmailField(verbose_name="Personal Email")
+    mobile_phone = models.CharField(max_length=15)
+    office_phone = models.CharField(max_length=15, blank=True)
+    home_phone = models.CharField(max_length=15, blank=True)
+    valid_from = models.DateField()
+    valid_to = models.DateField()
+    country = models.ForeignKey('Country', on_delete=models.CASCADE)
+    state = models.ForeignKey('state', on_delete=models.CASCADE)
+    address = models.CharField(max_length=150, blank=True)
+    home_house = models.TextField()
+    home_post_office = models.TextField()
+    home_city = models.TextField()
+    pincode = models.CharField(max_length=10, blank=True)
+    role = models.ForeignKey('Role', on_delete=models.CASCADE, to_field="role_id", null=True, blank=True)
+    department = models.ForeignKey('Department', on_delete=models.CASCADE)
     designation = models.CharField(max_length=100)
-    employee_manager = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True,
-                                         related_name='employees_managed')
+    manager = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True, related_name='employees_managed')
     employee_status = models.CharField(max_length=10)
-    # Self-referencing ForeignKey to link the employee to a manager (another employee)
-    emp_cp_name = models.CharField(max_length=100)
-    emp_cp_ph = models.CharField(max_length=15)
-    emp_cp_email = models.EmailField()
-    emp_cp_relation = models.CharField(max_length=100)
-    emp_base = models.DecimalField(max_digits=10, decimal_places=2)
+    emergency_contact_name = models.CharField(max_length=100)
+    emergency_contact_phone = models.CharField(max_length=15)
+    emergency_contact_email = models.EmailField()
+    emergency_contact_relation = models.CharField(max_length=100)
+    base_salary = models.DecimalField(max_digits=10, decimal_places=2)
+    created_on = models.DateTimeField(auto_now_add=True, null=True)
+    modified_on = models.DateTimeField(auto_now=True, null=True)
+    is_deleted = models.BooleanField(default=False)
 
-    emp_resume=models.FileField(upload_to='documents/',null=True,blank=True)
-    emp_certif=models.FileField(upload_to='documents/',null=True , blank=True)
-    created_on=models.DateTimeField(auto_now_add=True,null=True)
-    modified_on=models.DateTimeField(auto_now=True,null=True)
-    is_delete = models.BooleanField(default=False)  # New field for soft delete
-    floating_holidays_balance = models.IntegerField(default=2)  # Each employee has 2 floating holidays
-    floating_holidays_used = models.IntegerField(default=0)  # Tracks used floating holidays
-    emp_total_leaves = models.PositiveIntegerField(default=15)  # Total number of leaves
-    emp_used_leaves = models.PositiveIntegerField(default=0)  # Leaves already used
-    emp_password = models.CharField(max_length=128, null=True, blank=True)  # Allows existing records to remain valid
+    # These two fields get dynamically assigned in save()
+    floating_holidays_balance = models.IntegerField(default=2)
+    floating_holidays_used = models.IntegerField(default=0)
+    total_leaves = models.PositiveIntegerField(default=15)
+    used_leaves = models.PositiveIntegerField(default=0)
+
+    password = models.CharField(max_length=128, null=True, blank=True)
     resignation_date = models.DateField(null=True, blank=True)
+    incentive = models.DecimalField(max_digits=10, decimal_places=2, default=0.0)
 
     def available_leaves(self):
-        return self.emp_total_leaves - self.emp_used_leaves  # Calculate available leaves
+        return self.total_leaves - self.used_leaves
 
     def delete(self, *args, **kwargs):
-        """Perform a soft delete by setting is_delete to True."""
-        self.is_delete = True
+        self.is_deleted = True
         self.save()
 
-    # New fields to track the admin user who created and modified the record
-    # created_by = models.ForeignKey(User, related_name='created_employees', on_delete=models.SET_NULL, null=True)
-    # modified_by = models.ForeignKey(User, related_name='modified_employees', on_delete=models.SET_NULL, null=True)
-
-
     def save(self, *args, **kwargs):
-
-
         if not self.user:
             self.user, created = User.objects.get_or_create(
-                username=self.emp_email,
-                defaults={'email': self.emp_email, 'password': 'defaultpassword'}
+                username=self.company_email,
+                defaults={'email': self.company_email, 'password': 'defaultpassword'}
             )
+
+        today = date.today()
+        experience_years = 0
+        if self.created_on:
+            experience_years = (today - self.created_on.date()).days // 365
+
+        # --- Holiday policy lookup (for current year) ---
+        current_year = today.year
+        policy = HolidayPolicy.objects.filter(
+            year=current_year,
+            min_years_experience__lte=experience_years
+        ).order_by('-min_years_experience').first()
+
+        if policy:
+            self.total_leaves = policy.ordinary_holidays_count + policy.extra_holidays
+        else:
+            self.total_leaves = 0
+
+        # --- Floating holiday policy lookup (current year) ---
+        floating_policy = FloatingHolidayPolicy.objects.filter(year=current_year).first()
+        if floating_policy:
+            self.floating_holidays_balance = floating_policy.allowed_floating_holidays
 
         super().save(*args, **kwargs)
 
     def __str__(self):
-        return f"{self.emp_id} ({self.get_employee_type_display()})"
+        return f"{self.employee_id} ({self.get_employee_type_display()})"
 
-#
+
+class Resume(models.Model):
+    employee = models.ForeignKey(Employees, related_name='resumes', on_delete=models.CASCADE)
+    file = models.FileField(upload_to='documents/resumes/')
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.file.name} for {self.employee.first_name} {self.employee.last_name}"
+
+
+class Certificate(models.Model):
+    employee = models.ForeignKey(Employees, related_name='certificates', on_delete=models.CASCADE)
+    file = models.FileField(upload_to='documents/certificates/')
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.file.name} for {self.employee.first_name} {self.employee.last_name}"
 # leave management section
 
 from datetime import datetime
@@ -240,3 +273,26 @@ class FloatingHoliday(models.Model):
     def __str__(self):
         return self.name
 
+
+class HolidayPolicy(models.Model):
+    """
+    Stores the yearly policy for company-wide ordinary holidays and experience-based extra holidays.
+    """
+    year = models.PositiveIntegerField()
+    ordinary_holidays_count = models.PositiveIntegerField(help_text="Total ordinary holidays for the year.")
+    min_years_experience = models.PositiveIntegerField(help_text="Minimum years of experience for extra holidays to apply.")
+    extra_holidays = models.PositiveIntegerField(help_text="Extra holidays allocated for experience.")
+
+    def __str__(self):
+        return (f"{self.year}: {self.ordinary_holidays_count} ordinary, "
+                f"{self.min_years_experience}+ yrs = {self.extra_holidays} extra")
+
+class FloatingHolidayPolicy(models.Model):
+    """
+    Stores the yearly policy for floating holidays.
+    """
+    year = models.PositiveIntegerField(unique=True)
+    allowed_floating_holidays = models.PositiveIntegerField(help_text="Number of floating holidays allowed this year.")
+
+    def __str__(self):
+        return f"{self.year}: {self.allowed_floating_holidays} floating holidays allowed"

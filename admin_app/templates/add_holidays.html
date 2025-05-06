@@ -1,304 +1,191 @@
-
-
 {% extends 'admin_partials/admin_base.html' %}
+{% load static %}
 
-<!--parent template-->
-
-
-<!--<!DOCTYPE html>-->
-<!--<html>-->
-<!--<head>-->
-<!--    <title>Add Holiday</title>-->
-<!--</head>-->
-<!--<body>-->
-<!--    <h2>Add Holiday</h2>-->
-
-<!--    {% if messages %}-->
-<!--        <ul>-->
-<!--            {% for message in messages %}-->
-<!--                <li style="color: green;">{{ message }}</li>-->
-<!--            {% endfor %}-->
-<!--        </ul>-->
-<!--    {% endif %}-->
-
-<!--    <form method="post">-->
-<!--        {% csrf_token %}-->
-<!--        <label for="leave_type">Leave Type:</label>-->
-<!--        {{ form.leave_type }}-->
-<!--        <br><br>-->
-
-<!--        <label for="name">Holiday Name:</label>-->
-<!--        {{ form.name }}-->
-<!--        <br><br>-->
-
-<!--        <label for="date">Holiday Date:</label>-->
-<!--        {{ form.date }}-->
-<!--        <br><br>-->
-
-<!--        <button type="submit">Submit</button>-->
-<!--    </form>-->
-
-<!--    <br>-->
-<!--    <a href="{% url 'admin_dashboard' %}">Back to Admin Dashboard</a>-->
-<!--</body>-->
-<!--</html>-->
-
-
-
-
-<!--inherited designed template-->
 {% block styles %}
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
-    *, *::before, *::after {
-        box-sizing: border-box;
-        margin: 0;
-        padding: 0;
-    }
-
-    .add-holiday-content {
-        position: fixed;
-        top: 72px; /* Adjusted for navbar height */
-        left: 250px; /* Adjusted for sidebar width */
-        right: 250px; /* Add equal spacing on the right */
-        bottom: 0;
+    body {
+        font-family: 'Inter', sans-serif;
         background-color: #f4f4f9;
-        z-index: 1;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        padding: 20px; /* Added padding for better spacing */
+        color: #1f2937;
+        padding-top: 60px;
     }
-
-    .form-container {
+    .content-wrapper {
+        margin-left: 250px; /* Adjust for navbar width */
+        padding: 20px;
+    }
+    .form-container, .holiday-list-container {
         background-color: #ffffff;
         border-radius: 12px;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        padding: 20px; /* Reduced padding for compactness */
-        width: 100%;
-        max-width: 400px; /* Fixed width for better alignment */
-        height: auto; /* Removed fixed height */
-        margin: 0 auto; /* Center the form horizontally */
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        padding: 20px;
+        margin-bottom: 20px;
     }
-
+    .form-container {
+        margin: 0 auto; /* Center the form */
+    }
     .page-header {
         text-align: center;
-        margin-bottom: 15px; /* Reduced margin */
-        padding-bottom: 10px; /* Reduced padding */
+        margin-bottom: 15px;
         border-bottom: 1px solid #e5e7eb;
     }
-
     .page-title {
-        color: #2c3e50;
-        font-size: 1.3rem; /* Slightly smaller font */
+        padding: 10px;
+        background: linear-gradient(135deg, #6a85b6, #bac8e0);
+        color: white;
+        font-size: 1.5rem;
         font-weight: 600;
-        margin: 0;
     }
-
-    .form-group {
-        margin-bottom: 12px; /* Reduced margin */
-    }
-
-    .form-label {
-        display: block;
-        margin-bottom: 4px; /* Reduced margin */
-        color: #4b5563;
-        font-weight: 500;
-        font-size: 0.9rem;
-    }
-
-    .form-control {
-        width: 100%;
-        padding: 8px 12px; /* Slightly reduced padding */
-        border: 1px solid #d1d5db;
-        border-radius: 6px;
-        font-size: 0.9rem;
-        color: #1f2937;
-        background-color: #ffffff;
-        transition: all 0.2s ease;
-    }
-
-    select.form-control {
-        appearance: none;
-        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%234b5563' viewBox='0 0 16 16'%3E%3Cpath d='M8 10l4-4H4z'/%3E%3C/svg%3E");
-        background-repeat: no-repeat;
-        background-position: right 12px center;
-        padding-right: 35px;
-    }
-
-    input[type="date"].form-control {
-        padding-right: 10px;
-    }
-
-    .form-control:focus {
-        border-color: #3b82f6;
-        box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
-        outline: none;
-    }
-
     .field-error {
         color: #dc2626;
         font-size: 0.8rem;
         margin-top: 4px;
-        padding: 4px 8px;
-        background-color: #fee2e2;
-        border-radius: 4px;
-        border: 1px solid #fecaca;
     }
-
-    .messages {
-        margin: -5px 0 10px 0; /* Reduced margin */
-    }
-
     .message {
-        padding: 10px 12px; /* Reduced padding */
-        border-radius: 6px;
         margin-bottom: 8px;
-        font-size: 0.9rem; /* Smaller font */
+        font-size: 0.9rem;
         text-align: center;
     }
-
     .message.success {
         background-color: #dcfce7;
         color: #166534;
-        border: 1px solid #bbf7d0;
     }
-
     .message.error {
         background-color: #fee2e2;
         color: #991b1b;
-        border: 1px solid #fecaca;
     }
-
     .submit-button {
         width: 100%;
-        padding: 10px;
-        background-color: #3b82f6;
-        color: #ffffff;
-        border: none;
-        border-radius: 6px;
-        font-size: 0.95rem;
-        font-weight: 500;
-        cursor: pointer;
-        transition: all 0.2s ease;
-        margin-top: 10px; /* Reduced margin */
+        margin-top: 10px;
     }
-
-    .submit-button:hover {
-        background-color: #2563eb;
-        transform: translateY(-1px);
-    }
-
     .back-link {
         display: block;
         text-align: center;
-        margin-top: 10px; /* Reduced margin */
+        margin-top: 10px;
         color: #6b7280;
         text-decoration: none;
         font-size: 0.9rem;
-        transition: color 0.2s ease;
     }
-
     .back-link:hover {
         color: #3b82f6;
     }
-
-    @media (max-width: 1024px) {
-        .add-holiday-content {
-            left: 200px; /* Adjusted for smaller sidebar */
-            right: 200px; /* Adjusted for smaller sidebar */
-        }
-
-        .form-container {
-            width: 90%; /* Adjusted width for smaller screens */
-        }
+    .holiday-table {
+        width: 100%;
+        border-collapse: collapse;
     }
-
-    @media (max-width: 768px) {
-        .add-holiday-content {
-            left: 0; /* Full width on mobile */
-            right: 0; /* Full width on mobile */
-            padding: 10px; /* Reduced padding */
-        }
-
-        .form-container {
-            width: 100%; /* Full width on mobile */
-            padding: 15px; /* Reduced padding */
-        }
+    .holiday-table th, .holiday-table td {
+        padding: 12px;
+        text-align: left;
+        border-bottom: 1px solid #e5e7eb;
+    }
+    .holiday-table th {
+        background-color: #f3f4f6;
+        font-weight: 600;
+    }
+    .holiday-table tr:hover {
+        background-color: #f1f5f9;
     }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="add-holiday-content">
-    <div class="form-container">
-        <div class="page-header">
-            <h2 class="page-title">Add Holiday</h2>
+<div class="content-wrapper">
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-md-6">
+                <div class="form-container">
+                    <div class="page-header">
+                        <h2 class="page-title">Add Holiday</h2>
+                    </div>
+
+                    {% if messages %}
+                        <div class="messages">
+                            {% for message in messages %}
+                                <div class="alert alert-{{ message.tags }} message">
+                                    {{ message }}
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+
+                    <form method="post" id="holidayForm" novalidate>
+                        {% csrf_token %}
+
+                        <div class="mb-3">
+                            <label for="id_leave_type" class="form-label">Leave Type</label>
+                            <select name="leave_type" id="id_leave_type" class="form-select" required>
+                                <option value="">Select Leave Type</option>
+                                <option value="fixed" {% if form.leave_type.value == 'fixed' %}selected{% endif %}>Fixed Holiday</option>
+                                <option value="floating" {% if form.leave_type.value == 'floating' %}selected{% endif %}>Floating Holiday</option>
+                            </select>
+                            {% if form.leave_type.errors %}
+                                <div class="field-error">
+                                    {% for error in form.leave_type.errors %}{{ error }}{% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="id_name" class="form-label">Holiday Name</label>
+                            <input type="text" name="name" id="id_name" class="form-control" required placeholder="Enter holiday name" value="{{ form.name.value|default:'' }}" maxlength="100">
+                            {% if form.name.errors %}
+                                <div class="field-error">
+                                    {% for error in form.name.errors %}{{ error }}{% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="id_date" class="form-label">Holiday Date</label>
+                            <input type="date" name="date" id="id_date" class="form-control" required value="{{ form.date.value|date:'Y-m-d'|default:'' }}">
+                            {% if form.date.errors %}
+                                <div class="field-error">
+                                    {% for error in form.date.errors %}{{ error }}{% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <button type="submit" class="btn btn-primary submit-button">Add Holiday</button>
+                        <a href="{% url 'adminbase' %}" class="back-link">Back to Admin Dashboard</a>
+                    </form>
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <div class="holiday-list-container">
+                    <div class="page-header">
+                        <h2 class="page-title">Holidays for <span id="selected-year">{{ current_year }}</span></h2>
+                        <div class="d-flex align-items-center mb-3">
+                            <label for="year-filter" class="form-label mt-2 me-2">Select a Year</label>
+                            <select id="year-filter" class="form-select form-select-sm" style="width: auto; margin-right: 10px;">
+                                <!-- Year options will be populated by JavaScript -->
+                            </select>
+                            <label for="type-filter" class="form-label mt-2 me-2">Select Type</label>
+                            <select id="type-filter" class="form-select form-select-sm" style="width: auto;">
+                                <option value="fixed" selected>Fixed Holiday</option>
+                                <option value="floating">Floating Holiday</option>
+                            </select>
+                        </div>
+                    </div>
+                    <table class="holiday-table" id="holiday-table">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Date</th>
+                                <th>Type</th>
+                            </tr>
+                        </thead>
+                        <tbody id="holiday-tbody">
+                            <!-- Holidays will be dynamically loaded here -->
+                        </tbody>
+                    </table>
+                    <div id="no-entries" class="text-center mt-3" style="display: none;">
+                        No entries for this year.
+                    </div>
+                </div>
+            </div>
         </div>
-
-        {% if messages %}
-            <div class="messages">
-                {% for message in messages %}
-                    <div class="message {{ message.tags }}">
-                        {{ message }}
-                    </div>
-                {% endfor %}
-            </div>
-        {% endif %}
-
-        <form method="post" id="holidayForm"  novalidate>
-            {% csrf_token %}
-
-            <div class="form-group">
-                <label class="form-label" for="id_leave_type">Leave Type</label>
-                <select name="leave_type" id="id_leave_type" class="form-control" required>
-                    <option value="">Select Leave Type</option>
-                    <option value="fixed" {% if form.leave_type.value == 'fixed' %}selected{% endif %}>Fixed Holiday</option>
-                    <option value="floating" {% if form.leave_type.value == 'floating' %}selected{% endif %}>Floating Holiday</option>
-                </select>
-                {% if form.leave_type.errors %}
-                    <div class="field-error">
-                        {% for error in form.leave_type.errors %}{{ error }}{% endfor %}
-                    </div>
-                {% endif %}
-            </div>
-
-            <div class="form-group">
-                <label class="form-label" for="id_name">Holiday Name</label>
-                <input type="text"
-                       name="name"
-                       id="id_name"
-                       class="form-control"
-                       required
-                       placeholder="Enter holiday name"
-                       value="{{ form.name.value|default:'' }}"
-                       maxlength="100">
-                {% if form.name.errors %}
-                    <div class="field-error">
-                        {% for error in form.name.errors %}{{ error }}{% endfor %}
-                    </div>
-                {% endif %}
-            </div>
-
-            <div class="form-group">
-                <label class="form-label" for="id_date">Holiday Date</label>
-                <input type="date"
-                       name="date"
-                       id="id_date"
-                       class="form-control"
-                       required
-                       value="{{ form.date.value|date:'Y-m-d'|default:'' }}">
-                {% if form.date.errors %}
-                    <div class="field-error">
-                        {% for error in form.date.errors %}{{ error }}{% endfor %}
-                    </div>
-                {% endif %}
-            </div>
-
-            <div class="button-container">
-                <button type="submit" class="submit-button">Add Holiday</button>
-                <a href="{% url 'adminbase' %}" class="back-link">Back to Admin Dashboard</a>
-            </div>
-        </form>
     </div>
 </div>
 {% endblock %}
@@ -307,14 +194,13 @@
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         const form = document.getElementById('holidayForm');
-        const formContainer = document.querySelector('.form-container');
         const dateInput = document.getElementById('id_date');
         const leaveTypeSelect = document.getElementById('id_leave_type');
-        const nameInput = document.getElementById('id_name');
-
-        // Store original form height
-        const originalHeight = formContainer.offsetHeight;
-        formContainer.style.minHeight = `${originalHeight}px`;
+        const yearFilter = document.getElementById('year-filter');
+        const typeFilter = document.getElementById('type-filter');
+        const holidayTbody = document.getElementById('holiday-tbody');
+        const noEntries = document.getElementById('no-entries');
+        const selectedYearSpan = document.getElementById('selected-year');
 
         // Set minimum date to today for fixed holidays
         function updateDateRestrictions() {
@@ -330,72 +216,95 @@
         updateDateRestrictions();
 
         // Handle leave type change
-        leaveTypeSelect.addEventListener('change', function() {
-            updateDateRestrictions();
-
-            // Remove any existing error messages
-            const existingErrors = document.querySelectorAll('.field-error');
-            existingErrors.forEach(error => error.remove());
-        });
+        leaveTypeSelect.addEventListener('change', updateDateRestrictions);
 
         // Form validation
         form.addEventListener('submit', function(e) {
             let isValid = true;
-            let errorMessage = '';
-
-            // Clear existing error messages
-            const existingErrors = document.querySelectorAll('.field-error');
-            existingErrors.forEach(error => error.remove());
 
             // Validate leave type
             if (!leaveTypeSelect.value) {
                 isValid = false;
-                errorMessage += 'Please select a leave type.\n';
-                leaveTypeSelect.parentElement.appendChild(createErrorElement('Please select a leave type'));
+                leaveTypeSelect.classList.add('is-invalid');
+            } else {
+                leaveTypeSelect.classList.remove('is-invalid');
             }
 
             // Validate holiday name
-            if (!nameInput.value.trim()) {
+            if (!form.name.value.trim()) {
                 isValid = false;
-                errorMessage += 'Please enter a holiday name.\n';
-                nameInput.parentElement.appendChild(createErrorElement('Please enter a holiday name'));
+                form.name.classList.add('is-invalid');
+            } else {
+                form.name.classList.remove('is-invalid');
             }
 
             // Validate date
             if (!dateInput.value) {
                 isValid = false;
-                errorMessage += 'Please select a date.\n';
-                dateInput.parentElement.appendChild(createErrorElement('Please select a date'));
+                dateInput.classList.add('is-invalid');
+            } else {
+                dateInput.classList.remove('is-invalid');
             }
 
             if (!isValid) {
                 e.preventDefault();
-                formContainer.style.height = 'auto';
-                formContainer.style.minHeight = `${originalHeight}px`;
             }
         });
 
-        // Helper function to create error element
-        function createErrorElement(message) {
-            const errorDiv = document.createElement('div');
-            errorDiv.className = 'field-error';
-            errorDiv.textContent = message;
-            return errorDiv;
-        }
-
-        // Handle successful submission
-        if (document.querySelector('.message.success')) {
-            form.reset();
-            updateDateRestrictions();
-            formContainer.style.height = `${originalHeight}px`;
-        }
-
-        // Add form-control class to all form inputs
-        const formInputs = document.querySelectorAll('input, select');
-        formInputs.forEach(input => {
-            if (!input.classList.contains('form-control')) {
-                input.classList.add('form-control');
+        // Populate year filter with options
+        const currentYear = new Date().getFullYear();
+        for (let year = currentYear; year < currentYear + 35; year++) {
+            const option = document.createElement('option');
+            option.value = year;
+            option.textContent = year;
+            if (year === currentYear) {
+                option.selected = true;
             }
+            yearFilter.appendChild(option);
+        }
+
+        // Function to fetch holidays for the selected year and type
+        function fetchHolidaysForYearAndType(year, type) {
+            let url = `/admin_app/filter-holidays/${year}/`;
+            if (type) {
+                url += `?type=${type}`;
+            }
+
+            fetch(url)
+                .then(response => response.json())
+                .then(data => {
+                    holidayTbody.innerHTML = ''; // Clear existing rows
+                    const holidays = data.holidays;
+                    let hasEntries = false;
+
+                    holidays.forEach(holiday => {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `<td>${holiday.name}</td><td>${holiday.date}</td><td>${holiday.type}</td>`;
+                        holidayTbody.appendChild(row);
+                        hasEntries = true;
+                    });
+
+                    noEntries.style.display = hasEntries ? 'none' : 'block';
+                })
+                .catch(error => {
+                    console.error('Error fetching holidays:', error);
+                    noEntries.style.display = 'block';
+                });
+        }
+
+        // Initial fetch for the current year with fixed holidays as default
+        fetchHolidaysForYearAndType(currentYear, 'fixed');
+
+        // Handle year filter change
+        yearFilter.addEventListener('change', function() {
+            const selectedYear = parseInt(yearFilter.value);
+            selectedYearSpan.textContent = selectedYear;
+            fetchHolidaysForYearAndType(selectedYear, typeFilter.value);
+        });
+
+        // Handle type filter change
+        typeFilter.addEventListener('change', function() {
+            fetchHolidaysForYearAndType(yearFilter.value, typeFilter.value);
         });
     });
 </script>

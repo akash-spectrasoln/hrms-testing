@@ -224,7 +224,7 @@
 {% block content %}
     <div class="subordinates-content">
         <div class="container">
-            <h1>Subordinates of {{ manager.emp_fname }} {{ manager.emp_lname }}</h1>
+            <h1>Subordinates</h1>
 
             {% if subordinates %}
                 <div class="table-container">
@@ -240,11 +240,11 @@
                         <tbody>
                             {% for emp in subordinates %}
                             <tr>
-                                <td>{{ emp.emp_fname }} {{ emp.emp_lname }}</td>
-                                <td>{{ emp.emp_email }}</td>
-                                <td>{{ emp.dep }}</td>
+                                <td>{{ emp.first_name }} {{ emp.last_name }}</td>
+                                <td>{{ emp.company_email }}</td>
+                                <td>{{ emp.department }}</td>
                                 <td>
-                                    <a href="{% url 'allocate_leave' emp.id %}">Allocate Leave</a>
+                                    <a href="{% url 'allocate_leave' manager.id %}">Allocate Leave</a>
                                 </td>
                             </tr>
                             {% endfor %}

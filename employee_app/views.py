@@ -470,8 +470,43 @@ from django.db.models import Sum, F
 from datetime import timedelta
 from datetime import datetime
 
+from datetime import timedelta, date, datetime
+from django.db.models import Sum, F
+from django.shortcuts import render, redirect
+from django.contrib import messages
+from django.http import JsonResponse
+from django.contrib.auth.decorators import login_required
+import json
+def leave_days_agg(queryset):
+    """
+    Aggregates total leave days from LeaveRequest.leave_days
+    Returns an integer (handles None values gracefully).
+    """
+    # Sum the 'leave_days' field directly
+    days = queryset.aggregate(total_days=Sum('leave_days'))['total_days']
+    return days or 0
+def daterange(start_date, end_date):
+    for n in range(int((end_date - start_date).days) + 1):
+        yield start_date + timedelta(n)
 
+def calculate_working_days(start_date, end_date, holidays, approved_dates):
+    working_days = 0
+    current_date = start_date
+    while current_date <= end_date:
+        if (current_date.weekday() not in [5, 6] and  # Exclude Saturday (5) and Sunday (6)
+            current_date not in holidays and
+            current_date not in approved_dates):
+            working_days += 1
+        current_date += timedelta(days=1)
+    return working_days
+
+from django.core.mail import send_mail
+from django.conf import settings
+from datetime import date, timedelta
 @login_required
+
+
+
 def request_leave(request):
     if request.method == 'POST':
         form = LeaveRequestForm(request.POST, user=request.user)
@@ -479,141 +514,329 @@ def request_leave(request):
             leave_request = form.save(commit=False)
             leave_request.employee_user = request.user
 
-            # Fetch employee details
+            day_type = request.POST.get('day_type')
+            if day_type == 'one':
+                leave_request.end_date = leave_request.start_date
+            else:
+                if not leave_request.end_date or leave_request.end_date < leave_request.start_date:
+                    messages.error(request, "Please select a valid End Date.")
+                    return redirect('request_leave')
+
             try:
-                employee = Employees.objects.get(emp_email=request.user.email)
-                leave_request.employee_master = employee
+                employee = Employees.objects.get(company_email=request.user.email)
             except Employees.DoesNotExist:
                 return render(request, 'employee_app/error.html', {'message': 'Employee details not found.'})
 
-            # Calculate leave duration
-            start_date = leave_request.start_date
-            end_date = leave_request.end_date
-            leave_duration = (end_date - start_date).days + 1
+            current_year = date.today().year
+            today = date.today()
+            experience_years = (today - employee.created_on.date()).days // 365 if employee.created_on else 0
 
-            # Check if leave duration exceeds available balance
-            if leave_duration > employee.available_leaves():
-                messages.error(request, 'Your requested leave exceeds your remaining leave balance.')
+            policy = HolidayPolicy.objects.filter(
+                year=current_year, min_years_experience__lte=experience_years
+            ).order_by('-min_years_experience').first()
+            floating_policy = FloatingHolidayPolicy.objects.filter(year=current_year).first()
+
+            casual_leaves = (policy.ordinary_holidays_count if policy else 0) + (policy.extra_holidays if policy else 0)
+            floating_leaves = floating_policy.allowed_floating_holidays if floating_policy else 0
+
+            used_casual_leaves = leave_days_agg(
+                LeaveRequest.objects.filter(
+                    employee_user=request.user,
+                    leave_type='Casual Leave',
+                    status__in=['Accepted'],
+                    start_date__year=current_year
+                )
+            )
+            used_floating_leaves = leave_days_agg(
+                LeaveRequest.objects.filter(
+                    employee_user=request.user,
+                    leave_type='Floating Leave',
+                    status__in=['Accepted'],
+                    start_date__year=current_year
+                )
+            )
+
+            remaining_casual_leaves = (casual_leaves or 0) - (used_casual_leaves or 0)
+            remaining_floating_leaves = (floating_leaves or 0) - (used_floating_leaves or 0)
+
+            if remaining_casual_leaves <= 0 and remaining_floating_leaves <= 0:
+                messages.error(request, "You have exhausted your Casual and Floating Leave entitlements for this year.")
                 return redirect('request_leave')
 
-            # Validate leave type
             leave_type = request.POST.get('leave_type')
-            floating_holidays = list(FloatingHoliday.objects.values_list('date', flat=True))
+            original_leave_type = leave_type  # Keep track to distinguish conversion
+            if leave_type == 'Casual Leave' and remaining_casual_leaves <= 0:
+                messages.error(request, "No available Casual Leave left.")
+                return redirect('request_leave')
+            if leave_type == 'Floating Leave' and remaining_floating_leaves <= 0:
+                messages.error(request, "No available Floating Leave left.")
+                return redirect('request_leave')
 
-            if leave_type == "Floating Leave":
-                invalid_dates = [date for date in daterange(start_date, end_date) if date not in floating_holidays]
+            # Fetch holidays
+            regular_holidays = set(Holiday.objects.filter(
+                date__year=current_year
+            ).values_list('date', flat=True))
+            floating_holidays = set(FloatingHoliday.objects.filter(
+                date__year=current_year
+            ).values_list('date', flat=True))
+            all_leave_dates = set(
+                d for start, end in LeaveRequest.objects.filter(
+                    employee_user=request.user,
+                    status__in=['Pending', 'Accepted']
+                ).values_list('start_date', 'end_date')
+                for d in daterange(start, end)
+            )
+
+            start_date = leave_request.start_date
+            end_date = leave_request.end_date
+            requested_leave_dates = set(d for d in daterange(start_date, end_date))
+
+            # Floating holidays in the range
+            floating_holidays_in_range = [d for d in requested_leave_dates if d in floating_holidays]
+            already_applied = [d for d in floating_holidays_in_range if d in all_leave_dates]
+            not_applied = [d for d in floating_holidays_in_range if d not in all_leave_dates]
+            floating_holiday_confirmed = request.POST.get('floating_holiday_confirmed') == 'true'
+
+            # ====== Conversion Logic =======
+            converted_to_casual = False
+            if floating_holiday_confirmed or (
+                leave_type == "Floating Leave" and used_floating_leaves + len(floating_holidays_in_range) > floating_leaves
+            ):
+                leave_type = "Casual Leave"
+                converted_to_casual = True
+                messages.info(request, f'Floating holidays in your range have been converted to casual leave or exceeded your entitlement.')
+
+            if already_applied:
+                messages.error(request, f"A leave is already applied for these floating holiday(s): {', '.join([d.strftime('%Y-%m-%d') for d in already_applied])}")
+                return redirect('request_leave')
+
+            # For Floating Leave type, must only select dates that are floating holidays!
+            if original_leave_type == "Floating Leave" and not converted_to_casual:
+                invalid_dates = [d for d in requested_leave_dates if d not in floating_holidays]
                 if invalid_dates:
                     messages.error(request, 'The requested date range contains dates other than floating holidays.')
                     return redirect('request_leave')
-
-            elif leave_type == "Casual Leave":
-                invalid_dates = [date for date in daterange(start_date, end_date) if date in floating_holidays]
-                if invalid_dates:
-                    messages.error(request, 'The requested date range contains floating holidays.')
+                if used_floating_leaves + len(requested_leave_dates) > floating_leaves:
+                    messages.error(request, 'Floating holiday limit exceeded. Request will be converted to casual leave on your next try.')
                     return redirect('request_leave')
+                leave_duration = len(requested_leave_dates)
+            else:
+                if converted_to_casual:
+                    leave_duration = sum(
+                        1 for d in requested_leave_dates
+                        if d.weekday() < 5 and d not in regular_holidays and d not in all_leave_dates
+                    )
+                else:
+                    all_holidays = regular_holidays.union(floating_holidays)
+                    leave_duration = sum(
+                        1 for d in requested_leave_dates
+                        if d.weekday() < 5 and d not in all_holidays and d not in all_leave_dates
+                    )
 
-            # Save the leave request if all validations pass
+            # --- Balance check again now that we know duration ---
+            if leave_type == 'Casual Leave' and used_casual_leaves + leave_duration > casual_leaves:
+                messages.error(request, f"Your requested leave exceeds your remaining Casual Leave balance ({remaining_casual_leaves} left).")
+                return redirect('request_leave')
+
+            if leave_type == "Floating Leave" and used_floating_leaves + leave_duration > floating_leaves:
+                messages.error(request, 'Floating holiday limit exceeded. Request will be converted to casual leave.')
+                return redirect('request_leave')
+
+            # Save the request
+            leave_request.leave_type = leave_type
             leave_request.status = 'Pending'
+            leave_request.leave_days = leave_duration
             leave_request.save()
+
+            # ==== EMAIL NOTIFICATION LOGIC ====
+            manager = getattr(employee, 'manager', None)  # Adjust if your model relationship is different
+
+            # Email to employee
+            send_mail(
+                subject="Leave Request Submitted",
+                message=(
+                    f"Dear {employee.first_name},\n\n"
+                    f"Your leave request from {leave_request.start_date} to {leave_request.end_date} ({leave_request.leave_type}) "
+                    "has been submitted and is pending your manager's approval.\n\n"
+                    "Best regards,\nHR Team"
+                ),
+                from_email="akashaku32@gmail.com",
+                recipient_list=[employee.company_email],
+                fail_silently=False,
+            )
+
+            # Email to manager (if available)
+            if manager and getattr(manager, 'company_email', None):
+                send_mail(
+                    subject="Leave Approval Required for Your Team Member",
+                    message=(
+                        f"Dear {manager.first_name},\n\n"
+                        f"Employee {employee.first_name} {employee.last_name} has requested leave from {leave_request.start_date} to {leave_request.end_date} ({leave_request.leave_type}).\n\n"
+                        "Please log in to the HR portal to review and approve or reject this leave request.\n\n"
+                        "Best regards,\nHR Team"
+                    ),
+                    from_email="akashaku32@gmail.com",
+                    recipient_list=[manager.company_email],
+                    fail_silently=False,
+                )
+
             messages.success(request, 'Leave request submitted successfully!')
-            # return HttpResponse("Submitted successfully")
             return redirect('request_leave')
     else:
         form = LeaveRequestForm(user=request.user)
 
-    # Retrieve employee details
+    # --- Context for GET rendering remains unchanged (as before)
     try:
-        employee = Employees.objects.get(emp_email=request.user.email)
+        employee = Employees.objects.get(company_email=request.user.email)
     except Employees.DoesNotExist:
         return render(request, 'employee_app/error.html', {'message': 'Employee details not found.'})
 
-    # Determine if the user is a manager
-    is_manager = Employees.objects.filter(employee_manager=employee).exists()
-
-
-
-
-    # Current year and month
+    is_manager = Employees.objects.filter(manager=employee).exists()
     current_year = date.today().year
     today = date.today()
     current_month = today.month
+    experience_years = (today - employee.created_on.date()).days // 365 if hasattr(employee, 'created_on') and employee.created_on else 0
 
-    total_used_leaves = LeaveRequest.objects.filter(
-        employee_master=employee,
-        status='Accepted',
-        start_date__year=current_year
-    ).aggregate(total_days=Sum(F('end_date') - F('start_date') + timedelta(days=1)))['total_days'] or 0
+    policy = HolidayPolicy.objects.filter(
+        year=current_year, min_years_experience__lte=experience_years
+    ).order_by('-min_years_experience').first()
+    floating_policy = FloatingHolidayPolicy.objects.filter(year=current_year).first()
+    casual_leaves = (policy.ordinary_holidays_count if policy else 0) + (policy.extra_holidays if policy else 0)
+    floating_leaves = floating_policy.allowed_floating_holidays if floating_policy else 0
 
-    # Fetch holidays and floating holidays
+    used_casual_leaves = leave_days_agg(
+        LeaveRequest.objects.filter(
+            employee_user=request.user, leave_type='Casual Leave', status__in=['Accepted'], start_date__year=current_year
+        )
+    )
+    used_floating_leaves = leave_days_agg(
+        LeaveRequest.objects.filter(
+            employee_user=request.user, leave_type='Floating Leave', status__in=['Accepted'], start_date__year=current_year
+        )
+    )
+
+    remaining_casual_leaves = (casual_leaves or 0) - (used_casual_leaves or 0)
+    remaining_floating_leaves = (floating_leaves or 0) - (used_floating_leaves or 0)
+
     holidays = list(Holiday.objects.filter(date__year=current_year).values_list('date', flat=True))
     floating_holidays = list(FloatingHoliday.objects.filter(date__year=current_year).values_list('date', flat=True))
-
-    # Fetch approved leave dates for the employee
-    approved_leave_dates = list(LeaveRequest.objects.filter(
-        employee_user=request.user, status='Accepted'
-    ).values_list('start_date', 'end_date'))
-
-    # Flatten the approved leave date range
     approved_leave_dates = [
-        d.strftime('%Y-%m-%d') for start, end in approved_leave_dates for d in daterange(start, end)
+        d.strftime('%Y-%m-%d')
+        for start, end in LeaveRequest.objects.filter(
+            employee_user=request.user, status='Accepted'
+        ).values_list('start_date', 'end_date')
+        for d in daterange(start, end)
     ]
-
-    # Before returning the context to the template
-    print("Approved Leave Dates:", approved_leave_dates)
-
-    # Calculate weekends in the current month
+    pending_leave_dates = [
+        d.strftime('%Y-%m-%d')
+        for start, end in LeaveRequest.objects.filter(
+            employee_user=request.user, status='Pending'
+        ).values_list('start_date', 'end_date')
+        for d in daterange(start, end)
+    ]
     weekends = []
     day = date(current_year, current_month, 1)
     while day.month == current_month:
-        if day.weekday() in [SATURDAY, SUNDAY]:  # Saturday = 5, Sunday = 6
+        if day.weekday() in [5, 6]:
             weekends.append(day)
         day += timedelta(days=1)
 
-
-
-    # Format dates and serialize them for JavaScript
-    holidays = json.dumps([d.strftime('%Y-%m-%d') for d in holidays])
-    floating_holidays = json.dumps([d.strftime('%Y-%m-%d') for d in floating_holidays])
-    weekends = json.dumps([d.strftime('%Y-%m-%d') for d in weekends])
-    approved_leave_dates = json.dumps(approved_leave_dates)
-
-    # Render the template with serialized data
-    return render(request, 'test4.html', {
+    context = {
         'form': form,
-        'employee_name': f"{employee.emp_fname} {employee.emp_lname}",
-        'employee_email': employee.emp_email,
-        'holidays': holidays,
-        'floating_holidays': floating_holidays,
-        'weekends': weekends,
-        'approved_leave_dates': approved_leave_dates,  # Pass approved leave dates to the template
+        'employee_name': f"{employee.first_name} {employee.last_name}",
+        'employee_email': employee.company_email,
+        'holidays': [d.strftime('%Y-%m-%d') for d in holidays],
+        'floating_holidays': [d.strftime('%Y-%m-%d') for d in floating_holidays],
+        'weekends': [d.strftime('%Y-%m-%d') for d in weekends],
+        'approved_leave_dates': approved_leave_dates,
+        'pending_leave_dates': pending_leave_dates,
         'is_manager': is_manager,
-        'total_used_leaves': total_used_leaves,
-        'emp_designation': employee.designation,  # Employee designation
-        'emp_id': employee.emp_id,  # Employee ID
-        'emp_fname': employee.emp_fname,  # employee firstname
-        'emp_lname': employee.emp_lname  # employee lastname
-    })
+        'emp_designation': employee.designation,
+        'emp_id': employee.employee_id,
+        'emp_fname': employee.first_name,
+        'emp_lname': employee.last_name,
+        'casual_leaves': casual_leaves,
+        'floating_leaves': floating_leaves,
+        'used_casual_leaves': used_casual_leaves,
+        'used_floating_leaves': used_floating_leaves,
+        'remaining_casual_leaves': remaining_casual_leaves,
+        'remaining_floating_leaves': remaining_floating_leaves,
+    }
+    return render(request, 'leaverequest.html', context)
+@login_required
+def check_floating_holidays(request):
+    if request.method == 'POST':
+        start_date_str = request.POST.get('start_date')
+        end_date_str = request.POST.get('end_date')
+        
+        start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+        end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
 
+        # Fetch floating holidays
+        current_year = date.today().year
+        floating_holidays = list(FloatingHoliday.objects.filter(date__year=current_year).values_list('date', flat=True))
 
-# Utility function to generate a date range
-def daterange(start_date, end_date):
-    for n in range((end_date - start_date).days + 1):
-        yield start_date + timedelta(n)
+        # Fetch all leave dates for the employee (any status)
+        all_leave_dates = set(
+            d for start, end in LeaveRequest.objects.filter(
+                employee_user=request.user
+            ).values_list('start_date', 'end_date')
+            for d in daterange(start, end)
+        )
 
+        floating_holiday_status = []
+        for holiday in floating_holidays:
+            if start_date <= holiday <= end_date:
+                status = "applied" if holiday in all_leave_dates else "not_applied"
+                floating_holiday_status.append({
+                    "date": holiday.strftime('%Y-%m-%d'),
+                    "status": status
+                })
 
-
-
-
-
-
-
-
-
-
-
-
+        return JsonResponse({
+            'floating_holiday_status': floating_holiday_status
+        })
 # view for debugging
+@login_required
+def check_leave_conflicts(request):
+    if request.method == 'POST':
+        start_date_str = request.POST.get('start_date')
+        end_date_str = request.POST.get('end_date')
+        start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+        end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
 
+        # Only consider Pending or Accepted leaves
+        leave_qs = LeaveRequest.objects.filter(
+            employee_user=request.user,
+            status__in=['Pending', 'Accepted']
+        )
+
+        # All leave dates for the user (pending/accepted only)
+        leave_dates = set(
+            d for start, end in leave_qs.values_list('start_date', 'end_date')
+            for d in daterange(start, end)
+        )
+
+        # All floating holidays for the year
+        current_year = date.today().year
+        floating_holidays = set(FloatingHoliday.objects.filter(date__year=current_year).values_list('date', flat=True))
+
+        # Dates in the selected range
+        selected_dates = [start_date + timedelta(days=i) for i in range((end_date - start_date).days + 1)]
+
+        # Find conflicts (any leave already applied, except rejected)
+        conflict_dates = [d.strftime('%Y-%m-%d') for d in selected_dates if d in leave_dates]
+
+        # Find floating holidays in range that are not already applied for
+        floating_holiday_not_applied = [
+            d.strftime('%Y-%m-%d') for d in selected_dates
+            if d in floating_holidays and d not in leave_dates
+        ]
+
+        return JsonResponse({
+            'conflict_dates': conflict_dates,
+            'floating_holiday_not_applied': floating_holiday_not_applied
+        })
 from django.shortcuts import render
 from .models import Holiday, FloatingHoliday
 import json
@@ -646,42 +869,174 @@ def calendar_view(request):
 # main leave history view
 
 
+from django.shortcuts import get_object_or_404, redirect
+from django.contrib import messages
+from .models import LeaveRequest
+
+def delete_leave(request, leave_id):
+    leave = get_object_or_404(LeaveRequest, pk=leave_id, employee_user=request.user)
+    employee = leave.employee_master
+    if request.method == "POST":
+        # Only revert counters if leave was "Accepted" or "Approved"
+        if leave.status in ["Accepted", "Approved"]:
+            # You may want to recompute the duration as you did on accept_leave_request!
+            # For a simple rollback, assume leave.leave_days is correct:
+            # If you tracked floating vs casual breakdown, you'd subtract accordingly
+            
+            # Here is a generic rollback (customize by your app logic):
+            employee.used_leaves = max(0, employee.used_leaves - (leave.leave_days or 0))
+            # If you also need to handle floating leave, and you track that breakdown, adjust as needed.
+            # Example: employee.floating_holidays_used = max(0, employee.floating_holidays_used - float_days_of_this_leave)
+            employee.save()
+        leave.delete()
+        messages.success(request, "Planned leave deleted successfully.")
+    else:
+        messages.error(request, "Invalid delete operation.")
+    return redirect('my_leave_history') # Make sure this name matches your leave history view name
 
 from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
-from .models import LeaveRequest
+from .models import LeaveRequest,HolidayPolicy,FloatingHolidayPolicy
+from django.db.models import Sum, Q
+from django.utils.timezone import now
 
 @login_required
+
 def my_leave_history(request):
-    # Fetch the leave requests for the logged-in user
-    leave_requests = LeaveRequest.objects.filter(employee_user=request.user).order_by('-start_date')
+    user = request.user
+    current_year = now().year
+    today = now().date()
+    
+    start_of_year = date(current_year, 1, 1)
+    end_of_year = date(current_year, 12, 31)
 
-    # Check if the user is a manager
+# Format as "Jan 1, 2024 - Dec 31, 2024"
+    validity_range = f"{start_of_year.strftime('%b %d, %Y')} - {end_of_year.strftime('%b %d, %Y')}"
+
+    # --- Filtering ---
+    status_filter = request.GET.get('status', '')  # This comes from the dropdown
+
+    leave_requests = LeaveRequest.objects.filter(employee_user=user).order_by('-start_date')
+
+    # Apply filtering if filter chosen
+    if status_filter == 'pending':
+        leave_requests = leave_requests.filter(status__iexact='Pending')
+    elif status_filter == 'upcoming':
+        leave_requests = leave_requests.filter(
+            status__in=['Accepted', 'Approved'],
+            end_date__gte=today
+        )
+    elif status_filter == 'accepted':
+        leave_requests = leave_requests.filter(status__in=['Accepted', 'Approved'])
+    elif status_filter == 'rejected':
+        leave_requests = leave_requests.filter(status__iexact='Rejected')
+
+    # Add convenience flags for template
+    for leave in leave_requests:
+        leave.is_pending = (leave.status == 'Pending')
+        leave.is_approved = (leave.status in ['Accepted', 'Approved'])
+        leave.is_rejected = (leave.status == 'Rejected')
+
+    # ...all the rest of your code unchanged...
     try:
-        employee = Employees.objects.get(user=request.user)
-        subordinates = employee.employees_managed.all()  # Get all employees where this user is the manager
-        is_manager = subordinates.exists()  # Check if there are any subordinates
+        employee = Employees.objects.get(user=user)
+        is_manager = employee.employees_managed.exists()
+        if getattr(employee, 'created_on', None):
+            experience_years = (now().date() - employee.created_on.date()).days // 365
+        else:
+            experience_years = 0
     except Employees.DoesNotExist:
-        subordinates = None
+        employee = None
         is_manager = False
+        experience_years = 0
 
+    policy = (
+        HolidayPolicy.objects
+            .filter(year=current_year, min_years_experience__lte=experience_years)
+            .order_by('-min_years_experience')
+            .first()
+    )
+    floating_policy = FloatingHolidayPolicy.objects.filter(year=current_year).first()
 
-    current_year = now().year  # Get current year
-    total_used_leaves = employee.emp_used_leaves  # Fetch from the Employees model
+    leave_summary_data = []
+    for leave_type, description in LeaveRequest.LEAVE_TYPES:
+        leave_type_key = leave_type.lower()
 
-    return render(request, 'my_leave_history.html', {'leave_requests': leave_requests,'is_manager': is_manager, 'emp_designation': employee.designation,  # Employee designation
-        'emp_id': employee.emp_id,  # Employee ID
-        'emp_fname' : employee.emp_fname, #employee firstname
-        'emp_lname' : employee.emp_lname ,'total_used_leaves' : total_used_leaves}) #employee lastname })# Pass this to the template
+        if leave_type_key == "ordinary":
+            total_leaves = policy.ordinary_holidays_count if policy else 0
+        elif leave_type_key == "casual leave":
+            total_leaves = (
+                (policy.ordinary_holidays_count if policy else 0)
+                + (policy.extra_holidays if policy else 0)
+            )
+        elif leave_type_key == "floating leave":
+            total_leaves = floating_policy.allowed_floating_holidays if floating_policy else 0
+        else:
+            total_leaves = 0
 
+        used_leaves = (
+            LeaveRequest.objects
+                .filter(
+                    employee_user=user,
+                    leave_type=leave_type,
+                    start_date__year=current_year,
+                    status__in=["Accepted", "Approved"],
+                    end_date__lt=today,  # Add this line!
+                )
+                .aggregate(total_days=Sum('leave_days'))['total_days'] or 0
+)
+        planned_leaves = (
+            LeaveRequest.objects
+                .filter(
+                    employee_user=user,
+                    leave_type=leave_type,
+                    start_date__year=current_year,
+                    status__in=["Accepted", "Approved"],
+                    end_date__gte=today,
+                )
+                .aggregate(total_days=Sum('leave_days'))['total_days'] or 0
+        )
 
+        leave_summary_data.append({
+            'leave_type': description,
+            'validity': validity_range,
+            'available': max(0, total_leaves - used_leaves - planned_leaves),
+            'used': used_leaves,
+            'planned': planned_leaves,
+        })
 
+    total_used_leaves = sum(item['used'] for item in leave_summary_data)
 
+    planned_leave_requests = (
+        LeaveRequest.objects
+            .filter(
+                employee_user=user,
+                status__in=["Accepted", "Approved"],
+                start_date__year=current_year,
+                end_date__gte=today,
+            )
+            .order_by('start_date')
+    )
+
+    # Pass request as context for context-aware selection of the dropdown in template
+    return render(request, 'my_leave_history.html', {
+        'leave_requests': leave_requests,
+        'leave_summary': leave_summary_data,
+        'is_manager': is_manager,
+        'emp_designation': employee.designation if employee else '',
+        'emp_id': employee.employee_id if employee else '',
+        'emp_fname': employee.first_name if employee else '',
+        'emp_lname': employee.last_name if employee else '',
+        'total_used_leaves': total_used_leaves,
+        'planned_leave_requests': planned_leave_requests,
+        'request': request,
+        "today": date.today()  # <--- Add this!
+    })
 from django.utils.timezone import now
 
 def emp_index(request):
     try:
-        employee = Employees.objects.get(emp_email=request.user.username)
+        employee = Employees.objects.get(company_email=request.user.username)
     except Employees.DoesNotExist:
         return render(request, 'error.html', {'message': 'Employee not found.'})
 
@@ -693,16 +1048,16 @@ def emp_index(request):
 
     # Get total used leaves for the current year
     current_year = now().year  # Get current year
-    total_used_leaves = employee.emp_used_leaves  # Fetch from the Employees model
+    total_used_leaves = employee.used_leaves  # Fetch from the Employees model
 
-    return render(request, 'partials/base.html', {
+    return render(request, 'emp_index.html', {
         'employee': employee,
         'is_manager': is_manager , # Pass whether the employee is a manager or not
         'total_used_leaves': total_used_leaves , # Pass the used leaves count to the template
         'emp_designation': employee.designation,  # Employee designation
-        'emp_id': employee.emp_id,  # Employee ID
-        'emp_fname' : employee.emp_fname, #employee firstname
-        'emp_lname' : employee.emp_lname #employee lastname
+        'emp_id': employee.employee_id,  # Employee ID
+        'emp_fname' : employee.first_name, #employee firstname
+        'emp_lname' : employee.last_name #employee lastname
     })
 
 
@@ -764,22 +1119,22 @@ def holiday_list(request):
     is_manager = False  # Default value
     if request.user.is_authenticated:
         try:
-            employee = Employees.objects.get(emp_email=request.user.email)
+            employee = Employees.objects.get(company_email=request.user.email)
             is_manager = employee.employees_managed.exists()  # Checks if they manage anyone
         except Employees.DoesNotExist:
             pass  # If no employee record is found, keep is_manager as False
 
     current_year = now().year  # Get current year
-    total_used_leaves = employee.emp_used_leaves  # Fetch from the Employees model
+    total_used_leaves = employee.used_leaves  # Fetch from the Employees model
 
     context = {
         'holidays': holidays,
         'floating_holidays': floating_holidays,
         'is_manager': is_manager,  # Pass manager status to template
         'emp_designation': employee.designation,  # Employee designation
-        'emp_id': employee.emp_id,  # Employee ID
-        'emp_fname': employee.emp_fname,  # employee firstname
-        'emp_lname': employee.emp_lname , # employee lastname
+        'emp_id': employee.employee_id,  # Employee ID
+        'emp_fname': employee.first_name,  # employee firstname
+        'emp_lname': employee.last_name , # employee lastname
         'total_used_leaves' : total_used_leaves
     }
     return render(request, 'holiday_list.html', context)
@@ -789,53 +1144,7 @@ def holiday_list(request):
 
 
 
-# manager approver feature-main code
 
-#
-# from django.shortcuts import render, get_object_or_404, redirect
-# from django.contrib.auth.decorators import login_required
-# from .models import LeaveRequest, Employees
-# from datetime import datetime
-#
-# @login_required
-# def manager_leave_requests(request):
-#     """View to list leave requests submitted by subordinates."""
-#     try:
-#         # Fetch the logged-in user's employee profile
-#         manager = Employees.objects.get(user=request.user)
-#     except Employees.DoesNotExist:
-#         return render(request, 'employee_app/error.html', {'message': 'Manager profile not found.'})
-#
-#     #requirement -for only managers could see the manager request view page
-#     # Ensure the logged-in user is a manager (i.e., they manage other employees)
-#     if not Employees.objects.filter(employee_manager=manager).exists():
-#         # If the logged-in user does not manage any employees, they are not a manager
-#         # return redirect('emp_profile')
-#         return HttpResponse("cannot access")
-#
-#     # Check if the employee is a manager (i.e., has employees reporting to them)
-#     is_manager = Employees.objects.filter(employee_manager=manager).exists()
-#
-#     current_year = now().year  # Get current year
-#     total_used_leaves = manager.emp_used_leaves  # Fetch from the Employees model
-#
-#
-#
-#
-#     # Filter leave requests for employees managed by the logged-in manager
-#     leave_requests = LeaveRequest.objects.filter(employee_master__employee_manager=manager)
-#
-#     return render(request, 'manager_leave_requests.html', {
-#         'leave_requests': leave_requests,
-#         'manager_name': f"{manager.emp_fname} {manager.emp_lname}",
-#         'is_manager':is_manager,
-#         'emp_designation': manager.designation,  # Employee designation
-#         'emp_id': manager.emp_id,  # Employee ID
-#         'emp_fname': manager.emp_fname,  # employee firstname
-#         'emp_lname': manager.emp_lname  ,# employee lastname
-#         'total_used_leaves' : total_used_leaves
-#     })
-#
 
 
 from django.shortcuts import render, get_object_or_404, redirect
@@ -857,29 +1166,29 @@ def manager_leave_requests(request):
         return render(request, 'employee_app/error.html', {'message': 'Manager profile not found.'})
 
     # Ensure the logged-in user is a manager
-    if not Employees.objects.filter(employee_manager=manager).exists():
+    if not Employees.objects.filter(manager=manager).exists():
         return HttpResponse("cannot access")
 
     # Check if the employee is a manager
-    is_manager = Employees.objects.filter(employee_manager=manager).exists()
+    is_manager = Employees.objects.filter(manager=manager).exists()
 
     current_year = now().year
-    total_used_leaves = manager.emp_used_leaves
+    total_used_leaves = manager.used_leaves
 
     # Filter leave requests for employees managed by the logged-in manager
-    leave_requests = LeaveRequest.objects.filter(employee_master__employee_manager=manager)
+    leave_requests = LeaveRequest.objects.filter(employee_master__manager=manager)
 
     # Get available years for filtering
     available_years = list(set(leave_requests.values_list('start_date__year', flat=True)))
 
-    return render(request, 'manager_leave_requests.html', {
+    return render(request, 'manage_leave_requests.html', {
         'leave_requests': leave_requests,
-        'manager_name': f"{manager.emp_fname} {manager.emp_lname}",
+        'manager_name': f"{manager.first_name} {manager.last_name}",
         'is_manager': is_manager,
         'emp_designation': manager.designation,
-        'emp_id': manager.emp_id,
-        'emp_fname': manager.emp_fname,
-        'emp_lname': manager.emp_lname,
+        'emp_id': manager.employee_id,
+        'emp_fname': manager.first_name,
+        'emp_lname': manager.last_name,
         'total_used_leaves': total_used_leaves,
         'available_years': sorted(available_years, reverse=True),  # Add this for year filter
     })
@@ -899,7 +1208,7 @@ def filter_manager_leave_requests(request):
     status = request.GET.get('status', '')
 
     # Base queryset - only get leave requests for employees under this manager
-    leave_requests = LeaveRequest.objects.filter(employee_master__employee_manager=manager)
+    leave_requests = LeaveRequest.objects.filter(employee_master__manager=manager)
 
     # Apply filters
     if year:
@@ -907,8 +1216,8 @@ def filter_manager_leave_requests(request):
 
     if employee_name:
         leave_requests = leave_requests.filter(
-            Q(employee_master__emp_fname__icontains=employee_name) |
-            Q(employee_master__emp_lname__icontains=employee_name)
+            Q(employee_master__first_name__icontains=employee_name) |
+            Q(employee_master__last_name__icontains=employee_name)
         )
 
     if status:
@@ -918,7 +1227,7 @@ def filter_manager_leave_requests(request):
     filtered_data = [
         {
             'id': leave.id,
-            'employee_name': f"{leave.employee_master.emp_fname} {leave.employee_master.emp_lname}".strip(),
+            'employee_name': f"{leave.employee_master.first_name} {leave.employee_master.last_name}".strip(),
             'leave_type': leave.leave_type,
             'start_date': leave.start_date.strftime('%Y-%m-%d'),
             'end_date': leave.end_date.strftime('%Y-%m-%d'),
@@ -942,7 +1251,7 @@ def manage_leave_request(request, leave_request_id):
     leave_request = get_object_or_404(LeaveRequest, id=leave_request_id)
 
     # Ensure the logged-in manager or admin is allowed to act on this leave request
-    if not request.user.is_superuser and leave_request.employee_master.employee_manager.user != request.user:
+    if not request.user.is_superuser and leave_request.employee_master.manager.user != request.user:
         return render(request, 'employee_app/error.html', {'message': 'Unauthorized action.'})
 
         # Get the logged-in employee
@@ -952,10 +1261,10 @@ def manage_leave_request(request, leave_request_id):
         return render(request, 'employee_app/error.html', {'message': 'Employee profile not found.'})
 
         # Check if the logged-in employee is a manager
-    is_manager = Employees.objects.filter(employee_manager=logged_in_employee).exists()
+    is_manager = Employees.objects.filter(manager=logged_in_employee).exists()
 
     current_year = now().year  # Get current year
-    total_used_leaves = logged_in_employee.emp_used_leaves  # Fetch from the Employees model
+    total_used_leaves = logged_in_employee.used_leaves  # Fetch from the Employees model
 
     if request.method == 'POST':
         action = request.POST.get('action')  # 'accept' or 'reject'
@@ -989,16 +1298,16 @@ def manage_leave_request(request, leave_request_id):
 
         if action == 'accept':
             leave_request.status = 'Accepted'
-            print(f"Current Used Leaves: {employee.emp_used_leaves}")
-            print(f"Current Total Leaves: {employee.emp_total_leaves}")
+            print(f"Current Used Leaves: {employee.used_leaves}")
+            print(f"Current Total Leaves: {employee.total_leaves}")
 
             # Check if the employee has enough leave balance
-            if employee.emp_used_leaves + leave_duration <= 15:
+            if employee.used_leaves + leave_duration <= 15:
                 # Update leave days and floating holidays used
-                employee.emp_used_leaves += leave_duration
+                employee.used_leaves += leave_duration
                 employee.floating_holidays_used = floating_holidays_used
                 employee.save()
-                print(f"Updated Used Leaves: {employee.emp_used_leaves}")
+                print(f"Updated Used Leaves: {employee.used_leaves}")
             else:
                 messages.error(request, "Employee cannot exceed the allowed 15 total leave days.")
                 return redirect('manager_leave_requests')  # Or redirect to another appropriate view
@@ -1010,55 +1319,18 @@ def manage_leave_request(request, leave_request_id):
         if request.user.is_superuser:
             leave_request.approved_by = request.user  # Admin approves
         else:
-            approver = leave_request.employee_master.employee_manager.user
+            approver = leave_request.employee_master.manager.user
             leave_request.approved_by = approver  # Manager approves
 
         leave_request.save()
 
         return redirect('manager_leave_requests' if not request.user.is_superuser else 'admin_leave_requests')
 
-    return render(request, 'manage_leave_requests.html', {'leave_request': leave_request,'is_manager' : is_manager ,'emp_designation':logged_in_employee.designation , 'emp_id' : logged_in_employee.emp_id , 'emp_fname' : logged_in_employee.emp_fname , 'emp_lname' : logged_in_employee.emp_lname , 'total_used_leaves' : total_used_leaves})
+    return render(request, 'manage_leave_requests.html', {'leave_request': leave_request,'is_manager' : is_manager ,'emp_designation':logged_in_employee.designation , 'emp_id' : logged_in_employee.employee_id , 'emp_fname' : logged_in_employee.first_name , 'emp_lname' : logged_in_employee.last_name , 'total_used_leaves' : total_used_leaves})
 
 
 
-# @login_required
-# def manager_leave_requests(request):
-#     """View to list leave requests submitted by subordinates."""
-#     try:
-#         # Fetch the logged-in user's employee profile
-#         manager = Employees.objects.get(user=request.user)
-#     except Employees.DoesNotExist:
-#         return render(request, 'employee_app/error.html', {'message': 'Manager profile not found.'})
-#
-#     #requirement -for only managers could see the manager request view page
-#     # Ensure the logged-in user is a manager (i.e., they manage other employees)
-#     if not Employees.objects.filter(employee_manager=manager).exists():
-#         # If the logged-in user does not manage any employees, they are not a manager
-#         # return redirect('emp_profile')
-#         return HttpResponse("cannot access")
-#
-#     # Check if the employee is a manager (i.e., has employees reporting to them)
-#     is_manager = Employees.objects.filter(employee_manager=manager).exists()
-#
-#
-#
-#
-#     # Filter leave requests for employees managed by the logged-in manager
-#     leave_requests = LeaveRequest.objects.filter(employee_master__employee_manager=manager)
-#
-#     return render(request, 'manager_leave_requests.html', {
-#         'leave_requests': leave_requests,
-#         'manager_name': f"{manager.emp_fname} {manager.emp_lname}",
-#         'is_manager':is_manager,
-#         'emp_designation': manager.designation,  # Employee designation
-#         'emp_id': manager.emp_id,  # Employee ID
-#         'emp_fname': manager.emp_fname,  # employee firstname
-#         'emp_lname': manager.emp_lname  # employee lastname
-#     })
-#
-#
-#
-# })
+
 
 
 
@@ -1085,212 +1357,24 @@ def view_subordinates(request):
         return render(request, 'employee_app/error.html', {'message': 'Employee profile not found.'})
 
     # Fetch employees who report to this manager
-    subordinates = Employees.objects.filter(employee_manager=manager)
+    subordinates = Employees.objects.filter(manager=manager)
 
     # Check if the logged-in employee is actually a manager
     is_manager = subordinates.exists()  # If they have subordinates, they're a manager
 
     current_year = now().year  # Get current year
-    total_used_leaves = manager.emp_used_leaves  # Fetch from the Employees model
+    total_used_leaves = manager.used_leaves  # Fetch from the Employees model
 
     return render(request, 'view_subordinates.html', {
         'subordinates': subordinates,
         'manager': manager,
         'is_manager' : is_manager,
-        'emp_id' : manager.emp_id ,
-        'emp_fname' : manager.emp_fname,
-        'emp_lname' : manager.emp_lname,
+        'emp_id' : manager.employee_id ,
+        'emp_fname' : manager.first_name,
+        'emp_lname' : manager.last_name,
         'emp_designation' : manager.designation,
         'total_used_leaves' : total_used_leaves
     })
-
-
-
-#
-# from .utils import calculate_leave_duration  # Import your existing function
-# from django.shortcuts import render, get_object_or_404, redirect
-# from django.contrib.auth.decorators import login_required
-# from django.contrib import messages  # Import the messages framework
-# from django.core.mail import send_mail
-# from .models import Employees, LeaveRequest
-#
-# from datetime import datetime
-#
-#
-# @login_required
-# def allocate_leave(request, employee_id):
-#     """Manager can allocate leave for a subordinate."""
-#     manager = get_object_or_404(Employees, user=request.user)
-#     employee = get_object_or_404(Employees, id=employee_id, employee_manager=manager)
-#
-#     current_year = now().year  # Get current year
-#     total_used_leaves = employee.emp_used_leaves  # Fetch from the Employees model
-#
-#
-#
-#     # Determine if the logged-in user is a manager
-#     is_manager = Employees.objects.filter(employee_manager=manager).exists()
-#
-#     if request.method == "POST":
-#         print("form submitted")
-#         start_date = request.POST.get("start_date")
-#         end_date = request.POST.get("end_date")
-#         reason = request.POST.get("reason", "").strip()  # Ensuring reason is not null
-#
-#         if not start_date or not end_date:
-#             messages.error(request, "Both start and end date are required.")
-#             return render(request, 'allocate_leave.html', {'employee': employee})
-#
-#         if not reason:
-#             messages.error(request, "Reason is required.")
-#             return render(request, 'allocate_leave.html', {'employee': employee})
-#
-#         start_date = datetime.strptime(start_date, "%Y-%m-%d").date()
-#         end_date = datetime.strptime(end_date, "%Y-%m-%d").date()
-#
-#         # Calculate leave days (excluding holidays, weekends, and floating holidays)
-#         leave_days = calculate_leave_duration(start_date, end_date, employee)
-#
-#         if leave_days <= 0:
-#             messages.error(request, "No valid leave days selected.")
-#             return render(request, 'allocate_leave.html', {'employee': employee})
-#
-#         if employee.emp_used_leaves + leave_days > employee.emp_total_leaves:
-#             messages.error(request, "Not enough leave balance!")
-#             return render(request, 'allocate_leave.html', {'employee': employee})
-#
-#
-#
-#         # Create Leave Request
-#         LeaveRequest.objects.create(
-#             employee_user=employee.user,
-#             employee_master=employee,
-#             start_date=start_date,
-#             end_date=end_date,
-#             reason=reason,  # Now it will always have a value
-#             leave_type="Manager Allocated",
-#             status="Approved"
-#         )
-#
-#         # Update employee leave balance
-#         employee.emp_used_leaves += leave_days
-#         employee.save()
-#
-#         # Send email notification
-#         send_mail(
-#             subject="Leave Allocation Notification",
-#             message=f"Dear {employee.emp_fname},\n\nYour manager {manager.emp_fname} {manager.emp_lname} has allocated leave for you from {start_date} to {end_date}.\n\nReason: {reason}.\n\nBest regards,\nHR Team",
-#             from_email="ajaykmani2001@gmail.com",
-#             recipient_list=[employee.emp_email],
-#             fail_silently=False,
-#         )
-#
-#         # Adding success message
-#         messages.success(request, f"Leave has been allocated to {employee.emp_fname} {employee.emp_lname}.")
-#
-#         # Redirect to view subordinates
-#         return redirect('view_subordinates')
-#
-#     return render(request, 'allocate_leave.html', {'employee': employee , 'emp_id' : manager.emp_id , 'emp_fname' : manager.emp_fname , 'emp_lname' : manager.emp_lname ,'emp_designation' : manager.designation , 'total_used_leaves' : total_used_leaves , 'is_manager' : is_manager})
-#
-#
-
-
-
-
-
-#
-# from django.shortcuts import render, get_object_or_404, redirect
-# from django.contrib.auth.decorators import login_required
-# from django.contrib import messages
-# from django.core.mail import send_mail
-# from datetime import datetime
-# from .models import Employees, LeaveRequest, Holiday, FloatingHoliday
-# from admin_app.utils import calculate_leave_days  # Ensure correct function is imported
-#
-#
-# @login_required
-# def allocate_leave(request, employee_id):
-#     """Manager can allocate leave for a subordinate."""
-#     manager = get_object_or_404(Employees, user=request.user)
-#     employee = get_object_or_404(Employees, id=employee_id, employee_manager=manager)
-#
-#     current_year = datetime.now().year  # Get current year
-#     total_used_leaves = employee.emp_used_leaves  # Fetch from Employees model
-#
-#     # Determine if the logged-in user is a manager
-#     is_manager = Employees.objects.filter(employee_manager=manager).exists()
-#
-#     if request.method == "POST":
-#         start_date = request.POST.get("start_date")
-#         end_date = request.POST.get("end_date")
-#         reason = request.POST.get("reason", "").strip()
-#
-#         if not start_date or not end_date:
-#             messages.error(request, "Both start and end date are required.")
-#             return render(request, 'allocate_leave.html', {'employee': employee})
-#
-#         if not reason:
-#             messages.error(request, "Reason is required.")
-#             return render(request, 'allocate_leave.html', {'employee': employee})
-#
-#         start_date = datetime.strptime(start_date, "%Y-%m-%d").date()
-#         end_date = datetime.strptime(end_date, "%Y-%m-%d").date()
-#
-#         # Fetch holidays and floating holidays
-#         holidays = list(Holiday.objects.values_list("date", flat=True))
-#         floating_holidays = list(FloatingHoliday.objects.values_list("date", flat=True))
-#
-#         # Calculate leave days excluding holidays, floating holidays, and weekends
-#         leave_days = calculate_leave_days(start_date, end_date, holidays, floating_holidays)
-#
-#         if leave_days <= 0:
-#             messages.error(request, "No valid leave days selected.")
-#             return render(request, 'allocate_leave.html', {'employee': employee})
-#
-#         if employee.emp_used_leaves + leave_days > employee.emp_total_leaves:
-#             messages.error(request, "Not enough leave balance!")
-#             return render(request, 'allocate_leave.html', {'employee': employee})
-#
-#         # Create Leave Request
-#         LeaveRequest.objects.create(
-#             employee_user=employee.user,
-#             employee_master=employee,
-#             start_date=start_date,
-#             end_date=end_date,
-#             reason=reason,
-#             leave_type="Manager Allocated",
-#             status="Approved"
-#         )
-#
-#         # Update employee leave balance
-#         employee.emp_used_leaves += leave_days
-#         employee.save()
-#
-#         # Send email notification
-#         send_mail(
-#             subject="Leave Allocation Notification",
-#             message=f"Dear {employee.emp_fname},\n\nYour manager {manager.emp_fname} {manager.emp_lname} has allocated leave for you from {start_date} to {end_date}.\n\nReason: {reason}.\n\nBest regards,\nHR Team",
-#             from_email="ajaykmani2001@gmail.com",
-#             recipient_list=[employee.emp_email],
-#             fail_silently=False,
-#         )
-#
-#         messages.success(request, f"Leave has been allocated to {employee.emp_fname} {employee.emp_lname}.")
-#         return redirect('view_subordinates')
-#
-#     return render(request, 'allocate_leave.html', {
-#         'employee': employee,
-#         'emp_id': manager.emp_id,
-#         'emp_fname': manager.emp_fname,
-#         'emp_lname': manager.emp_lname,
-#         'emp_designation': manager.designation,
-#         'total_used_leaves': total_used_leaves,
-#         'is_manager': is_manager
-#     })
-#
-
-
 
 
 
@@ -1302,25 +1386,27 @@ from datetime import datetime
 from .models import Employees, LeaveRequest, Holiday, FloatingHoliday
 from admin_app.utils import calculate_leave_days  # Ensure correct function is imported
 
+from django.core.mail import send_mail
+from django.contrib import messages
+from django.shortcuts import render, redirect, get_object_or_404
+from datetime import datetime
 
-@login_required
-def allocate_leave(request, employee_id):
+def allocate_leave(request, manager_id):
     """Manager can allocate leave for a subordinate."""
     manager = get_object_or_404(Employees, user=request.user)
-    employee = get_object_or_404(Employees, id=employee_id, employee_manager=manager)
-
+    employee = get_object_or_404(Employees, id=manager_id)
     current_year = datetime.now().year  # Get current year
-    total_used_leaves = employee.emp_used_leaves  # Fetch from Employees model
+    total_used_leaves = employee.used_leaves  # Fetch from Employees model
 
     # Determine if the logged-in user is a manager
-    is_manager = Employees.objects.filter(employee_manager=manager).exists()
+    is_manager = Employees.objects.filter(manager=manager).exists()
 
     if request.method == "POST":
-        start_date = request.POST.get("start_date")
-        end_date = request.POST.get("end_date")
+        start_date_str = request.POST.get("start_date")
+        end_date_str = request.POST.get("end_date")
         reason = request.POST.get("reason", "").strip()
 
-        if not start_date or not end_date:
+        if not start_date_str or not end_date_str:
             messages.error(request, "Both start and end date are required.")
             return render(request, 'allocate_leave.html', {'employee': employee})
 
@@ -1328,36 +1414,26 @@ def allocate_leave(request, employee_id):
             messages.error(request, "Reason is required.")
             return render(request, 'allocate_leave.html', {'employee': employee})
 
-        start_date = datetime.strptime(start_date, "%Y-%m-%d").date()
-        end_date = datetime.strptime(end_date, "%Y-%m-%d").date()
+        try:
+            start_date = datetime.strptime(start_date_str, "%Y-%m-%d").date()
+            end_date = datetime.strptime(end_date_str, "%Y-%m-%d").date()
+        except ValueError:
+            messages.error(request, "Invalid date format.")
+            return render(request, 'allocate_leave.html', {'employee': employee})
 
-        # Fetch holidays and floating holidays
-        holidays = list(Holiday.objects.values_list("date", flat=True))
-        floating_holidays = list(FloatingHoliday.objects.values_list("date", flat=True))
+        if end_date < start_date:
+            messages.error(request, "End date cannot be before start date.")
+            return render(request, 'allocate_leave.html', {'employee': employee})
 
-        # Calculate total leave days, excluding holidays and weekends
-        leave_days = calculate_leave_days(start_date, end_date, holidays, floating_holidays)
-
+        # Simple plain calculation: total days including both ends
+        leave_days = (end_date - start_date).days + 1
+        print(leave_days)
         if leave_days <= 0:
             messages.error(request, "No valid leave days selected.")
             return render(request, 'allocate_leave.html', {'employee': employee})
 
-        floating_days_in_request = sum(1 for day in floating_holidays if start_date <= day <= end_date)
-
-        # Check how many floating holidays have been used
-        if floating_days_in_request > 0:
-            remaining_floating_balance = max(0, employee.floating_holidays_balance - employee.floating_holidays_used)
-
-            if floating_days_in_request <= remaining_floating_balance:
-                # Deduct only from floating holidays used
-                employee.floating_holidays_used += floating_days_in_request
-            else:
-                # Use remaining floating holidays and count extra as leave days
-                employee.floating_holidays_used += remaining_floating_balance
-                leave_days += (floating_days_in_request - remaining_floating_balance)
-
         # Ensure the employee has enough leave balance
-        if employee.emp_used_leaves + leave_days > employee.emp_total_leaves:
+        if employee.used_leaves + leave_days > employee.total_leaves:
             messages.error(request, "Not enough leave balance!")
             return render(request, 'allocate_leave.html', {'employee': employee})
 
@@ -1369,35 +1445,41 @@ def allocate_leave(request, employee_id):
             end_date=end_date,
             reason=reason,
             leave_type="Manager Allocated",
-            status="Approved"
+            status="Approved",
+            leave_days=leave_days
         )
 
         # Update employee leave balance
-        employee.emp_used_leaves += leave_days
+        employee.used_leaves += leave_days
         employee.save()
 
         # Send email notification
         send_mail(
             subject="Leave Allocation Notification",
-            message=f"Dear {employee.emp_fname},\n\nYour manager {manager.emp_fname} {manager.emp_lname} has allocated leave for you from {start_date} to {end_date}.\n\nReason: {reason}.\n\nBest regards,\nHR Team",
-            from_email="ajaykmani2001@gmail.com",
-            recipient_list=[employee.emp_email],
+            message=(
+                f"Dear {employee.first_name},\n\n"
+                f"Your manager {manager.first_name} {manager.last_name} has allocated leave for you from {start_date} to {end_date}.\n\n"
+                f"Number of days: {leave_days}\n"
+                f"Reason: {reason}\n\n"
+                "Best regards,\nHR Team"
+            ),
+            from_email="akashaku32@gmail.com",
+            recipient_list=[employee.company_email],
             fail_silently=False,
         )
 
-        messages.success(request, f"Leave has been allocated to {employee.emp_fname} {employee.emp_lname}.")
+        messages.success(request, f"Leave has been allocated to {employee.first_name} {employee.last_name}.")
         return redirect('view_subordinates')
 
     return render(request, 'allocate_leave.html', {
         'employee': employee,
-        'emp_id': manager.emp_id,
-        'emp_fname': manager.emp_fname,
-        'emp_lname': manager.emp_lname,
+        'emp_id': manager.employee_id,
+        'emp_fname': manager.first_name,
+        'emp_lname': manager.last_name,
         'emp_designation': manager.designation,
         'total_used_leaves': total_used_leaves,
         'is_manager': is_manager
     })
-
 
 def navbar(request):
     return render(request,'admin_partials/admin_header.html')

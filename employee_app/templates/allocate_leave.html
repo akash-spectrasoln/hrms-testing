@@ -76,6 +76,7 @@
             padding-bottom: 12px;
             border-bottom: 2px solid #e6e6e6;
             text-align: center;
+            
         }
 
         .page-title {
@@ -249,7 +250,7 @@
         <div class="form-container">
             <div class="page-header">
                 <h1 class="page-title">Allocate Leave</h1>
-                <div class="employee-name">for {{ employee.emp_fname }} {{ employee.emp_lname }}</div>
+                <div class="employee-name">for {{ employee.first_name }} {{ employee.last_name }}</div>
             </div>
 
             {% if messages %}

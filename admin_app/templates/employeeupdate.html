@@ -1,1167 +1,481 @@
 {% extends 'admin_partials/admin_base.html' %}
 {% load static %}
+{% load custom_filters %}
 {% block styles %}
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+<link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
 <style>
-    /* Root Variables */
-    :root {
-        --primary-50: #eff6ff;
-        --primary-100: #dbeafe;
-        --primary-500: #3b82f6;
-        --primary-600: #2563eb;
-        --primary-700: #1d4ed8;
-        --success-50: #f0fdf4;
-        --success-500: #22c55e;
-        --success-600: #16a34a;
-        --neutral-50: #f9fafb;
-        --neutral-100: #f3f4f6;
-        --neutral-200: #e5e7eb;
-        --neutral-300: #d1d5db;
-        --neutral-600: #4b5563;
-        --neutral-700: #374151;
-        --neutral-800: #1f2937;
-        --error-50: #fef2f2;
-        --error-500: #ef4444;
-    }
-
-    /* Base Styles */
     body {
         font-family: 'Inter', sans-serif;
-        background-color: var(--neutral-50);
-        color: var(--neutral-800);
-        line-height: 1.4;
-        -webkit-font-smoothing: antialiased;
-        -moz-osx-font-smoothing: grayscale;
+        background-color: #f9fafb;
+        color: #1f2937;
         padding-top: 60px;
     }
-
-    /* Container and Layout */
     .container {
-        padding: 10px;
-        margin: 40px auto;
         max-width: 1200px;
-        width: 100%;
-        overflow-x: hidden;
-        min-height: calc(100vh - 80px);
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
+        margin: 40px auto;
+        padding: 20px;
     }
-
-    /* Add space between navbar and form */
-    .navbar + .container,
-    .navbar + div .container,
-    .navbar ~ .container:first-of-type {
-        margin-top: 100px;
-    }
-
-    .main-content {
-        flex: 1;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        padding: 20px 0;
-    }
-
-    /* Navbar Adjustments */
-    .navbar {
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        z-index: 1000;
-        background-color: white;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    }
-
-    /* Form Card */
-    .form-card {
-        background: white;
-        border-radius: 12px;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-        padding: 25px 20px;
-        max-width: 1000px;
-        margin: 30px auto 0;
-        width: 100%;
-    }
-
-    /* Card Header */
     .card-header {
-        background: linear-gradient(135deg, var(--primary-600), var(--primary-700));
-        margin: -25px -20px 15px -20px;
-        padding: 15px;
-        border-radius: 12px 12px 0 0;
+        background: linear-gradient(135deg, #6a85b6, #bac8e0);
         text-align: center;
         color: white;
     }
-
-    .card-title {
-        font-size: 1.4rem;
-        margin: 0;
-        font-weight: 600;
+    .section-heading {
+        font-size: 1.5rem;
+        margin-top: 20px;
+        margin-bottom: 10px;
+        border-bottom: 2px solid #6a85b6;
+        padding-bottom: 5px;
     }
-
-    /* Progress Steps */
-    .form-progress {
-        display: flex;
-        justify-content: space-between;
-        padding: 10px 20px;
-        background: var(--neutral-50);
-        margin: -15px -20px 15px -20px;
-        border-bottom: 1px solid var(--neutral-200);
-        gap: 15px;
-        overflow-x: auto;
-        scrollbar-width: thin;
-        scrollbar-color: var(--primary-500) var(--neutral-100);
+    .is-invalid {
+        border-color: #dc3545;
     }
-
-    .form-progress::-webkit-scrollbar {
-        height: 5px;
-    }
-
-    .form-progress::-webkit-scrollbar-track {
-        background: var(--neutral-100);
-        border-radius: 3px;
-    }
-
-    .form-progress::-webkit-scrollbar-thumb {
-        background-color: var(--primary-500);
-        border-radius: 3px;
-    }
-
-    .progress-step {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        position: relative;
-        flex: 0 0 auto;
-        min-width: max-content;
-        cursor: pointer;
-    }
-
-    .progress-step.completed .step-number {
-        background: var(--success-500);
-        border-color: var(--success-500);
-        color: white;
-    }
-
-    .progress-step.completed .step-number::after {
-        content: '✓';
-    }
-
-    .progress-step.completed .step-label {
-        color: var(--success-500);
-    }
-
-    .step-number {
-        width: 28px;
-        height: 28px;
-        border-radius: 50%;
-        background: white;
-        border: 2px solid var(--neutral-300);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-weight: 600;
-        color: var(--neutral-600);
-        transition: all 0.3s ease;
-        flex-shrink: 0;
-    }
-
-    .step-label {
-        font-size: 0.85rem;
-        color: var(--neutral-600);
-        font-weight: 500;
-        white-space: nowrap;
-    }
-
-    /* Form Sections - More Compact */
-    .form-section {
-        background: var(--neutral-50);
-        border-radius: 10px;
-        padding: 10px 12px;
-        margin-bottom: 12px;
-        border: 1px solid var(--neutral-200);
-        transition: all 0.3s ease;
-    }
-
-    .form-section:hover {
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-        transform: translateY(-2px);
-    }
-
-    .section-title {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        font-size: 1.05rem;
-        color: var(--primary-600);
-        margin-bottom: 8px;
-        padding-bottom: 6px;
-        border-bottom: 1px solid var(--neutral-200);
-    }
-
-    .section-title i {
-        width: 24px;
-        height: 24px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        background: var(--primary-600);
-        color: white;
-        border-radius: 6px;
-    }
-
-    /* Form Controls - More Compact */
-    .form-group {
-        margin-bottom: 8px;
-        position: relative;
-        width: 100%;
-        min-width: 0;
-    }
-
-    .form-label {
-        display: block;
-        font-size: 0.85rem;
-        margin-bottom: 2px;
-        color: var(--neutral-700);
-        font-weight: 500;
-    }
-
-    .form-label.required::after {
+    .required::after {
         content: ' *';
-        color: var(--error-500);
-        font-weight: bold;
+        color: #dc3545;
     }
-
-    /* Enhanced Select Wrapper */
-    .select-wrapper {
-        position: relative;
-        width: 100%;
-        height: 34px;
-    }
-
-    .select-wrapper select {
-        width: 100%;
-        height: 34px;
-        padding: 4px 28px 4px 10px;
-        border: 1.5px solid var(--neutral-200);
-        border-radius: 6px;
-        font-size: 0.9rem;
-        color: var(--neutral-800);
-        background-color: white;
-        cursor: pointer;
-        -webkit-appearance: none !important;
-        -moz-appearance: none !important;
-        appearance: none !important;
-        background-image: none !important;
-    }
-
-    .select-wrapper::after {
-        content: '';
-        position: absolute;
-        right: 10px;
-        top: 50%;
-        transform: translateY(-50%);
-        width: 0;
-        height: 0;
-        border-left: 5px solid transparent;
-        border-right: 5px solid transparent;
-        border-top: 5px solid var(--neutral-600);
-        pointer-events: none;
-    }
-
-    .select-wrapper select:hover {
-        border-color: var(--primary-500);
-    }
-
-    .select-wrapper select:focus {
-        border-color: var(--primary-500);
-        box-shadow: 0 0 0 3px var(--primary-50);
-        outline: none;
-    }
-
-    .select-wrapper.loading::after {
-        content: '';
-        border: 2px solid var(--neutral-200);
-        border-top: 2px solid var(--primary-500);
-        border-radius: 50%;
-        width: 16px;
-        height: 16px;
-        animation: spin 1s linear infinite;
-    }
-
-    @keyframes spin {
-        0% { transform: translateY(-50%) rotate(0deg); }
-        100% { transform: translateY(-50%) rotate(360deg); }
-    }
-
-    /* Form Control Base - More Compact */
-    .form-control {
-        width: 100%;
-        padding: 6px 10px;
-        border: 1.5px solid var(--neutral-200);
-        border-radius: 6px;
-        font-size: 0.9rem;
-        transition: all 0.3s ease;
-        background-color: white;
-        box-shadow: none !important;
-        height: 34px;
-    }
-
-    .form-control:required {
-        box-shadow: none !important;
-    }
-
-    .form-control:hover {
-        border-color: var(--primary-500);
-    }
-
-    .form-control:focus {
-        border-color: var(--primary-500);
-        box-shadow: 0 0 0 3px var(--primary-50) !important;
-        outline: none;
-    }
-
-    /* Remove browser validation styling */
-    .form-control:invalid {
-        box-shadow: none !important;
-    }
-
-    .form-control:required:invalid {
-        box-shadow: none !important;
-    }
-
-    ::-webkit-validation-bubble-message,
-    ::-webkit-validation-bubble-arrow {
-        display: none;
-    }
-
-    /* Grid Layouts - More Compact */
-    .form-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-        gap: 8px;
-        width: 100%;
-    }
-
-    .form-grid-two-columns {
-        display: grid;
-        grid-template-columns: repeat(2, 1fr);
-        gap: 8px;
-        width: 100%;
-    }
-
-    .form-grid-three-columns {
-        display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        gap: 8px;
-        width: 100%;
-    }
-
-    /* File Upload Styling - Fixed for Overlap Issue */
-    .file-input-container {
-        position: relative;
-        width: 100%;
-        height: 70px;
-        border: 2px dashed var(--neutral-300);
-        border-radius: 6px;
-        background: var(--neutral-50);
-        transition: all 0.3s ease;
-        cursor: pointer;
+    .file-input-wrapper {
         display: flex;
         align-items: center;
-        justify-content: center;
-        overflow: hidden;
+        margin-top: 5px;
     }
-
-    .file-input-container:hover,
-    .file-input-container.dragover {
-        border-color: var(--primary-500);
-        background: var(--primary-50);
-    }
-
-    /* Hide the default text when a file is selected */
-    .file-input-container.has-file .file-upload-text {
-        display: none;
-    }
-
-    .file-upload-text {
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        text-align: center;
-        pointer-events: none;
-        width: 100%;
-        padding: 0 20px;
-    }
-
-    .file-upload-text i {
-        font-size: 1.3rem;
-        color: var(--primary-500);
-        margin-bottom: 3px;
-    }
-
-    .file-name-display {
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        font-size: 0.9rem;
-        color: var(--primary-600);
-        max-width: 90%;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-        font-weight: 500;
-    }
-
-    .file-input-container input[type="file"] {
-        opacity: 0;
-        position: absolute;
-        width: 100%;
-        height: 100%;
+    .file-input-wrapper .delete-icon {
+        margin-left: 10px;
+        color: #dc3545;
         cursor: pointer;
     }
-
-    .current-file {
-        margin-top: 4px;
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        font-size: 0.85rem;
-        color: var(--neutral-600);
-        padding: 4px 8px;
-        background: var(--neutral-50);
-        border-radius: 4px;
-        border: 1px solid var(--neutral-200);
-    }
-
-    .current-file i {
-        color: var(--primary-500);
-    }
-
-    .current-file a {
-        color: var(--primary-500);
-        text-decoration: none;
-        max-width: 200px;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-    }
-
-    .current-file a:hover {
-        text-decoration: underline;
-    }
-
-    /* Submit Button - More Compact */
-    .submit-btn {
-        background: linear-gradient(135deg, var(--primary-600), var(--primary-700));
-        color: white;
-        border: none;
-        padding: 6px 12px;
-        border-radius: 5px;
-        font-size: 0.85rem;
-        font-weight: 600;
+    .file-input-wrapper .add-icon {
+        margin-left: 10px;
+        color: #28a745;
         cursor: pointer;
-        transition: all 0.3s ease;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 5px;
-        width: 100%;
-        max-width: 130px;
-        margin: 10px auto 0;
-        height: 30px;
-    }
-
-    .submit-btn:hover {
-        transform: translateY(-1px);
-        box-shadow: 0 2px 8px rgba(37, 99, 235, 0.2);
-    }
-
-    .submit-btn:active {
-        transform: translateY(0);
-    }
-
-    /* Responsive Design */
-    @media (max-width: 768px) {
-        body {
-            padding-top: 50px;
-        }
-
-        .container {
-            margin: 10px 5px;
-            padding: 5px;
-        }
-
-        .navbar + .container,
-        .navbar + div .container,
-        .navbar ~ .container:first-of-type {
-            margin-top: 80px;
-        }
-
-        .form-card {
-            padding: 15px 10px;
-            margin-top: 15px;
-        }
-
-        .card-header {
-            margin: -15px -10px 10px -10px;
-            padding: 12px;
-        }
-
-        .form-grid-two-columns,
-        .form-grid-three-columns {
-            grid-template-columns: 1fr;
-        }
     }
 </style>
-{% endblock %}
-
-
+{% endblock styles %}
 
 {% block content %}
 <div class="container">
-    <div class="main-content">
-        <div class="form-card">
-            <!-- Form Header -->
-            <div class="card-header">
-                <h2 class="card-title">Edit Employee</h2>
-            </div>
-
-            <!-- Progress Steps -->
-            <div class="form-progress">
-                <div class="progress-step completed" data-section="basic-info">
-                    <div class="step-number">1</div>
-                    <span class="step-label">Basic Info</span>
-                </div>
-                <div class="progress-step completed" data-section="validity">
-                    <div class="step-number">2</div>
-                    <span class="step-label">Validity Period</span>
-                </div>
-                <div class="progress-step completed" data-section="contact-info">
-                    <div class="step-number">3</div>
-                    <span class="step-label">Contact Info</span>
-                </div>
-                <div class="progress-step completed" data-section="address">
-                    <div class="step-number">4</div>
-                    <span class="step-label">Address</span>
-                </div>
-                <div class="progress-step completed" data-section="employment">
-                    <div class="step-number">5</div>
-                    <span class="step-label">Employment</span>
-                </div>
-                <div class="progress-step completed" data-section="documents">
-                    <div class="step-number">6</div>
-                    <span class="step-label">Documents</span>
-                </div>
-            </div>
-
-            <form method="POST" enctype="multipart/form-data" id="employeeForm">
+    <div class="card">
+        <div class="card-header text-center">
+            <div class="card-title"><h4>Edit Employee</h4></div>
+        </div>
+        <div class="card-body">
+            <form method="post" enctype="multipart/form-data" id="employeeForm">
                 {% csrf_token %}
-
+                
                 <!-- Basic Information Section -->
-                <div class="form-section" data-section="basic-info">
-                    <h3 class="section-title">
-                        <i class="fas fa-user"></i>
-                        Basic Information
-                    </h3>
-
-
-                    <div class="form-grid-three-columns">
-    <!-- Employee Type -->
-    <div class="form-group">
-        <label class="form-label required">Employee Type</label>
-        <div class="select-wrapper">
-            <select id="employee_type" name="employee_type" class="form-control" required>
-                <option value="" disabled>Select Employee Type</option>
-                <option value="C-" {% if form.instance.employee_type == "C-" %}selected{% endif %}>Contractor</option>
-                <option value="I-" {% if form.instance.employee_type == "I-" %}selected{% endif %}>Intern</option>
-                <option value="E-" {% if form.instance.employee_type == "E-" %}selected{% endif %}>Employee</option>
-            </select>
-        </div>
-    </div>
-
-    <!-- Employee ID (Read-only) -->
-    <div class="form-group">
-        <label class="form-label required">Employee ID</label>
-        <input type="text" id="empid" name="emp_id" class="form-control" value="{{ form.instance.emp_id }}" readonly required>
-    </div>
-
-    <!-- Salutation Field -->
-    <div class="form-group">
-        <label class="form-label required">Salutation</label>
-        <div class="select-wrapper">
-            <select name="sal" class="form-control" required>
-                <option value="" disabled>Select</option>
-                {% for sal in salutations %}
-                    <option value="{{ sal.id }}" {% if form.instance.sal.id == sal.id %}selected{% endif %}>
-                        {{ sal.sal_name }}
-                    </option>
-                {% endfor %}
-            </select>
-        </div>
-    </div>
-</div>
-
-<div class="form-grid-three-columns">
-    <!-- First Name -->
-    <div class="form-group">
-        <label class="form-label required">First Name</label>
-        <input type="text" name="emp_fname" class="form-control" value="{{ form.instance.emp_fname }}" required>
-    </div>
-
-    <!-- Middle Name -->
-    <div class="form-group">
-        <label class="form-label">Middle Name</label>
-        <input type="text" name="emp_mname" class="form-control" value="{{ form.instance.emp_mname }}">
-    </div>
-
-    <!-- Last Name -->
-    <div class="form-group">
-        <label class="form-label required">Last Name</label>
-        <input type="text" name="emp_lname" class="form-control" value="{{ form.instance.emp_lname }}" required>
-    </div>
-</div>
+                <!-- <div class="section-heading">Basic Information</div> -->
+                <div class="form-row">
+                    <div class="form-group col-md-4">
+                        <label for="employee_type" class="required">Employee Type</label>
+                        <select id="employee_type" name="employee_type" class="form-control" required>
+                            <option value="" disabled>Select Employee Type</option>
+                            <option value="C-" {% if form.instance.employee_type == "C-" %}selected{% endif %}>Contractor</option>
+                            <option value="I-" {% if form.instance.employee_type == "I-" %}selected{% endif %}>Intern</option>
+                            <option value="E-" {% if form.instance.employee_type == "E-" %}selected{% endif %}>Employee</option>
+                        </select>
+                    </div>
+                    <div class="form-group col-md-4">
+                        <label for="employee_id" class="required">Employee ID</label>
+                        <input type="text" id="employee_id" name="employee_id" class="form-control" value="{{ form.instance.employee_id }}" readonly required>
+                    </div>
+                    <div class="form-group col-md-4">
+                        <label for="salutation" class="required">Salutation</label>
+                        <select name="salutation" class="form-control" required>
+                            <option value="" disabled>Select</option>
+                            {% for sal in salutations %}
+                            <option value="{{ sal.id }}" {% if form.instance.salutation.id == sal.id %}selected{% endif %}>
+                                {{ sal.sal_name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group col-md-4">
+                        <label for="first_name" class="required">First Name</label>
+                        <input type="text" name="first_name" class="form-control" value="{{ form.instance.first_name }}" required>
+                    </div>
+                    <div class="form-group col-md-4">
+                        <label for="middle_name">Middle Name</label>
+                        <input type="text" name="middle_name" class="form-control" value="{{ form.instance.middle_name }}">
+                    </div>
+                    <div class="form-group col-md-4">
+                        <label for="last_name" class="required">Last Name</label>
+                        <input type="text" name="last_name" class="form-control" value="{{ form.instance.last_name }}" required>
+                    </div>
                 </div>
 
                 <!-- Validity Period Section -->
-                <div class="form-section" data-section="validity">
-                    <h3 class="section-title">
-                        <i class="fas fa-calendar"></i>
-                        Validity Period
-                    </h3>
-                    <div class="form-grid-two-columns">
-                        <div class="form-group">
-                            <label class="form-label required">Valid From</label>
-                            <input type="date" name="emp_val_from" class="form-control"
-                                   value="{{ form.instance.emp_val_from|date:'Y-m-d' }}" required>
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label required">Valid To</label>
-                            <input type="date" name="emp_val_to" class="form-control"
-                                   value="{{ form.instance.emp_val_to|date:'Y-m-d' }}" required>
-                        </div>
+                <!-- <div class="section-heading">Validity Period</div> -->
+                <div class="form-row">
+                    <div class="form-group col-md-6">
+                        <label for="valid_from" class="required">Valid From</label>
+                        <input type="date" name="valid_from" class="form-control" value="{{ form.instance.valid_from|date:'Y-m-d' }}" required>
+                    </div>
+                    <div class="form-group col-md-6">
+                        <label for="valid_to" class="required">Valid To</label>
+                        <input type="date" name="valid_to" class="form-control" value="{{ form.instance.valid_to|date:'Y-m-d' }}" required>
                     </div>
                 </div>
 
                 <!-- Contact Information Section -->
-                <div class="form-section" data-section="contact-info">
-                    <h3 class="section-title">
-                        <i class="fas fa-address-card"></i>
-                        Contact Information
-                    </h3>
-                    <div class="form-grid">
-                        <!-- Company Email -->
-                        <div class="form-group">
-                            <label class="form-label required">Company Email</label>
-                            <input type="email" name="emp_email" class="form-control" value="{{ form.instance.emp_email }}" required>
-                        </div>
-
-                        <!-- Personal Email -->
-                        <div class="form-group">
-                            <label class="form-label required">Personal Email</label>
-                            <input type="email" name="emp_pemail" class="form-control" value="{{ form.instance.emp_pemail }}" required>
-                        </div>
-
-                        <!-- Personal Phone -->
-                        <div class="form-group">
-                            <label class="form-label required">Personal Phone</label>
-                            <input type="tel" name="emp_mob_ph" class="form-control" value="{{ form.instance.emp_mob_ph }}" required>
-                        </div>
-
-                        <!-- Office Phone -->
-                        <div class="form-group">
-                            <label class="form-label">Office Phone</label>
-                            <input type="tel" name="empophone" class="form-control" value="{{ form.instance.emp_off_ph }}">
-                        </div>
-
-                        <!-- Home Phone -->
-                        <div class="form-group">
-                            <label class="form-label">Home Phone</label>
-                            <input type="tel" name="emphphone" class="form-control" value="{{ form.instance.emp_home_ph }}">
-                        </div>
-
-                        <!-- Emergency Contact Name -->
-                        <div class="form-group">
-                            <label class="form-label required ">Emergency Contact Name</label>
-                            <input type="text" name="emp_cp_name" class="form-control" value="{{ form.instance.emp_cp_name }}" required>
-                        </div>
-
-                        <!-- Emergency Contact Phone -->
-                        <div class="form-group">
-                            <label class="form-label required">Emergency Contact Phone</label>
-                            <input type="tel" name="emp_cp_ph" class="form-control" value="{{ form.instance.emp_cp_ph }}" required>
-                        </div>
-
-<!--                        &lt;!&ndash; Emergency Contact Email &ndash;&gt;-->
-<!--                        <div class="form-group">-->
-<!--                            <label class="form-label required">Emergency Contact Email</label>-->
-<!--                            <input type="email" name="emp_cp_email" class="form-control" value="{{ form.instance.emp_cp_email }}" required>-->
-<!--                        </div>-->
-
-                        <!-- Emergency Contact Relationship -->
-                        <div class="form-group">
-                            <label class="form-label required">Emergency Contact Relationship</label>
-                            <div class="select-wrapper">
-                                <select name="emp_cp_relation" class="form-control" required>
-                                    <option value="" disabled selected>Choose Relation</option>
-                                    <option value="Mother" {% if form.instance.emp_cp_relation == 'Mother' %}selected{% endif %}>Mother</option>
-                                    <option value="Father" {% if form.instance.emp_cp_relation == 'Father' %}selected{% endif %}>Father</option>
-                                    <option value="Brother" {% if form.instance.emp_cp_relation == 'Brother' %}selected{% endif %}>Brother</option>
-                                    <option value="Sister" {% if form.instance.emp_cp_relation == 'Sister' %}selected{% endif %}>Sister</option>
-                                    <option value="Husband" {% if form.instance.emp_cp_relation == 'Husband' %}selected{% endif %}>Husband</option>
-                                    <option value="Wife" {% if form.instance.emp_cp_relation == 'Wife' %}selected{% endif %}>Wife</option>
-                                </select>
-                            </div>
-                        </div>
+                <!-- <div class="section-heading">Contact Information</div> -->
+                <div class="form-row">
+                    <div class="form-group col-md-6">
+                        <label for="company_email" class="required">Company Email</label>
+                        <input type="email" name="company_email" class="form-control" value="{{ form.instance.company_email }}" required>
                     </div>
+                    <div class="form-group col-md-6">
+                        <label for="personal_email" class="required">Personal Email</label>
+                        <input type="email" name="personal_email" class="form-control" value="{{ form.instance.personal_email }}" required>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group col-md-4">
+                        <label for="mobile_phone" class="required">Personal Phone</label>
+                        <input type="tel" name="mobile_phone" class="form-control" value="{{ form.instance.mobile_phone }}" required>
+                    </div>
+                    <div class="form-group col-md-4">
+                        <label for="office_phone">Office Phone</label>
+                        <input type="tel" name="office_phone" class="form-control" value="{{ form.instance.office_phone }}">
+                    </div>
+                    <div class="form-group col-md-4">
+                        <label for="home_phone">Home Phone</label>
+                        <input type="tel" name="home_phone" class="form-control" value="{{ form.instance.home_phone }}">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group col-md-6">
+                        <label for="emergency_contact_name" class="required">Emergency Contact Name</label>
+                        <input type="text" name="emergency_contact_name" class="form-control" value="{{ form.instance.emergency_contact_name }}" required>
+                    </div>
+                    <div class="form-group col-md-6">
+                        <label for="emergency_contact_phone" class="required">Emergency Contact Phone</label>
+                        <input type="tel" name="emergency_contact_phone" class="form-control" value="{{ form.instance.emergency_contact_phone }}" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="emergency_contact_relation" class="required">Emergency Contact Relationship</label>
+                    <select name="emergency_contact_relation" class="form-control" required>
+                        <option value="" disabled selected>Choose Relation</option>
+                        <option value="Mother" {% if form.instance.emergency_contact_relation == 'Mother' %}selected{% endif %}>Mother</option>
+                        <option value="Father" {% if form.instance.emergency_contact_relation == 'Father' %}selected{% endif %}>Father</option>
+                        <option value="Brother" {% if form.instance.emergency_contact_relation == 'Brother' %}selected{% endif %}>Brother</option>
+                        <option value="Sister" {% if form.instance.emergency_contact_relation == 'Sister' %}selected{% endif %}>Sister</option>
+                        <option value="Husband" {% if form.instance.emergency_contact_relation == 'Husband' %}selected{% endif %}>Husband</option>
+                        <option value="Wife" {% if form.instance.emergency_contact_relation == 'Wife' %}selected{% endif %}>Wife</option>
+                    </select>
                 </div>
 
                 <!-- Address Information Section -->
-                <div class="form-section" data-section="address">
-                    <h3 class="section-title">
-                        <i class="fas fa-map-marker-alt"></i>
-                        Address Details
-                    </h3>
-                    <div class="form-grid">
-                        <!-- Country -->
-                        <div class="form-group">
-                            <label class="form-label required">Country</label>
-                            <div class="select-wrapper">
-                                <select name="country" id="country" class="form-control" required>
-                                    <option value="" disabled selected>Select Country</option>
-                                    {% for country in countries %}
-                                        <option value="{{ country.id }}" {% if form.instance.country.id == country.id %}selected{% endif %}>
-                                            {{ country.country_name }}
-                                        </option>
-                                    {% endfor %}
-                                </select>
-                            </div>
-                        </div>
-
-                        <!-- State -->
-                        <div class="form-group">
-                            <label class="form-label required">State</label>
-                            <div class="select-wrapper">
-                                <select name="state" id="state" class="form-control" required>
-                                    <option value="" disabled selected>Select State</option>
-                                    {% for state in states %}
-                                        <option value="{{ state.id }}" {% if form.instance.state.id == state.id %}selected{% endif %}>
-                                            {{ state.name }}
-                                        </option>
-                                    {% endfor %}
-                                </select>
-                            </div>
-                        </div>
-
-                        <!-- City -->
-                        <div class="form-group">
-                            <label class="form-label required">City</label>
-                            <input type="text" name="emp_home_city" class="form-control" value="{{ form.instance.emp_home_city }}" required>
-                        </div>
-
-                        <!-- Street -->
-                        <div class="form-group">
-                            <label class="form-label required">Street</label>
-                            <input type="text" name="emp_home_street" class="form-control" value="{{ form.instance.emp_home_street }}" required>
-                        </div>
-
-                        <!-- Pincode -->
-                        <div class="form-group">
-                            <label class="form-label required">Pincode</label>
-                            <input type="text" name="pincode" class="form-control" value="{{ form.instance.pincode }}" required>
-                        </div>
+                <!-- <div class="section-heading">Address Information</div> -->
+                <div class="form-row">
+                    <div class="form-group col-md-6">
+                        <label for="country" class="required">Country</label>
+                        <select name="country" id="country" class="form-control" required>
+                            <option value="" disabled selected>Select Country</option>
+                            {% for country in countries %}
+                            <option value="{{ country.id }}" {% if form.instance.country.id == country.id %}selected{% endif %}>
+                                {{ country.country_name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group col-md-6">
+                        <label for="state" class="required">State</label>
+                        <select name="state" id="state" class="form-control" required>
+                            <option value="" disabled selected>Select State</option>
+                            {% for state in states %}
+                            <option value="{{ state.id }}" {% if form.instance.state.id == state.id %}selected{% endif %}>
+                                {{ state.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
                     </div>
                 </div>
+                <div class="form-row">
+                    <div class="form-group col-md-4">
+                        <label for="home_house" class="required">Home</label>
+                        <input type="text" name="home_house"  class="form-control" value="{{ form.instance.home_house }}"required>
+                    </div>
+                    <div class="form-group col-md-4">
+                        <label for="home_city" class="required">City</label>
+                        <input type="text" name="home_city" class="form-control"value="{{ form.instance.home_city }}" required>
+                    </div>
+                    <div class="form-group col-md-4">
+                        <label for="pincode" class="required">Pincode</label>
+                        <input type="text" name="pincode" class="form-control" value="{{ form.instance.pincode }}" required>
+                    </div>
+                </div>
+                
 
                 <!-- Employment Details Section -->
-                <div class="form-section" data-section="employment">
-                    <h3 class="section-title">
-                        <i class="fas fa-briefcase"></i>
-                        Employment Details
-                    </h3>
-                    <div class="form-grid">
-                        <!-- Role -->
-
-
-
-<!--                        <div class="form-group">-->
-<!--                            <label class="form-label required">Role</label>-->
-<!--                            <div class="select-wrapper">-->
-<!--                                <select name="role" class="form-control" required>-->
-<!--                                    <option value="" disabled selected>Select Role</option>-->
-<!--                                    {% for role in roles %}-->
-<!--                                        <option value="{{ role.role_id }}" {% if form.instance.role.role_id == role.role_id %}selected{% endif %}>-->
-<!--                                            {{ role.role_name }}-->
-<!--                                        </option>-->
-<!--                                    {% endfor %}-->
-<!--                                </select>-->
-<!--                            </div>-->
-<!--                        </div>-->
-
-
-
-
-
-
-
-
-                        <!-- Department -->
-<div class="form-group">
-    <label class="form-label required">Department</label>
-    <div class="select-wrapper">
-        <select name="dep" class="form-control" required>
-            <option value="" disabled>Select Department</option>
-            {% for department in departments %}
-                <option value="{{ department.id }}"
-                    {% if form.instance.dep and form.instance.dep.id == department.id %}selected{% endif %}>
-                    {{ department.dep_name }}
-                </option>
-            {% endfor %}
-        </select>
-    </div>
-</div>
-
-
-                        <!-- Designation -->
-<!--                        <div class="form-group">-->
-<!--                            <label class="form-label required">Designation</label>-->
-<!--                            <input type="text" name="designation" class="form-control" value="{{ form.instance.designation }}" required>-->
-<!--                        </div>-->
-
-
-
-<!--                        <div class="form-group">-->
-<!--    <label class="form-label required">Role</label>-->
-<!--    <div class="select-wrapper">-->
-<!--        <select name="designation" class="form-control" required>-->
-<!--            <option value="" disabled selected>Select Role</option>-->
-<!--            <option value="Salesforce Developer">Salesforce Developer</option>-->
-<!--            <option value="Jr. Software Engineer">Jr. Software Engineer</option>-->
-<!--        </select>-->
-<!--    </div>-->
-<!--</div>-->
-
-
-<!--designation field-->
-
-                       <div class="form-group">
-    <label class="form-label required">Designation</label>
-    <div class="select-wrapper">
-        <select name="designation" class="form-control" required>
-            <option value="" disabled>Select Designation</option>
-            <option value="Salesforce Developer" {% if form.instance.designation == "Salesforce Developer" %}selected{% endif %}>
-                Salesforce Developer
-            </option>
-            <option value="Jr. Software Engineer" {% if form.instance.designation == "Jr. Software Engineer" %}selected{% endif %}>
-                Jr. Software Engineer
-            </option>
-            <!-- Add other designation options here -->
-        </select>
-    </div>
-</div>
-
-                        <!-- Employee Status -->
-                        <div class="form-group">
-                            <label class="form-label required">Employee Status</label>
-                            <div class="select-wrapper">
-                                <select name="employee_status" class="form-control" required>
-                                    <option value="" disabled selected>Choose Status</option>
-                                    <option value="employed" {% if form.instance.employee_status == 'employed' %}selected{% endif %}>Employed</option>
-                                    <option value="resigned" {% if form.instance.employee_status == 'resigned' %}selected{% endif %}>Resigned</option>
-<!--                                    <option value="maternal_leave" {% if form.instance.employee_status == 'maternal_leave' %}selected{% endif %}>Maternal Leave</option>-->
-                                </select>
-                            </div>
-                        </div>
-
-                        <!-- Manager -->
-
-
-<!-- <div class="form-group">-->
-<!--    <label class="form-label required">Manager</label>-->
-<!--    <div class="select-wrapper">-->
-<!--        <select name="employee_manager" class="form-control">-->
-<!--            &lt;!&ndash; Ensure "None" is selectable and preselected when there is no manager &ndash;&gt;-->
-<!--            <option value="" {% if not form.instance.employee_manager %}selected{% endif %}>None</option>-->
-
-<!--            {% for manager in managers %}-->
-<!--                <option value="{{ manager.id }}"-->
-<!--                    {% if form.instance.employee_manager and form.instance.employee_manager.id == manager.id %}-->
-<!--                        selected-->
-<!--                    {% endif %}>-->
-<!--                    {{ manager.emp_fname }} {{ manager.emp_lname }} ({{ manager.emp_id }})-->
-<!--                </option>-->
-<!--            {% endfor %}-->
-<!--        </select>-->
-<!--    </div>-->
-<!--</div>-->
-
-
-
-
-
-                        <div class="form-group">
-    <label class="form-label">Manager</label>
-    <div class="select-wrapper">
-        <select name="employee_manager" class="form-control">
-            <option value="">None</option>
-            {% for employee in employees %}
-                <option value="{{ employee.id }}"
-                    {% if form.instance.employee_manager and form.instance.employee_manager.id == employee.id %}
-                        selected
-                    {% endif %}>
-                    {{ employee.emp_fname }} {{ employee.emp_lname }} ({{ employee.emp_id }})
-                </option>
-            {% endfor %}
-        </select>
-    </div>
-</div>
-
-                        <!-- Salary -->
-                        <div class="form-group">
-                            <label class="form-label required">Salary</label>
-                           <input type="text" name="emp_base" class="form-control" value="{{ form.instance.emp_base|default_if_none:'' }}" required>
-
-                        </div>
+                <!-- <div class="section-heading">Employment Details</div> -->
+                <div class="form-row">
+                    <div class="form-group col-md-4">
+                        <label for="home_post_office" class="required">Post Office</label>
+                        <input type="text" name="home_post_office" class="form-control" value="{{ form.instance.home_post_office }}" required>
+                    </div>
+                    <div class="form-group col-md-4">
+                        <label for="department" class="required">Department</label>
+                        <select name="department" class="form-control" required>
+                            <option value="" disabled>Select Department</option>
+                            {% for department in departments %}
+                            <option value="{{ department.id }}" {% if form.instance.department and form.instance.department.id == department.id %}selected{% endif %}>
+                                {{ department.dep_name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group col-md-4">
+                        <label for="designation" class="required">Designation</label>
+                        <input type="text" name="designation" class="form-control" value="{{ form.instance.designation }}" required>
                     </div>
                 </div>
-
+                <div class="form-row">
+                    <div class="form-group col-md-4">
+                        <label for="employee_status" class="required">Employee Status</label>
+                        <select name="employee_status" class="form-control" required>
+                            <option value="" disabled selected>Choose Status</option>
+                            <option value="employed" {% if form.instance.employee_status == 'employed' %}selected{% endif %}>Employed</option>
+                            <option value="resigned" {% if form.instance.employee_status == 'resigned' %}selected{% endif %}>Resigned</option>
+                        </select>
+                    </div>
+                    <div class="form-group col-md-4">
+                        <label for="manager">Manager</label>
+                        <select name="manager" class="form-control">
+                            <option value="">None</option>
+                            {% for employee in employees %}
+                            <option value="{{ employee.id }}" {% if form.instance.manager and form.instance.manager.id == employee.id %}selected{% endif %}>
+                                {{ employee.first_name }} {{ employee.last_name }} ({{ employee.employee_id }})
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+    
+                </div>
+                <div class="form-row">
+                    <div class="form-group col-md-6">
+                        <label for="base_salary" class="required">Salary</label>
+                        <input type="text" name="base_salary" class="form-control" value="{{ form.instance.base_salary|default_if_none:'' }}" required>
+                    </div>
+                    <div class="form-group col-md-6">
+                        <label for="incentive">Incentive</label>
+                        <input type="text" name="incentive" class="form-control" value="{{ form.instance.incentive|default_if_none:'' }}" required>
+                    </div>
+                </div>
                 <!-- Documents Section -->
-                <div class="form-section" data-section="documents">
-                    <h3 class="section-title">
-                        <i class="fas fa-file-alt"></i>
-                        Documents
-                    </h3>
-                    <div class="form-grid-two-columns">
-                        <div class="form-group">
-                            <label class="form-label">Resume</label>
-                            <div class="file-input-container" id="resume-container">
-                                <div class="file-upload-text">
-                                    <i class="fas fa-cloud-upload-alt"></i>
-                                    <div>Drag & drop or click to upload</div>
-                                </div>
-                                <div class="file-name-display"></div>
-                                <input type="file" name="emp_resume" class="form-control"  id="id_emp_resume">
+                <!-- <div class="section-heading">Documents</div> -->
+                
+                    <div class="form-group">
+                        <label for="resumes">Resumes</label>
+                        <div class="file-input-container" id="resumeContainer">
+                            <div class="file-input-wrapper">
+                                <input type="file" name="resumes" class="form-control-file" accept=".pdf,.doc,.docx" id="resumeInput">
+                                <span id="resumeFileName" class="file-name"></span>
+                                <i class="fas fa-plus-circle add-icon" title="Add another file"></i>
+                                <i class="fas fa-trash-alt delete-icon" title="Delete this file"></i>
                             </div>
-                            {% if form.instance.emp_resume %}
-                            <div class="current-file">
-                                <i class="fas fa-file-pdf"></i>
-                                <span>Current file:</span>
-                                <a href="{{ form.instance.emp_resume.url }}" target="_blank">
-                                    {{ form.instance.emp_resume.name }}
-                                </a>
-                                 <label class="delete-checkbox" style="margin-left: 10px;">
-                    <input type="checkbox" name="emp_resume-clear" id="emp_resume-clear_id">
-                    <span style="color: #ef4444; margin-left: 5px;">Delete</span>
-                </label>
-                            </div>
-                            {% endif %}
                         </div>
-                        <div class="form-group">
-                            <label class="form-label">Other Certification</label>
-                            <div class="file-input-container" id="certif-container">
-                                <div class="file-upload-text">
-                                    <i class="fas fa-cloud-upload-alt"></i>
-                                    <div>Drag & drop or click to upload</div>
+                        {% if form.instance.resumes.all %}
+                        <div class="current-file mt-4">
+                            <label>Current Files</label>
+                            <div class="list-group">
+                                {% for resume in form.instance.resumes.all %}
+                                <div class="list-group-item d-flex justify-content-between align-items-center">
+                                    <h6 class="mb-1">{{ resume.file.name|basename }}</h6>
+                                    <div class="d-flex">
+                                        <a href="{{ resume.file.url }}" target="_blank" class="btn btn-link btn-sm p-0 mr-2">
+                                            <i class="fas fa-download"></i> View
+                                        </a>
+                                        <a href="#" class="btn btn-danger btn-sm delete-file-link" data-file-id="{{ resume.id }}" data-file-type="resume" title="Delete this file">
+                                            <i class="fas fa-trash-alt"></i>
+                                        </a>
+                                    </div>
                                 </div>
-                                <div class="file-name-display"></div>
-                                <input type="file" name="emp_certif" class="form-control" id="id_emp_certif">
+                                {% endfor %}
                             </div>
-                            {% if form.instance.emp_certif %}
-                            <div class="current-file">
-                                <i class="fas fa-file-certificate"></i>
-                                <span>Current file:</span>
-                                <a href="{{ form.instance.emp_certif.url }}" target="_blank">
-                                    {{ form.instance.emp_certif.name }}
-                                </a>
-                                 <label class="delete-checkbox" style="margin-left: 10px;">
-                    <input type="checkbox" name="emp_certif-clear" id="emp_certif-clear_id">
-                    <span style="color: #ef4444; margin-left: 5px;">Delete</span>
-                </label>
-                            </div>
-                            {% endif %}
                         </div>
+                        {% endif %}
                     </div>
-                </div>
-
-                <button type="submit" class="submit-btn">
-                    <i class="fas fa-save"></i>
-                    Save
+                    <div class="form-group">
+                        <label for="certificates">Other Certifications</label>
+                        <div class="file-input-container" id="certificateContainer">
+                            <div class="file-input-wrapper">
+                                <input type="file" name="certificates" class="form-control-file" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" id="certificateInput">
+                                <span id="certificateFileName" class="file-name"></span>
+                                <i class="fas fa-plus-circle add-icon" title="Add another file"></i>
+                                <i class="fas fa-trash-alt delete-icon" title="Delete this file"></i>
+                            </div>
+                        </div>
+                        {% if form.instance.certificates.all %}
+                        <div class="current-file mt-4">
+                            <label>Current Files</label>
+                            <div class="list-group">
+                                {% for certificate in form.instance.certificates.all %}
+                                <div class="list-group-item d-flex justify-content-between align-items-center">
+                                    <h6 class="mb-1">{{ certificate.file.name|basename }}</h6>
+                                    <div class="d-flex">
+                                        <a href="{{ certificate.file.url }}" target="_blank" class="btn btn-link btn-sm p-0 mr-2">
+                                            <i class="fas fa-download"></i> View
+                                        </a>
+                                        <a href="#" class="btn btn-danger btn-sm delete-file-link" data-file-id="{{ certificate.id }}" data-file-type="certificate" title="Delete this file">
+                                            <i class="fas fa-trash-alt"></i>
+                                        </a>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                
+                
+                <script>
+                    document.addEventListener('DOMContentLoaded', function() {
+                        // Function to update file name display
+                        function updateFileName(inputId, displayId) {
+                            const input = document.getElementById(inputId);
+                            const display = document.getElementById(displayId);
+                            input.addEventListener('change', function() {
+                                const fileName = this.files.length > 0 ? this.files[0].name : '';
+                                display.textContent = fileName;
+                            });
+                        }
+                
+                        // Update file name display for resumes
+                        updateFileName('resumeInput', 'resumeFileName');
+                
+                        // Update file name display for certificates
+                        updateFileName('certificateInput', 'certificateFileName');
+                    });
+                </script>
+                <button type="submit" class="btn btn-success mt-3">
+                    <i class="fas fa-save"></i> Save
                 </button>
             </form>
         </div>
     </div>
 </div>
-{% endblock %}
-{% block scripts %}
+
+
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.bundle.min.js"></script>
 <script>
-   document.addEventListener('DOMContentLoaded', function() {
-       // Section Navigation
-       function initializeSectionNavigation() {
-           document.querySelectorAll('.progress-step').forEach(step => {
-               step.addEventListener('click', function() {
-                   const targetSection = this.getAttribute('data-section');
-                   const targetElement = document.querySelector(`.form-section[data-section="${targetSection}"]`);
-                   if (targetElement) {
-                       targetElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                   }
-               });
-           });
-       }
+    $(document).ready(function() {
+        // Add new file input
+        $(document).on('click', '.add-icon', function() {
+            const container = $(this).closest('.file-input-container');
+            const newInputWrapper = $('<div class="file-input-wrapper"></div>');
+            const newInput = $('<input type="file" class="form-control-file mt-2">');
+            const addIcon = $('<i class="fas fa-plus-circle add-icon" title="Add another file"></i>');
+            const deleteIcon = $('<i class="fas fa-trash-alt delete-icon" title="Delete this file"></i>');
 
-       // Country-State Handling
-       function initializeCountryStateHandling() {
-           const countrySelect = document.getElementById('country');
-           const stateSelect = document.getElementById('state');
+            if (container.attr('id') === 'resumeContainer') {
+                newInput.attr('name', 'resumes').attr('accept', '.pdf,.doc,.docx');
+            } else {
+                newInput.attr('name', 'certificates').attr('accept', '.pdf,.doc,.docx,.jpg,.jpeg,.png');
+            }
 
-           if (countrySelect && stateSelect) {
-               countrySelect.addEventListener('change', function() {
-                   const countryId = this.value;
-                   const stateWrapper = stateSelect.closest('.select-wrapper');
+            newInputWrapper.append(newInput).append(addIcon).append(deleteIcon);
+            container.append(newInputWrapper);
+        });
 
-                   stateSelect.innerHTML = '<option value="">Select State</option>';
-                   stateSelect.disabled = true;
+        // Remove file input
+        $(document).on('click', '.delete-icon', function() {
+            $(this).closest('.file-input-wrapper').remove();
+        });
 
-                   if (countryId) {
-                       stateWrapper.classList.add('loading');
+        // Initialize country-state handling
+        $('#country').change(function() {
+            const countryId = $(this).val();
+            const stateSelect = $('#state');
+            stateSelect.prop('disabled', true).empty().append('<option value="">Select State</option>');
 
-                       $.ajax({
-                           url: "{% url 'get_states' %}",
-                           data: { 'country_id': countryId },
-                           method: 'GET',
-                           dataType: 'json',
-                           success: function(response) {
-                               stateSelect.innerHTML = '<option value="">Select State</option>';
-                               if (Array.isArray(response)) {
-                                   response.forEach(state => {
-                                       const option = new Option(state.name, state.id);
-                                       stateSelect.add(option);
-                                   });
-                               }
-                           },
-                           error: function(xhr, status, error) {
-                               console.error('Error fetching states:', error);
-                               alert('Error loading states. Please try again.');
-                           },
-                           complete: function() {
-                               stateSelect.disabled = false;
-                               stateWrapper.classList.remove('loading');
-                           }
-                       });
-                   } else {
-                       stateSelect.disabled = false;
-                   }
-               });
-           }
-       }
+            if (countryId) {
+                $.ajax({
+                    url: "{% url 'get_states' %}",
+                    data: { 'country_id': countryId },
+                    method: 'GET',
+                    dataType: 'json',
+                    success: function(response) {
+                        if (Array.isArray(response)) {
+                            response.forEach(state => {
+                                stateSelect.append(new Option(state.name, state.id));
+                            });
+                        }
+                    },
+                    error: function() {
+                        alert('Error loading states. Please try again.');
+                    },
+                    complete: function() {
+                        stateSelect.prop('disabled', false);
+                    }
+                });
+            }
+        });
 
-       // Employee Type & ID Handling
-       function initializeEmployeeIDHandling() {
-           const empTypeField = document.querySelector('select[name="employee_type"]');
-           const empIdField = document.querySelector('input[name="empid"]');
+        // Fetch Employee ID based on Employee Type
+        $('#employee_type').change(function() {
+            const empType = $(this).val();
+            const empIdField = $('#employee_id');
 
-           if (!empTypeField || !empIdField) return;
+            if (!empType) {
+                empIdField.val('');
+                return;
+            }
 
-           function updateEmployeeID() {
-               let empType = empTypeField.value;
-               if (!empType) return;
+            $.ajax({
+                url: `/admin_app/generate-emp-id/?employee_type=${empType}`,
+                method: 'GET',
+                dataType: 'json',
+                success: function(data) {
+                    if (data.employee_id) {
+                        empIdField.val(data.employee_id);
+                    } else {
+                        empIdField.val('');
+                    }
+                },
+                error: function() {
+                    alert('Failed to generate Employee ID. Please try again.');
+                }
+            });
+        });
+        $(document).on('click', '.delete-file-link', function(e) {
+        e.preventDefault(); // Prevent default anchor behavior
 
-               let currentEmpID = empIdField.value;
-               let empNumber = currentEmpID.replace(/^[A-Z]-/, ''); // Remove old prefix
+        const fileId = $(this).data('file-id');
+        const fileType = $(this).data('file-type');
+        const listItem = $(this).closest('.list-group-item');
 
-               if (!empNumber || isNaN(empNumber)) {
-                   // Generate a new 4-digit number if no valid number exists
-                   empNumber = Math.floor(1000 + Math.random() * 9000);
-               }
-
-               empIdField.value = `${empType}${empNumber}`; // Update Employee ID
-           }
-
-           empTypeField.addEventListener('change', updateEmployeeID);
-       }
-
-       // File Upload Handling
-       function initializeFileUploads() {
-           document.querySelectorAll('.file-input-container').forEach(container => {
-               const input = container.querySelector('input[type="file"]');
-               const display = container.querySelector('.file-name-display');
-
-               input.addEventListener('change', function() {
-                   if (this.files && this.files[0]) {
-                       const file = this.files[0];
-                       display.textContent = file.name; // Update the display with the file name
-                       container.classList.add('has-file'); // Add a class to indicate a file is selected
-                   }
-               });
-
-               // Optional: Add drag-and-drop functionality
-               container.addEventListener('dragover', function(e) {
-                   e.preventDefault();
-                   container.classList.add('dragover');
-               });
-
-               container.addEventListener('dragleave', function() {
-                   container.classList.remove('dragover');
-               });
-
-               container.addEventListener('drop', function(e) {
-                   e.preventDefault();
-                   container.classList.remove('dragover');
-                   const file = e.dataTransfer.files[0];
-                   if (file) {
-                       input.files = e.dataTransfer.files; // Set the dropped file
-                       display.textContent = file.name; // Update the display with the file name
-                       container.classList.add('has-file');
-                   }
-               });
-           });
-       }
-
-       // Validate fields in a section
-       function validateSection(section) {
-           const fields = section.querySelectorAll('[required]');
-           return Array.from(fields).every(field => field.value.trim() !== '');
-       }
-
-       // Update the progress bar
-       function updateProgressBar() {
-           document.querySelectorAll('.form-section').forEach(section => {
-               const sectionName = section.getAttribute('data-section');
-               const progressStep = document.querySelector(`.progress-step[data-section="${sectionName}"]`);
-
-               if (validateSection(section)) {
-                   progressStep.classList.add('completed');
-               } else {
-                   progressStep.classList.remove('completed');
-               }
-           });
-       }
-
-       // Initialize event listeners for form fields
-       function initializeFieldListeners() {
-           document.querySelectorAll('input, select').forEach(field => {
-               field.addEventListener('input', updateProgressBar);
-               field.addEventListener('change', updateProgressBar);
-           });
-       }
-
-       // Initialize all components
-       function initializeAll() {
-           initializeSectionNavigation();
-           initializeCountryStateHandling();
-           initializeEmployeeIDHandling();
-           initializeFileUploads();
-           initializeFieldListeners(); // Add this line
-           updateProgressBar(); // Initial check
-       }
-
-       // Start initialization
-       initializeAll();
-   });
+        if (confirm('Are you sure you want to delete this file?')) {
+            $.ajax({
+                url: "{% url 'delete_file' %}",  // Update with your actual URL
+                method: 'POST',
+                data: {
+                    'file_id': fileId,
+                    'file_type': fileType,
+                    'csrfmiddlewaretoken': '{{ csrf_token }}'
+                },
+                success: function(response) {
+                    if (response.success) {
+                        listItem.remove();
+                    } else {
+                        alert('Failed to delete the file. Please try again.');
+                    }
+                },
+                error: function() {
+                    alert('Error occurred while deleting the file. Please try again.');
+                }
+            });
+        }
+    });
+    $('#employeeForm').on('submit', function() {
+    $(this).find('button[type="submit"]').prop('disabled', true);
+    });
+    });
 </script>
-{% endblock %}
+{% endblock content %}

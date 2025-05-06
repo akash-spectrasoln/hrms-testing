@@ -1,376 +1,320 @@
-
-
 {% extends 'partials/base.html' %}
 
-<!--<!DOCTYPE html>-->
-<!--<html lang="en">-->
-<!--<head>-->
-<!--    <meta charset="UTF-8">-->
-<!--    <meta name="viewport" content="width=device-width, initial-scale=1.0">-->
-<!--    <title>My Leave History</title>-->
-<!--    <style>-->
-<!--        body {-->
-<!--            font-family: Arial, sans-serif;-->
-<!--            background-color: #f4f4f9;-->
-<!--            color: #333;-->
-<!--        }-->
-
-<!--        h1 {-->
-<!--            text-align: center;-->
-<!--            margin-top: 20px;-->
-<!--        }-->
-
-<!--        table {-->
-<!--            width: 90%;-->
-<!--            margin: 20px auto;-->
-<!--            border-collapse: collapse;-->
-<!--        }-->
-
-<!--        th, td {-->
-<!--            padding: 10px;-->
-<!--            text-align: center;-->
-<!--            border: 1px solid #ccc;-->
-<!--        }-->
-
-<!--        th {-->
-<!--            background-color: #004080;-->
-<!--            color: #fff;-->
-<!--        }-->
-
-<!--        tr:nth-child(even) {-->
-<!--            background-color: #f2f2f2;-->
-<!--        }-->
-
-<!--        .status {-->
-<!--            font-weight: bold;-->
-<!--        }-->
-
-<!--        .pending {-->
-<!--            color: #ffa500; /* Orange for pending */-->
-<!--        }-->
-
-<!--        .accepted {-->
-<!--            color: #28a745; /* Green for accepted */-->
-<!--        }-->
-
-<!--        .rejected {-->
-<!--            color: #dc3545; /* Red for rejected */-->
-<!--        }-->
-<!--    </style>-->
-<!--</head>-->
-<!--<body>-->
-<!--    <h1>My Leave History</h1>-->
-<!--    <table>-->
-<!--        <thead>-->
-<!--            <tr>-->
-<!--                <th>Leave Type</th>-->
-<!--                <th>Start Date</th>-->
-<!--                <th>End Date</th>-->
-<!--                <th>Description</th>-->
-<!--                <th>Status</th>-->
-<!--            </tr>-->
-<!--        </thead>-->
-<!--        <tbody>-->
-<!--            {% for leave in leave_requests %}-->
-<!--            <tr>-->
-<!--                <td>{{leave.leave_type}}</td>-->
-<!--                <td>{{ leave.start_date }}</td>-->
-<!--                <td>{{ leave.end_date }}</td>-->
-<!--                <td>{{ leave.reason }}</td>-->
-<!--                <td class="status {% if leave.status == 'Pending' %}pending{% elif leave.status == 'Accepted' %}accepted{% elif leave.status == 'Rejected' %}rejected{% endif %}">-->
-<!--                    {{ leave.status }}-->
-<!--                </td>-->
-<!--            </tr>-->
-<!--            {% empty %}-->
-<!--            <tr>-->
-<!--                <td colspan="4">No leave requests found.</td>-->
-<!--            </tr>-->
-<!--            {% endfor %}-->
-<!--        </tbody>-->
-<!--    </table>-->
-<!--</body>-->
-<!--</html>-->
-
-
-
-
-
-
-
 {% block styles %}
-    <style>
-        .leave-history-content {
-            position: fixed;
-            top: 72px;
-            left: 250px;
-            right: 0;
-            bottom: 0;
-            overflow-y: auto;
-            background-color: #f4f4f9;
-            padding: 40px 20px;
-            z-index: 1;
-            display: flex;
-            justify-content: center;
-        }
+<style>
+    html, body {
+        overflow-x: hidden;
+        margin: 0;
+        height: 100%;
+    }
 
+    .container {
+        position: fixed;
+        top: 72px;
+        left: 250px;
+        right: 0;
+        bottom: 0;
+        overflow: hidden;
+        background-color: #f4f4f9;
+        padding: 40px 20px;
+        display: flex;
+        justify-content: center;
+    }
+
+    .content-wrapper {
+        width: 95%;
+        max-width: 1100px;
+        margin: 0 auto;
+    }
+
+    .page-title {
+        text-align: center;
+        margin-bottom: 25px;
+        color: #2c3e50;
+        font-size: 1.5rem;
+        font-weight: 600;
+    }
+    .status-pending {
+        color: #efac79;
+        font-weight: 600;
+    }
+    .status-approved {
+        color: #15803d;
+        font-weight: 600;
+    }
+    .status-rejected {
+        color: #dc2626;
+        font-weight: 600;
+    }
+    .tables-wrapper {
+        display: flex;
+        flex-direction: column;
+        gap: 30px;
+    }
+    .table-container {
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+    .table-title {
+        background-color: #3b82f6;
+        color: white;
+        padding: 12px 25px;
+        border-radius: 8px 8px 0 0;
+        font-size: 14px;
+        font-weight: 500;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+    .table-scroll {
+        overflow-y: auto;
+        max-height: 400px;
+        padding: 0 15px;
+        margin: 12px 0;
+    }
+    .table-scroll::-webkit-scrollbar {
+        width: 6px;
+    }
+    .table-scroll::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 4px;
+    }
+    .table-scroll::-webkit-scrollbar-thumb {
+        background: #c1c1c1;
+        border-radius: 4px;
+    }
+    .table-scroll::-webkit-scrollbar-thumb:hover {
+        background: #a8a8a8;
+    }
+
+    .table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0;
+    }
+
+    .table th {
+        background-color: #f8f9fa;
+        padding: 12px 25px;
+        text-align: left;
+        border-bottom: 2px solid #e2e8f0;
+        font-size: 14px;
+        font-weight: 500;
+        color: #2c3e50;
+        position: sticky;
+        top: 0;
+        z-index: 1;
+    }
+
+    .table td {
+        padding: 10px 25px;
+        border-bottom: 1px solid #e2e8f0;
+        font-size: 14px;
+        color: #2c3e50;
+    }
+
+    .table tr:last-child td {
+        border-bottom: none;
+    }
+
+    .table tr:nth-child(even) {
+        background-color: #f8f9fa;
+    }
+
+    .table tr:hover {
+        background-color: #f1f5f9;
+    }
+
+    .no-data {
+        text-align: center;
+        padding: 20px;
+        color: #64748b;
+        font-size: 14px;
+        font-style: italic;
+    }
+
+    .delete-button .trash-icon {
+        color: #dc2626;
+        transition: color 0.2s;
+        vertical-align: middle;
+    }
+    .delete-button:hover .trash-icon {
+        color: #b91c1c;
+    }
+
+    @media (max-width: 1200px) {
         .content-wrapper {
-            background-color: #ffffff;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-            padding: 25px;
-            width: 95%;
-            max-width: 1400px;
-            margin: 0 auto;
-            position: relative;
-            left: -60px;
-            height: calc(100vh - 160px);
-            display: flex;
-            flex-direction: column;
+            width: 90%;
         }
-
-        .page-header {
-            margin-bottom: 20px;
-            padding-bottom: 15px;
-            border-bottom: 2px solid #e6e6e6;
+    }
+    @media (max-width: 1024px) {
+        .container {
+            left: 200px;
         }
-
-        .page-title {
-            color: #2c3e50;
-            font-size: 1.5rem;
-            font-weight: 600;
-            text-align: center;
-            margin: 0;
+    }
+    @media (max-width: 768px) {
+        .container {
+            left: 0;
+            padding: 30px 15px;
         }
-
-        .table-container {
-            flex: 1;
-            overflow: auto;
-            margin-top: 20px;
-            border-radius: 4px;
-        }
-
-        /* Scrollbar styling */
-        .table-container::-webkit-scrollbar {
-            width: 6px;
-            height: 6px;
-        }
-
-        .table-container::-webkit-scrollbar-track {
-            background: #f1f1f1;
-            border-radius: 4px;
-        }
-
-        .table-container::-webkit-scrollbar-thumb {
-            background: #c1c1c1;
-            border-radius: 4px;
-        }
-
-        .table-container::-webkit-scrollbar-thumb:hover {
-            background: #a8a8a8;
-        }
-
-        table {
+        .content-wrapper {
             width: 100%;
-            border-collapse: separate;
-            border-spacing: 0;
-            background-color: #ffffff;
         }
-
-        thead {
-            position: sticky;
-            top: 0;
-            z-index: 2;
+        .tables-wrapper {
+            gap: 20px;
         }
-
-        th {
-            color: white;
-            padding: 12px 15px;
-            font-weight: 500;
-            background-color: #3b82f6;
-            text-align: center;
-            font-size: 14px;
-            white-space: nowrap;
-            border-bottom: 1px solid #e2e8f0;
+        .table th,
+        .table td {
+            padding: 10px 20px;
         }
-
-        td {
-            padding: 12px 15px;
-            border-bottom: 1px solid #eef2f6;
-            color: #2c3e50;
-            text-align: center;
-            font-size: 14px;
-            white-space: nowrap;
+    }
+    @media (max-width: 480px) {
+        .container {
+            padding: 20px 10px;
         }
-
-        /* Column widths */
-        th:nth-child(1), td:nth-child(1) { width: 13%; } /* Start Date */
-        th:nth-child(2), td:nth-child(2) { width: 13%; } /* End Date */
-        th:nth-child(3), td:nth-child(3) { width: 12%; } /* Leave Type */
-        th:nth-child(4), td:nth-child(4) { width: 15%; } /* Description */
-        th:nth-child(5), td:nth-child(5) { width: 10%; } /* Status */
-        th:nth-child(6), td:nth-child(6) { width: 8%; }  /* Leave Days */
-        th:nth-child(7), td:nth-child(7) { width: 15%; } /* Approved/Rejected By */
-
-        tbody tr:nth-child(even) {
-            background-color: #f8f9fa;
+        .page-title {
+            font-size: 1.3rem;
         }
-
-        tbody tr:hover {
-            background-color: #f8f9ff;
+        .table th,
+        .table td {
+            padding: 8px 15px;
         }
-
-        .status {
-            font-weight: 500;
-            padding: 6px 10px;
-            border-radius: 4px;
-            display: inline-block;
-            text-align: center;
-            width: fit-content;
-            margin: 0 auto;
-            font-size: 14px;
-            white-space: nowrap;
-        }
-
-        .pending {
-            color: #f59e0b;
-            background-color: #fef3c7;
-        }
-
-        .accepted,
-        .approved {
-            color: #10b981;
-            background-color: #d1fae5;
-        }
-
-        .rejected {
-            color: #ef4444;
-            background-color: #fee2e2;
-        }
-
-        .no-data {
-            text-align: center;
-            padding: 20px;
-            color: #64748b;
-            font-style: italic;
-        }
-
-        /* Responsive styles */
-        @media (max-width: 1200px) {
-            .content-wrapper {
-                width: 90%;
-                left: -40px;
-            }
-            table {
-                min-width: 1000px;
-            }
-        }
-
-        @media (max-width: 1024px) {
-            .leave-history-content {
-                left: 200px;
-            }
-            .content-wrapper {
-                width: 95%;
-                left: -30px;
-            }
-        }
-
-        @media (max-width: 768px) {
-            .leave-history-content {
-                left: 0;
-                padding: 30px 15px;
-            }
-            .content-wrapper {
-                width: 100%;
-                left: 0;
-                padding: 15px;
-            }
-            .table-container {
-                margin-top: 15px;
-            }
-            th, td {
-                padding: 10px 12px;
-                font-size: 14px;
-            }
-            .status {
-                padding: 4px 8px;
-                font-size: 14px;
-            }
-        }
-
-        @media (max-width: 480px) {
-            .leave-history-content {
-                padding: 20px 10px;
-            }
-            .content-wrapper {
-                padding: 10px;
-            }
-            .page-title {
-                font-size: 1.3rem;
-            }
-        }
-    </style>
+    }
+</style>
 {% endblock %}
 
 {% block content %}
-    <div class="leave-history-content">
-        <div class="content-wrapper">
-            <div class="page-header">
-                <h1 class="page-title">My Leave History</h1>
+<div class="container">
+    <div class="content-wrapper">
+        <h2 class="page-title">My Leave History</h2>
+        <div class="tables-wrapper">
+
+            <!-- Leave Summary Table -->
+            <div class="table-container">
+                <div class="table-title">Leave Summary</div>
+                <div class="table-scroll">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Leave Type</th>
+                                <th>Validity</th>
+                                <th>Available</th>
+                                <th>Used</th>
+                                <th>Planned</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% if leave_summary %}
+                                {% for summary in leave_summary %}
+                                <tr>
+                                    <td>{{ summary.leave_type }}</td>
+                                    <td>{{ summary.validity }}</td>
+                                    <td>{{ summary.available }}</td>
+                                    <td>{{ summary.used }}</td>
+                                    <td>{{ summary.planned }}</td>
+                                </tr>
+                                {% endfor %}
+                            {% else %}
+                                <tr>
+                                    <td colspan="5" class="no-data">No leave summaries available.</td>
+                                </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
             </div>
 
+            <!-- All Leave Requests Table WITH Action column for Cancel/Delete and filtering -->
             <div class="table-container">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Start Date</th>
-                            <th>End Date</th>
-                            <th>Leave Type</th>
-                            <th>Description</th>
-                            <th>Status</th>
-                            <th>Leave Days</th>
-                            <th>Approved/Rejected By</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for leave in leave_requests %}
-                        <tr>
-                            <td>{{ leave.start_date }}</td>
-                            <td>{{ leave.end_date }}</td>
-                            <td>{{ leave.leave_type }}</td>
-                            <td>{{ leave.reason }}</td>
-                            <td>
-                                <span class="status {% if leave.status == 'Pending' %}pending{% elif leave.status == 'Accepted' or leave.status == 'Approved' %}accepted{% elif leave.status == 'Rejected' %}rejected{% endif %}">
-                                    {{ leave.status }}
-                                </span>
-                            </td>
-                            <td>{{ leave.leave_days }}</td>
-                            <td>
-                                {% if leave.status != 'Pending' %}
-                                    {% if leave.approved_by %}
-                                        {% if leave.approved_by.is_superuser %}
-                                            Admin
-                                        {% else %}
-                                            {{ leave.employee_master.employee_manager.emp_fname }}
-                                            {{ leave.employee_master.employee_manager.emp_lname }}
-                                            ({{ leave.employee_master.employee_manager.emp_id }})
-                                        {% endif %}
-                                    {% else %}
-                                        N/A
-                                    {% endif %}
-                                {% else %}
-                                    &nbsp;
-                                {% endif %}
-                            </td>
-                        </tr>
-                        {% empty %}
-                        <tr>
-                            <td colspan="7" class="no-data">No leave requests found.</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+                <div class="table-title">
+                    <span>All Leave Requests</span>
+                    <form method="get" style="margin-bottom: 0;">
+                        <select name="status" onchange="this.form.submit()" style="padding:3px 8px; border-radius:4px; border:1px solid #d1d5db;">
+                            <option value="" {% if not request.GET.status %}selected{% endif %}>All</option>
+                            <option value="pending" {% if request.GET.status == 'pending' %}selected{% endif %}>Pending</option>
+                            <option value="upcoming" {% if request.GET.status == 'upcoming' %}selected{% endif %}>Upcoming</option>
+                            <option value="accepted" {% if request.GET.status == 'accepted' %}selected{% endif %}>Accepted</option>
+                            <option value="rejected" {% if request.GET.status == 'rejected' %}selected{% endif %}>Rejected</option>
+                        </select>
+                    </form>
+                </div>
+                <div class="table-scroll">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Start Date</th>
+                                <th>End Date</th>
+                                <th>Leave Type</th>
+                                <th>Description</th>
+                                <th>Status</th>
+                                <th>Leave Days</th>
+                                <th>Approved/Rejected By</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% if leave_requests %}
+                                {% for leave in leave_requests %}
+                                    <tr>
+                                        <td>{{ leave.start_date }}</td>
+                                        <td>{{ leave.end_date }}</td>
+                                        <td>{{ leave.leave_type }}</td>
+                                        <td>{{ leave.reason }}</td>
+                                        <td>
+                                            <span class="
+                                                {% if leave.is_pending %}status-pending
+                                                {% elif leave.is_approved %}status-approved
+                                                {% elif leave.is_rejected %}status-rejected
+                                                {% endif %}
+                                            ">
+                                                {{ leave.status }}
+                                            </span>
+                                        </td>
+                                        <td>{{ leave.leave_days }}</td>
+                                        <td>
+                                            {% if not leave.is_pending %}
+                                                {% if leave.approved_by %}
+                                                    {{ leave.approved_by.get_full_name|default:leave.approved_by.username }}
+                                                {% else %}
+                                                    N/A
+                                                {% endif %}
+                                            {% else %}
+                                                &mdash;
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if leave.is_pending or leave.is_approved and leave.start_date >= today %}
+                                                <form method="post" action="{% url 'delete_leave' leave.id %}" style="display:inline">
+                                                    {% csrf_token %}
+                                                    <button type="submit" class="delete-button"
+                                                            title="Delete"
+                                                            onclick="return confirm('Are you sure you want to cancel this leave request?');"
+                                                            style="background: none; border: none; padding: 0; cursor: pointer;">
+                                                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" class="trash-icon">
+                                                            <path stroke-linecap="round" stroke-linejoin="round"
+                                                                d="M6 19a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V7H6zm3-3v-6m4 6v-6M9 7V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v3"></path>
+                                                        </svg>
+                                                    </button>
+                                                </form>
+                                            {% else %}
+                                                <span style="color:#bdb4b4;">No Action</span>
+                                                
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            {% else %}
+                                <tr>
+                                    <td colspan="8" class="no-data">No leave requests found.</td>
+                                </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
             </div>
+
         </div>
     </div>
+</div>
 {% endblock %}
