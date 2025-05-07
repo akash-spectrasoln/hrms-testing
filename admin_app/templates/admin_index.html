@@ -1,276 +1,177 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Admin Portal{% endblock %}</title>
+{% extends 'admin_partials/admin_base.html' %}
 
-    <!-- Base CSS -->
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+{% block title %}
+Admin Portal
+{% endblock %}
+
+{% block styles %}
+<style>
+    .container {
+        position: fixed;
+        top: 72px;
+        left: 250px;
+        right: 0;
+        bottom: 0;
+        overflow-y: auto;
+        background-color: #f4f4f9;
+        padding: 40px 20px;
+        z-index: 1;
+        display: flex;
+        justify-content: center;
+    }
+
+    .content-wrapper {
+        width: 95%;
+        max-width: 1100px;
+        margin: 0 auto;
+        position: relative;
+        left: -60px;
+    }
+
+    .page-title {
+        text-align: center;
+        margin-bottom: 25px;
+        color: #2c3e50;
+        font-size: 1.5rem;
+        font-weight: 600;
+    }
+
+    .card-wrapper {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 20px;
+        padding: 20px;
+    }
+
+    .card {
+        display: block;
+        width: 150px;
+        height: 150px;
+        background: #ffffff;
+        border-radius: 8px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        text-decoration: none;
+        color: inherit;
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+        color: #3b82f6;
+    }
+
+    .card-content {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 100%;
+        padding: 20px;
+        text-align: center;
+    }
+
+    .card-icon {
+        font-size: 2rem;
+        margin-bottom: 10px;
+        color: #3b82f6;
+    }
+
+    .card-content h3 {
+        margin: 0;
+        font-size: 1rem;
+        color: #2c3e50;
+    }
+
+    @media (max-width: 1200px) {
+        .content-wrapper {
+            width: 90%;
+            left: -40px;
         }
+    }
 
-        body {
-            background-color: #f4f4f5;
-            color: #27272a;
+    @media (max-width: 1024px) {
+        .container {
+            left: 200px;
         }
-
-        /* Navbar Styles */
-        .navbar {
-            background-color: #ffffff;
-            padding: 1rem;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            position: fixed;
-            width: 100%;
-            top: 0;
-            z-index: 1000;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        .content-wrapper {
+            width: 95%;
+            left: -30px;
         }
+    }
 
-        .logo {
-            color: #3b82f6;
-            font-size: 1.5rem;
-            font-weight: bold;
-        }
-
-        .profile-section {
-            position: relative;
-        }
-
-        .profile-button {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            background-color: #3b82f6;
-            border: none;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: bold;
-            color: #ffffff;
-            transition: background-color 0.3s;
-        }
-
-        .profile-button:hover {
-            background-color: #2563eb;
-        }
-
-        .profile-dropdown {
-            position: absolute;
-            right: 0;
-            top: 50px;
-            background-color: #ffffff;
-            border-radius: 8px;
-            width: 200px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            display: none;
-        }
-
-        .profile-dropdown.active {
-            display: block;
-        }
-
-        .profile-info {
-            padding: 1rem;
-            border-bottom: 1px solid #e4e4e7;
-        }
-
-        .profile-info h3 {
-            color: #3b82f6;
-            margin-bottom: 0.5rem;
-        }
-
-        .profile-info p {
-            color: #71717a;
-            font-size: 0.9rem;
-        }
-
-        .dropdown-options a {
-            display: block;
-            padding: 0.75rem 1rem;
-            color: #27272a;
-            text-decoration: none;
-            transition: background-color 0.3s;
-        }
-
-        .dropdown-options a:hover {
-            background-color: #f4f4f5;
-        }
-
-        /* Sidebar Styles */
-        .sidebar {
-            position: fixed;
+    @media (max-width: 768px) {
+        .container {
             left: 0;
-            top: 72px;
-            height: calc(100vh - 72px);
-            width: 250px;
-            background-color: #ffffff;
-            padding: 1.5rem 1rem;
-            box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+            padding: 30px 15px;
         }
-
-        .sidebar-menu {
-            list-style: none;
+        .content-wrapper {
+            width: 100%;
+            left: 0;
         }
-
-        .menu-item {
-            margin-bottom: 0.75rem;
+        .card {
+            width: 130px;
+            height: 130px;
         }
+    }
 
-        .menu-item a {
-            display: flex;
-            align-items: center;
-            padding: 0.75rem 1rem;
-            color: #27272a;
-            text-decoration: none;
-            border-radius: 6px;
-            transition: all 0.3s ease;
+    @media (max-width: 480px) {
+        .container {
+            padding: 20px 10px;
         }
-
-        .menu-item a:hover {
-            background-color: #e6f0ff;
-            color: #3b82f6;
+        .page-title {
+            font-size: 1.3rem;
         }
-
-        .menu-item.active a {
-            background-color: #e6f0ff;
-            color: #3b82f6;
-            border-left: 3px solid #3b82f6;
-            padding-left: calc(1rem - 3px);
+        .card {
+            width: 100px;
+            height: 100px;
         }
+    }
+</style>
+{% endblock styles %}
 
-        .menu-icon {
-            margin-right: 0.75rem;
-            width: 20px;
-            height: 20px;
-        }
-
-        .menu-item a:hover .menu-icon {
-            transform: scale(1.1);
-            transition: transform 0.3s ease;
-        }
-
-        /* Main Content Area */
-        .main-content {
-            margin-left: 250px;
-            margin-top: 72px;
-            padding: 2rem;
-            background-color: #ffffff;
-        }
-
-        /* Responsive Design */
-        @media (max-width: 768px) {
-            .sidebar {
-                transform: translateX(-100%);
-                transition: transform 0.3s ease-in-out;
-            }
-
-            .sidebar.active {
-                transform: translateX(0);
-            }
-
-            .main-content {
-                margin-left: 0;
-            }
-        }
-    </style>
-
-    <!-- Additional CSS block for child templates -->
-    {% block styles %}
-    {% endblock %}
-</head>
-<body>
-    <!-- Navbar -->
-    <nav class="navbar">
-        <div class="logo">Admin Portal</div>
-        <div class="profile-section">
-            <button class="profile-button" onclick="toggleProfile()">AD</button>
-            <div class="profile-dropdown" id="profileDropdown">
-                <div class="profile-info">
-                    <h3>Administrator</h3>
-                    <p>Admin Dashboard</p>
+{% block content %}
+<div class="container">
+    <div class="content-wrapper">
+        <h2 class="page-title">Admin Dashboard</h2>
+        <div class="card-wrapper">
+            <!-- Add Employee Card -->
+            <a href="{% url 'add_employee' %}" class="card">
+                <div class="card-content">
+                    <span class="card-icon">👤</span>
+                    <h3>Add Employee</h3>
                 </div>
-                <div class="dropdown-options">
-                    <a href="">Change Password</a>
-                    <a href="{% url 'admin_logout' %}">Logout</a>
+            </a>
+            <!-- Download Employees Card -->
+            <a href="{% url 'export_employees' %}" class="card">
+                <div class="card-content">
+                    <span class="card-icon">⬇️</span>
+                    <h3>Download Employees</h3>
                 </div>
-            </div>
+            </a>
+            <!-- View Employees Card -->
+            <a href="{% url 'employee_list' %}" class="card">
+                <div class="card-content">
+                    <span class="card-icon">👥</span>
+                    <h3>View Employees</h3>
+                </div>
+            </a>
+            <!-- Deleted Employees Card -->
+            <a href="{% url 'deleted_employees' %}" class="card">
+                <div class="card-content">
+                    <span class="card-icon">🗑️</span>
+                    <h3>Deleted Employees</h3>
+                </div>
+            </a>
+            <!-- Manage Leave Requests Card -->
+            <a href="{% url 'leave_request_display' %}" class="card">
+                <div class="card-content">
+                    <span class="card-icon">📋</span>
+                    <h3>Manage Leave Requests</h3>
+                </div>
+            </a>
         </div>
-    </nav>
-
-    <!-- Sidebar -->
-    <div class="sidebar">
-        <ul class="sidebar-menu">
-            <li class="menu-item active">
-                <a href="{% url 'admin_index' %}">
-                    <span class="menu-icon">🏠</span>
-                    Home
-                </a>
-            </li>
-            <li class="menu-item">
-                <a href="{% url 'add_employee' %}">
-                    <span class="menu-icon">👤</span>
-                    Add Employee
-                </a>
-            </li>
-            <li class="menu-item">
-                <a href="{% url 'employee_list' %}">
-                    <span class="menu-icon">👥</span>
-                    View Employees
-                </a>
-            </li>
-            <li class="menu-item">
-                <a href="{% url 'deleted_employees' %}">
-                    <span class="menu-icon">🗑️</span>
-                    Deleted Employees
-                </a>
-            </li>
-            <li class="menu-item">
-                <a href="{% url 'export_employees' %}">
-                    <span class="menu-icon">📥</span>
-                    Download Employees
-                </a>
-            </li>
-            <li class="menu-item">
-                <a href="{% url 'leave_request_display' %}">
-                    <span class="menu-icon">📋</span>
-                    Manage Leave Requests
-                </a>
-            </li>
-        </ul>
     </div>
-
-    <!-- Main Content Area -->
-    <div class="main-content">
-        {% block content %}
-        {% endblock content %}
-    </div>
-
-    <!-- Base JavaScript -->
-    <script>
-        function toggleProfile() {
-            const dropdown = document.getElementById('profileDropdown');
-            dropdown.classList.toggle('active');
-        }
-
-        document.addEventListener('click', function(event) {
-            const dropdown = document.getElementById('profileDropdown');
-            const profileButton = event.target.closest('.profile-button');
-            if (!profileButton && dropdown.classList.contains('active')) {
-                dropdown.classList.remove('active');
-            }
-        });
-    </script>
-
-    <!-- Additional JavaScript block for child templates -->
-    {% block scripts %}
-    {% endblock %}
-</body>
-</html>
+</div>
+{% endblock content %}

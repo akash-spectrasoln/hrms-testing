@@ -171,8 +171,7 @@ def export_employees_to_excel(request):
             employee.emergency_contact_email,
             employee.emergency_contact_relation,
             float(employee.base_salary),
-            employee.resume.url if employee.resume else '',
-            employee.certificates.url if employee.certificates else '',
+            
             created_on,
             modified_on,
             employee.is_deleted,
