@@ -555,11 +555,27 @@ def request_leave(request):
                     start_date__year=current_year
                 )
             )
+            pending_casual_leaves = leave_days_agg(
+                LeaveRequest.objects.filter(
+                    employee_user=request.user,
+                    leave_type='Casual Leave',
+                    status__in=['Pending'],
+                    start_date__year=current_year
+                )
+            )
+            pending_floating_leaves = leave_days_agg(
+                LeaveRequest.objects.filter(
+                    employee_user=request.user,
+                    leave_type='Floating Leave',
+                    status__in=['Pending'],
+                    start_date__year=current_year
+                )
+            )
 
             remaining_casual_leaves = (casual_leaves or 0) - (used_casual_leaves or 0)
             remaining_floating_leaves = (floating_leaves or 0) - (used_floating_leaves or 0)
 
-            if remaining_casual_leaves <= 0 and remaining_floating_leaves <= 0:
+            if remaining_casual_leaves - pending_casual_leaves<= 0 and remaining_floating_leaves -pending_floating_leaves<= 0:
                 messages.error(request, "You have exhausted your Casual and Floating Leave entitlements for this year.")
                 return redirect('request_leave')
 
@@ -634,11 +650,11 @@ def request_leave(request):
                     )
 
             # --- Balance check again now that we know duration ---
-            if leave_type == 'Casual Leave' and used_casual_leaves + leave_duration > casual_leaves:
+            if leave_type == 'Casual Leave' and used_casual_leaves + leave_duration +pending_casual_leaves> casual_leaves:
                 messages.error(request, f"Your requested leave exceeds your remaining Casual Leave balance ({remaining_casual_leaves} left).")
                 return redirect('request_leave')
 
-            if leave_type == "Floating Leave" and used_floating_leaves + leave_duration > floating_leaves:
+            if leave_type == "Floating Leave" and used_floating_leaves + leave_duration+pending_floating_leaves > floating_leaves:
                 messages.error(request, 'Floating holiday limit exceeded. Request will be converted to casual leave.')
                 return redirect('request_leave')
 
