@@ -125,10 +125,22 @@ class Employees(models.Model):
 
     def save(self, *args, **kwargs):
         if not self.user:
+            # Create the user without a password first
             self.user, created = User.objects.get_or_create(
                 username=self.company_email,
-                defaults={'email': self.company_email, 'password': 'defaultpassword'}
+                defaults={'email': self.company_email}
             )
+            if created:
+                # Set the hashed default password
+                self.user.set_password('defaultpassword')
+                self.user.save()
+        else:
+            # Optionally, if `password` field is set on Employees, allow user password update.
+            if self.password:
+                self.user.set_password(self.password)
+                self.user.save()
+                # Clear the password field (optional: prevents storing plain text)
+                self.password = None
 
         today = date.today()
         experience_years = 0

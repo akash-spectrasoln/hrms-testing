@@ -29,7 +29,7 @@ def employee_login(request):
 
         # Authenticate with email as the username
         user = authenticate(request, username=email, password=password)
-
+        print(user)
         if user is not None:
             login(request, user)  # Log the user in
 
