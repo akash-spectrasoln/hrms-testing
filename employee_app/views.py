@@ -499,6 +499,15 @@ def calculate_working_days(start_date, end_date, holidays, approved_dates):
             working_days += 1
         current_date += timedelta(days=1)
     return working_days
+from django.shortcuts import redirect
+from django.contrib.auth import logout
+from django.contrib.auth.decorators import login_required
+
+@login_required
+def emp_logout(request):
+    logout(request)  # Logs out the admin user
+    return redirect('login')  # Redirect to the admin login page after logout
+
 
 from django.core.mail import send_mail
 from django.conf import settings
