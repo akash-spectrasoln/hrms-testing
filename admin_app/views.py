@@ -266,7 +266,8 @@ def list_employees(request):
             'employee_status': employee.employee_status,
             'manager_display': manager_display,
             'resignation_tooltip': resignation_tooltip,
-            'resignation_date': employee.resignation_date
+            'resignation_date': employee.resignation_date,
+            'today': date.today(),
         })
 
     context = {
@@ -282,7 +283,40 @@ def list_employees(request):
 
 
 
+from django.shortcuts import redirect, get_object_or_404
+from django.contrib import messages
+from datetime import date
+from .models import LeaveRequest, Employees
 
+def delete_leave_request(request, leave_id):
+    leave = get_object_or_404(LeaveRequest, id=leave_id)
+    
+    if leave.status == "Accepted" and leave.start_date > date.today():
+        # Adjust employee's used leaves BEFORE deleting
+        employee = leave.employee_user
+        leave_days = leave.leave_days  # Make sure this field is in your model
+        
+        try:
+            emp_obj = Employees.objects.get(company_email=employee.email)
+        except Employees.DoesNotExist:
+            emp_obj = None
+        
+        # Update logic depending on leave type
+        if emp_obj:
+            if leave.leave_type == "Casual Leave":
+                emp_obj.used_leaves = max(emp_obj.used_leaves - leave_days, 0)
+                emp_obj.save()
+            elif leave.leave_type == "Floating Leave":
+                emp_obj.floating_holidays_used = max(emp_obj.floating_holidays_used  - leave_days, 0)
+                emp_obj.save()
+            # ...add more leave types if you track others
+
+        leave.delete()
+        messages.success(request, "Upcoming accepted leave successfully deleted.")
+    else:
+        messages.error(request, "Only future, accepted leaves can be deleted.")
+
+    return redirect("admin_leave_requests")
 
 
 

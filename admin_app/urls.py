@@ -20,7 +20,7 @@ path('deleted_employees/', DeletedEmployeeListView.as_view(), name='deleted_empl
 path('leaverequestdisplay/',admin_leave_requests,name='leave_request_display'),
 path('accept_leave_request/<int:leave_request_id>/', accept_leave_request, name='accept_leave_request'),
 path('reject_leave_request/<int:leave_request_id>/', reject_leave_request, name='reject_leave_request'),
-
+path('delete-leave/<int:leave_id>/', delete_leave_request, name='delete_leave_request'),
 # path('employee/update/<int:pk>/', EmployeeUpdateView.as_view(), name='employee_update'),
 path('employee/<int:pk>/edit/', EmployeeUpdateView.as_view(), name='employee_edit'),
 path('ajax/load-states/', load_states, name='load_states'),  # This is for AJAX dynamic state loading

@@ -513,6 +513,8 @@ def request_leave(request):
         if form.is_valid():
             leave_request = form.save(commit=False)
             leave_request.employee_user = request.user
+            employee=Employees.objects.get(user_id=request.user)
+            leave_request.employee_master=employee
 
             day_type = request.POST.get('day_type')
             if day_type == 'one':
