@@ -1145,7 +1145,7 @@ def admin_login(request):
 
         if user is not None and (user.is_staff or user.is_superuser):
             login(request, user)
-            return redirect('adminbase')  # Redirect to admin dashboard
+            return redirect('admin_index')  # Redirect to admin dashboard
         else:
             messages.error(request, 'Invalid credentials or insufficient permissions')
 

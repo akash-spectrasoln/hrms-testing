@@ -184,7 +184,7 @@ EMAIL_USE_TLS = True
 EMAIL_HOST_USER = 'akashaku32@gmail.com'
 EMAIL_HOST_PASSWORD = 'rkiw lnew skny akhu'
 
-
+# phxg eqbz boqr mhhw
 
 # EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 

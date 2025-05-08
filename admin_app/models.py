@@ -114,7 +114,7 @@ class Employees(models.Model):
 
     password = models.CharField(max_length=128, null=True, blank=True)
     resignation_date = models.DateField(null=True, blank=True)
-    incentive = models.DecimalField(max_digits=10, decimal_places=2, default=0.0)
+    incentive = models.DecimalField(max_digits=10, decimal_places=2, default=0.0,null=True)
 
     def available_leaves(self):
         return self.total_leaves - self.used_leaves
