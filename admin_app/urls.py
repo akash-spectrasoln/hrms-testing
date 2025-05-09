@@ -39,26 +39,35 @@ path('admin_dashboard/', admin_dashboard, name='admin_dashboard'),
 path('change_password/', change_password, name='admin_change_password'),
 # Forgot Password - Enter Email
 
+path('admin_password_reset/',
+     auth_views.PasswordResetView.as_view(
+         template_name='admin_password_reset.html',
+         email_template_name='admin_password_reset_email.txt',
+         html_email_template_name='admin_password_reset_email.html',
+         subject_template_name='admin_password_reset_subject.txt',
+         success_url=reverse_lazy('admin_password_reset_done')    # <-- Add this!
+     ), name='admin_password_reset'),
 
-path('admin_password_reset/', auth_views.PasswordResetView.as_view(
-    template_name='admin_password_reset.html',
-    email_template_name='admin_password_reset_email.txt',       # plain text version
-    html_email_template_name='admin_password_reset_email.html', # HTML version
-    subject_template_name='admin_password_reset_subject.txt',
-), name='admin_password_reset'),
-# Password Reset Email Sent Confirmation
 path('admin_password_reset_done/',
-         auth_views.PasswordResetDoneView.as_view(template_name='admin_password_reset_done.html'),
-         name='admin_password_reset_done'),
-# Link Clicked - Enter New Password
-path('admin_password_reset_confirm/<uidb64>/<token>/',
-         auth_views.PasswordResetConfirmView.as_view(template_name='admin_password_reset_confirm.html'),
-         name='admin_password_reset_confirm'),
+     auth_views.PasswordResetDoneView.as_view(
+         template_name='admin_password_reset_done.html',
+         extra_context={'login_url': reverse_lazy('admin_login')}
+     ),
+     name='admin_password_reset_done'),
 
-# Password Successfully Changed
+path('admin_password_reset_confirm/<uidb64>/<token>/',
+     auth_views.PasswordResetConfirmView.as_view(
+         template_name='admin_password_reset_confirm.html',
+         success_url=reverse_lazy('admin_password_reset_complete')  # <-- Add this!
+     ),
+     name='admin_password_reset_confirm'),
+
 path('admin_password_reset_complete/',
-         auth_views.PasswordResetCompleteView.as_view(template_name='admin_password_reset_complete.html'),
-         name='admin_password_reset_complete'),
+     auth_views.PasswordResetCompleteView.as_view(
+         template_name='admin_password_reset_complete.html',
+         extra_context={'login_url': reverse_lazy('admin_login')}
+     ),
+     name='admin_password_reset_complete'),
 
 # path("leave-requests/", admin_leave_requests, name="admin_leave_requests"),
 path("filter-leave-requests/", filter_leave_requests, name="filter_leave_requests"),

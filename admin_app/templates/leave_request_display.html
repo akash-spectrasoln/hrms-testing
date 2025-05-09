@@ -276,8 +276,8 @@ body {
                                     </span>
                                 </td>
                                 <td>
-                                    {% if data.leave_request.status == "Pending" %}
-                                        <div class="action-buttons">
+                                    <div class="action-buttons">
+                                        {% if data.leave_request.status == "Pending" %}
                                             <form method="post" action="{% url 'accept_leave_request' data.leave_request.id %}">
                                                 {% csrf_token %}
                                                 <button type="submit" class="btn btn-sm btn-custom-accept">Accept</button>
@@ -286,15 +286,12 @@ body {
                                                 {% csrf_token %}
                                                 <button type="submit" class="btn btn-sm btn-custom-reject">Reject</button>
                                             </form>
-                                        </div>
-                                    {% elif data.leave_request.status == "Accepted" and data.leave_request.start_date > today %}
+                                        {% endif %}
                                         <form method="post" action="{% url 'delete_leave_request' data.leave_request.id %}" style="display:inline;">
                                             {% csrf_token %}
-                                            <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Are you sure you want to delete this upcoming leave?');">Delete</button>
+                                            <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Are you sure you want to delete this leave request?');">Delete</button>
                                         </form>
-                                    {% else %}
-                                        <span class="text-muted">No Actions</span>
-                                    {% endif %}
+                                    </div>
                                 </td>
                             </tr>
                             {% empty %}

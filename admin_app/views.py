@@ -283,40 +283,37 @@ def list_employees(request):
 
 
 
-from django.shortcuts import redirect, get_object_or_404
+
+from django.shortcuts import get_object_or_404, redirect
 from django.contrib import messages
 from datetime import date
-from .models import LeaveRequest, Employees
+from .models import LeaveRequest, Employees  # Adjust this import if your app name/model name differs
 
 def delete_leave_request(request, leave_id):
     leave = get_object_or_404(LeaveRequest, id=leave_id)
-    
-    if leave.status == "Accepted" and leave.start_date > date.today():
-        # Adjust employee's used leaves BEFORE deleting
-        employee = leave.employee_user
-        leave_days = leave.leave_days  # Make sure this field is in your model
-        
-        try:
-            emp_obj = Employees.objects.get(company_email=employee.email)
-        except Employees.DoesNotExist:
-            emp_obj = None
-        
-        # Update logic depending on leave type
-        if emp_obj:
-            if leave.leave_type == "Casual Leave":
-                emp_obj.used_leaves = max(emp_obj.used_leaves - leave_days, 0)
-                emp_obj.save()
-            elif leave.leave_type == "Floating Leave":
-                emp_obj.floating_holidays_used = max(emp_obj.floating_holidays_used  - leave_days, 0)
-                emp_obj.save()
-            # ...add more leave types if you track others
+    employee = leave.employee_user
+    leave_days = leave.leave_days  # Ensure this exists in your model
 
-        leave.delete()
-        messages.success(request, "Upcoming accepted leave successfully deleted.")
-    else:
-        messages.error(request, "Only future, accepted leaves can be deleted.")
+    # Try to adjust leave counts regardless of status
+    try:
+        emp_obj = Employees.objects.get(company_email=employee.email)
+    except Employees.DoesNotExist:
+        emp_obj = None
 
-    return redirect("admin_leave_requests")
+    if emp_obj:
+        # Adjust balances only if it makes sense for the leave type
+        if leave.leave_type == "Casual Leave":
+            emp_obj.used_leaves = max(emp_obj.used_leaves - leave_days, 0)
+            emp_obj.save()
+        elif leave.leave_type == "Floating Leave":
+            emp_obj.floating_holidays_used = max(emp_obj.floating_holidays_used - leave_days, 0)
+            emp_obj.save()
+        # ...add other leave types if needed
+
+    leave.delete()
+    messages.success(request, "Leave request deleted successfully.")
+
+    return redirect("leave_request_display")
 
 
 
