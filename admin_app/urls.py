@@ -38,21 +38,27 @@ path('admin_dashboard/', admin_dashboard, name='admin_dashboard'),
 # path('create_admin/', create_admin_user, name='create_admin_user'),  # Add this line
 path('change_password/', change_password, name='admin_change_password'),
 # Forgot Password - Enter Email
-path('admin_password_reset/', auth_views.PasswordResetView.as_view(template_name='admin_password_reset.html'),
-         name='admin_password_reset'),
+
+
+path('admin_password_reset/', auth_views.PasswordResetView.as_view(
+    template_name='admin_password_reset.html',
+    email_template_name='admin_password_reset_email.txt',       # plain text version
+    html_email_template_name='admin_password_reset_email.html', # HTML version
+    subject_template_name='admin_password_reset_subject.txt',
+), name='admin_password_reset'),
 # Password Reset Email Sent Confirmation
 path('admin_password_reset_done/',
-         auth_views.PasswordResetDoneView.as_view(template_name='adminpage_password_reset_done.html'),
+         auth_views.PasswordResetDoneView.as_view(template_name='admin_password_reset_done.html'),
          name='admin_password_reset_done'),
 # Link Clicked - Enter New Password
 path('admin_password_reset_confirm/<uidb64>/<token>/',
-         auth_views.PasswordResetConfirmView.as_view(template_name='adminpage_password_reset_confirm.html'),
-         name='adminpage_password_reset_confirm'),
+         auth_views.PasswordResetConfirmView.as_view(template_name='admin_password_reset_confirm.html'),
+         name='admin_password_reset_confirm'),
 
 # Password Successfully Changed
 path('admin_password_reset_complete/',
-         auth_views.PasswordResetCompleteView.as_view(template_name='adminpage_password_reset_complete.html'),
-         name='adminpage_password_reset_complete'),
+         auth_views.PasswordResetCompleteView.as_view(template_name='admin_password_reset_complete.html'),
+         name='admin_password_reset_complete'),
 
 # path("leave-requests/", admin_leave_requests, name="admin_leave_requests"),
 path("filter-leave-requests/", filter_leave_requests, name="filter_leave_requests"),

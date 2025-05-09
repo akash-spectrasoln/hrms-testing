@@ -892,7 +892,6 @@ from django.shortcuts import redirect
 from django.contrib.auth import logout
 from django.contrib.auth.decorators import login_required
 
-@login_required
 def admin_logout(request):
     logout(request)  # Logs out the admin user
     return redirect('admin_login')  # Redirect to the admin login page after logout

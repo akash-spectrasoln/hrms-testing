@@ -15,17 +15,24 @@ path('profile/',employee_dashboard, name='profile'),
 path('update_employee_passwords/', update_employee_passwords, name='update_employee_passwords'),
 path('edit_employee/',edit_employee_profile,name='edit_employee'),
 # path('delete_employee/',delete_employee_profile,name='delete_employee')
-path('password_reset/', auth_views.PasswordResetView.as_view(
-template_name='password_reset_form.html'
-), name='password_reset'),
+path(
+        'password_reset/',
+        auth_views.PasswordResetView.as_view(
+            template_name='password_reset_form.html',                           # form for entering email
+            email_template_name='employee_password_reset_email.txt',            # plain text email fallback
+            html_email_template_name='password_reset_email.html',      # your beautiful HTML email
+            subject_template_name='employee_password_reset_subject.txt',        # subject template
+        ),
+        name='password_reset'
+    ),
 path('password_reset_done/', auth_views.PasswordResetDoneView.as_view(
-template_name='admin_password_reset_done.html'
+template_name='password_reset_done.html'
 ), name='password_reset_done'),
 path('reset/<uidb64>/<token>/', auth_views.PasswordResetConfirmView.as_view(
-template_name='admin_password_reset_confirm.html'
+template_name='password_reset_confirm.html'
 ), name='password_reset_confirm'),
 path('reset/done/', auth_views.PasswordResetCompleteView.as_view(
-template_name='admin_password_reset_complete.html'
+template_name='password_reset_complete.html'
 ), name='password_reset_complete'),
 path('logout/', employee_logout, name='logout'),
 path('change_password/', change_password, name='change_password'),

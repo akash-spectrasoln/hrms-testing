@@ -445,9 +445,9 @@ def change_password(request):
     return render(request, 'change_password.html', {
         'form': form,
         'is_manager': is_manager,
-        'emp_id': employee.emp_id,  # Employee ID
-        'emp_fname': employee.emp_fname,  # Employee first name
-        'emp_lname': employee.emp_lname,  # Employee last name
+        'emp_id': employee.employee_id,  # Employee ID
+        'emp_fname': employee.first_name,  # Employee first name
+        'emp_lname': employee.last_name,  # Employee last name
         'emp_designation': employee.designation,  # Employee designation
         'total_used_leaves': total_used_leaves  # Fetching from Employees model
     })
@@ -503,7 +503,7 @@ from django.shortcuts import redirect
 from django.contrib.auth import logout
 from django.contrib.auth.decorators import login_required
 
-@login_required
+
 def emp_logout(request):
     logout(request)  # Logs out the admin user
     return redirect('login')  # Redirect to the admin login page after logout
