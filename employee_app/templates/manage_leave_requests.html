@@ -2,11 +2,43 @@
 
 {% block styles %}
 <style>
+    body, html {
+        height: 100%;
+        margin: 0;
+        padding: 0;
+        background: #f4f4f9;
+    }
+
+    /* FLEX LAYOUT for sidebar and main content */
+    #layout-wrapper {
+        display: flex;
+        flex-direction: row;
+        min-height: 100vh;
+    }
+    #admin-sidebar {
+        width: 250px;
+        min-width: 80px;
+        background: #fff;
+        border-right: 1px solid #e4e6ef;
+        height: 100vh;
+        z-index: 9;
+        /* put any sidebar styling you need here! */
+    }
+    #main-content {
+        flex: 1 1 0%;
+        min-width: 0;
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+    }
+
+    /* Main content styles */
     .leave-requests-table-container {
-        margin-top: 80px; /* Adjust to match your fixed navbar height */
-        padding: 20px 20px 40px 20px;
+        padding: 40px 20px;
         background-color: #f4f4f9;
         min-height: 100vh;
+        width: 100%;
+        box-sizing: border-box;
     }
     .leave-requests-heading {
         margin-bottom: 24px;
@@ -65,9 +97,11 @@
     }
 
     /* Responsive styles */
+    @media (max-width: 1100px) {
+        #admin-sidebar { width: 200px; }
+    }
     @media (max-width: 900px) {
         .leave-requests-table-container {
-            margin-top: 72px;
             padding: 15px 7px 30px 7px;
         }
         .leave-requests-heading {
@@ -75,8 +109,17 @@
         }
     }
     @media (max-width: 600px) {
+        #layout-wrapper { flex-direction: column; }
+        #admin-sidebar {
+            width: 100vw;
+            height: auto;
+            border-right: none;
+            border-bottom: 1px solid #e4e6ef;
+        }
+        #main-content { width: 100vw; }
         .leave-requests-table-container {
-            margin-top: 60px;
+            padding: 12px 4px;
+            top: 72px !important;
         }
         .leave-requests-table th,
         .leave-requests-table td {
@@ -84,12 +127,32 @@
             font-size: 13px;
         }
     }
+    .status-pending {
+    color: #ca8a04; /* amber/yellow */
+    font-weight: 600;
+}
+.status-upcoming {
+    color: #06b6d4; /* teal/cyan */
+    font-weight: 600;
+}
+.status-accepted {
+    color: #22c55e; /* green */
+    font-weight: 600;
+}
+.status-rejected {
+    color: #ef4444; /* red */
+    font-weight: 600;
+}
+.status-other {
+    color: #64748b; /* slate gray */
+    font-weight: 600;
+}
 </style>
 {% endblock %}
 
-{% block content %}
-<div class="leave-requests-table-container">
-    <div class="leave-requests-heading">Manage Leave Requests</div>
+{% block content %} 
+<div class="leave-requests-table-container mt-4">
+    <div class="leave-requests-heading mt-2">Manage Leave Requests</div>
     <table class="leave-requests-table">
         <thead>
             <tr>
@@ -97,7 +160,9 @@
                 <th>Leave Type</th>
                 <th>Start Date</th>
                 <th>End Date</th>
+                <th class="text-center">Leave Days</th>
                 <th>Status</th>
+                
                 <th>Actions</th>
             </tr>
         </thead>
@@ -108,14 +173,33 @@
                 <td>{{ leave_request.leave_type }}</td>
                 <td>{{ leave_request.start_date }}</td>
                 <td>{{ leave_request.end_date }}</td>
-                <td>{{ leave_request.status }}</td>
+                <td class="text-center">{{leave_request.leave_days}}</td>
                 <td>
-                    <form method="post" class="action-buttons" style="display:inline;">
+                    <span class="
+                        {% if leave_request.status|lower == 'pending' %}status-pending
+                        {% elif leave_request.status|lower == 'upcoming' %}status-upcoming
+                        {% elif leave_request.status|lower == 'accepted' %}status-accepted
+                        {% elif leave_request.status|lower == 'rejected' %}status-rejected
+                        {% else %}status-other{% endif %}
+                    ">
+                        {{ leave_request.status }}
+                    </span>
+                </td>
+                
+                <td>
+                    {% if leave_request.status != "Accepted" %}
+                    <form method="post"
+                          action="{% url 'manage_leave_request' leave_request.id %}"
+                          class="action-buttons"
+                          style="display:inline;">
                         {% csrf_token %}
                         <button type="submit" name="action" value="accept" class="btn btn-accept">Accept</button>
                         <button type="submit" name="action" value="reject" class="btn btn-reject">Reject</button>
                         <input type="hidden" name="leave_request_id" value="{{ leave_request.id }}">
                     </form>
+                    {% else %}
+                        -
+                    {% endif %}
                 </td>
             </tr>
             {% empty %}

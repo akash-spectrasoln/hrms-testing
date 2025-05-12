@@ -209,7 +209,23 @@ body[data-sidebar-size=sm] {
 
 
 
-
+#admin-sidebar {
+    width: 250px;
+    min-width: 80px;
+    background: #fff;
+    border-right: 1px solid #e4e6ef;
+    height: 100vh;
+    z-index: 9;
+}
+@media (max-width: 991.98px) {
+    #layout-wrapper { flex-direction: column !important; }
+    #admin-sidebar {
+        width: 100vw;
+        height: auto;
+        border-right: none;
+        border-bottom: 1px solid #e4e6ef;
+    }
+}
 
 
 
@@ -248,117 +264,79 @@ body[data-sidebar-size=sm] {
 
 </head>
 
-<body {% block extra_body %} data-topbar="dark"{% endblock extra_body %} data-sidebar="{% if request.user.is_authenticated and request.user.is_dark_mode %}dark{% else %}light{% endif %}">
+<body {% block extra_body %} data-topbar="dark"{% endblock extra_body %}
+      data-sidebar="{% if request.user.is_authenticated and request.user.is_dark_mode %}dark{% else %}light{% endif %}">
     <!-- Begin page -->
-    <div id="layout-wrapper">
-       {% block header %}
-        {% include "partials/header.html" %}
-        {% endblock header %}
-
+    <div id="layout-wrapper" class="d-flex flex-row" style="min-height:100vh;">
         {% block left_sidebar %}
-        {% include 'partials/left-sidebar.html' %}
+            <!-- Sidebar must have id for CSS targeting -->
+            <nav id="admin-sidebar">
+                {% include 'partials/left-sidebar.html' %}
+            </nav>
         {% endblock left_sidebar %}
-
-
-        {% block content %}
-        <!-- Toast Container inside block content -->
-
-        {% block footer %}
-        {% endblock footer %}
-        {% endblock content %}
-
+    
+        <div id="main-content" class="flex-grow-1 d-flex flex-column" style="min-width:0;">
+            {% block header %}
+                {% include "partials/header.html" %}
+            {% endblock header %}
+    
+            {% block content %}
+                {% block footer %}{% endblock footer %}
+            {% endblock content %}
+        </div>
     </div>
     <!-- END layout-wrapper -->
 
 
-
-
-
     {% block javascript %}
-    <script>   </script>
     <script src="{% static 'tool/main.js' %}"></script>
-    <!-- JAVASCRIPT -->
-
-    <!-- jQuery (required for Bootstrap's JavaScript plugins) -->
     <script src="{% static 'libs/jquery/dist/jquery.min.js' %}"></script>
-
-    <!-- Bootstrap JavaScript (choose one source, either local or CDN) -->
     <script src="{% static 'libs/bootstrap/dist/js/bootstrap.bundle.min.js' %}"></script>
-    <!-- Alternatively, use the CDN:
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
-    -->
-
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <!-- Other Libraries -->
-
-
     <script src="{% static 'libs/metismenu/dist/metisMenu.min.js' %}"></script>
     <script src="{% static 'libs/simplebar/dist/simplebar.min.js' %}"></script>
     <script src="{% static 'libs/node-waves/dist/waves.min.js' %}"></script>
     <script src="{% static 'libs/feather-icons/dist/feather.min.js' %}"></script>
     <script src="{% static 'libs/pace-js/pace.min.js' %}"></script>
-
-    <!-- Custom Scripts -->
-    {% block extra_js %}
-    {% endblock extra_js %}
+    {% block extra_js %}{% endblock extra_js %}
     <script src="{% static 'js/app.js' %}"></script>
-
-
-    <!-- Inline Custom Script -->
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             var searchForm = document.querySelector('.app-search');
             var searchInput = document.getElementById('searchInput');
             var table = document.getElementById('searchableTable');
-            var tableRows = table.querySelectorAll('tbody tr'); // Target only the rows of the specified table
+            var tableRows = table ? table.querySelectorAll('tbody tr') : [];
             var loadingOverlay = document.getElementById('loadingOverlay');
-
             function filterRows() {
                 var searchQuery = searchInput.value.toLowerCase();
-
                 tableRows.forEach(function(row) {
-                    var cells = row.querySelectorAll('td');
-                    var rowText = '';
                     var matches = false;
-
-                    cells.forEach(function(cell) {
+                    row.querySelectorAll('td').forEach(function(cell) {
                         var isSearchable = cell.getAttribute('data-searchable') === 'true';
                         if (isSearchable && cell.textContent.toLowerCase().includes(searchQuery)) {
                             matches = true;
                         }
                     });
-
-                    if (matches) {
-                        row.style.display = 'table-row'; // Show the table row
-                    } else {
-                        row.style.display = 'none'; // Hide the table row
-                    }
+                    row.style.display = matches ? 'table-row' : 'none';
                 });
             }
-
-            // Add event listener for input to handle live search
-            searchInput.addEventListener('input', function() {
-                filterRows();
-            });
-
-            searchForm.addEventListener('submit', function(event) {
-                event.preventDefault(); // Prevent the form from submitting normally
-
-                loadingOverlay.style.display = 'flex'; // Show loading spinner
-
-                // Perform search
-                filterRows();
-
-                setTimeout(function() {
-                    loadingOverlay.style.display = 'none'; // Hide loading spinner after a delay
-                }, 300); // Adjust the delay as needed
-            });
+            if (searchInput && tableRows.length) {
+                searchInput.addEventListener('input', filterRows);
+            }
+            if (searchForm && loadingOverlay) {
+                searchForm.addEventListener('submit', function(event) {
+                    event.preventDefault();
+                    loadingOverlay.style.display = 'flex';
+                    filterRows();
+                    setTimeout(function() {
+                        loadingOverlay.style.display = 'none';
+                    }, 300);
+                });
+            }
         });
+        sidebar.classList.toggle('collapsed');
     </script>
-
-
-{% endblock javascript %}
-
+    {% endblock javascript %}
 </body>
 
 </html>

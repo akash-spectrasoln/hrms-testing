@@ -446,6 +446,16 @@ class EmployeeUpdateView(UpdateView):
                     Certificate.objects.create(employee=employee, file=certificate_file)
 
             employee.save()
+
+            # -------- ADMIN PRIVILEGE HANDLING --------
+            is_admin = self.request.POST.get('is_admin') == 'on'
+            if hasattr(employee, 'user') and employee.user is not None:
+                user_obj = employee.user
+                user_obj.is_superuser = is_admin
+                user_obj.is_staff = is_admin
+                user_obj.save()
+            # ------------------------------------------
+
             messages.success(self.request, "✅ Employee details updated successfully.")
             return super().form_valid(form)
 

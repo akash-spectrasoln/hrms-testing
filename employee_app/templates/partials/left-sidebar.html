@@ -1,89 +1,54 @@
 {% load static %}
 {% block left_sidebar %}
-        <!-- ========== Left Sidebar Start ========== -->
-        <div class="vertical-menu mt-0">
-
-            <div data-simplebar class="h-100">
-
-                <!--- Sidemenu -->
-                <div id="sidebar-menu">
-
-                    <!-- Left Menu Start -->
-                    <ul class="metismenu list-unstyled mt-0" id="side-menu">
-
-                        <li>
-                            <a href="{% url 'index' %}">
-                                <i data-feather="layers"></i>
-                                <span data-key="t-dashboard"><strong>Dashboard</strong></span>
-                            </a>
-                        </li>
-
-                        <li>
-                            <a href="{% url 'request_leave' %}">
-                                <i data-feather="send"></i>
-                                <span data-key="t-dashboard"><strong>Request Leave</strong></span>
-                            </a>
-                        </li>
-                        <!-- <li>
-                            <a href="#">
-                                <i data-feather="layers"></i>
-                                <span data-key="t-dashboard"><strong>Transformations</strong></span>
-                            </a>
-                        </li> -->
-                        <li>
-                            <a href="{% url 'my_leave_history' %}">
-                                <i data-feather="database"></i>
-                                <span data-key="t-dashboard"><strong>Leave History</strong></span>
-                            </a>
-                        </li>
-                        <li>
-                            <a href="{% url 'holiday_list' %}">
-                                <i data-feather="calendar"></i>
-                                <span data-key="t-dashboard"><strong>View Holidays</strong></span>
-                            </a>
-                        </li>
-
-                         {% if is_manager %}
-<!--                         <li class="menu-item">-->
-<!--                              <a href="{% url 'view_subordinates' %}">-->
-<!--                                   <span class="menu-icon">🎉</span>-->
-<!--                               Manage Leave Requests-->
-<!--                             </a>-->
-<!--                          </li>-->
-                        <li>
-                            <a href="{% url 'manager_leave_requests' %}">
-                                <i data-feather="archive"></i>
-                                <span data-key="t-dashboard"><strong>Manage Leave Requests</strong></span>
-                            </a>
-                        </li>
-                         {% endif %}
-
-                         {% if is_manager %}
-<!--            <li class="menu-item">-->
-<!--                <a href="{% url 'manager_leave_requests' %}">-->
-<!--                    <span class="menu-icon">👥</span>-->
-<!--                    View Suboordinates-->
-<!--                </a>-->
-<!--            </li>-->
-                        <li>
-                            <a href="{% url 'view_subordinates' %}">
-                                <i data-feather="monitor"></i>
-                                <span data-key="t-dashboard"><strong>View Suboordinates</strong></span>
-                            </a>
-                        </li>
-            {% endif %}
-
-                        
-
-                        
-
-
-
-                        
-
-                </div>
-                <!-- Sidebar -->
-            </div>
+<!-- ========== Left Sidebar Start ========== -->
+<nav id="admin-sidebar" class="vertical-menu mt-0">
+    <div data-simplebar class="h-100">
+        <!--- Sidemenu -->
+        <div id="sidebar-menu">
+            <!-- Left Menu Start -->
+            <ul class="metismenu list-unstyled mt-0" id="side-menu">
+                <li>
+                    <a href="{% url 'index' %}">
+                        <i data-feather="layers"></i>
+                        <span data-key="t-dashboard"><strong>Dashboard</strong></span>
+                    </a>
+                </li>
+                <li>
+                    <a href="{% url 'request_leave' %}">
+                        <i data-feather="send"></i>
+                        <span data-key="t-dashboard"><strong>Request Leave</strong></span>
+                    </a>
+                </li>
+                <li>
+                    <a href="{% url 'my_leave_history' %}">
+                        <i data-feather="database"></i>
+                        <span data-key="t-dashboard"><strong>Leave History</strong></span>
+                    </a>
+                </li>
+                <li>
+                    <a href="{% url 'holiday_list' %}">
+                        <i data-feather="calendar"></i>
+                        <span data-key="t-dashboard"><strong>View Holidays</strong></span>
+                    </a>
+                </li>
+                {% if is_manager %}
+                <li>
+                    <a href="{% url 'manager_leave_requests' %}">
+                        <i data-feather="archive"></i>
+                        <span data-key="t-dashboard"><strong>Manage Leave Requests</strong></span>
+                    </a>
+                </li>
+                <li>
+                    <a href="{% url 'view_subordinates' %}">
+                        <i data-feather="monitor"></i>
+                        <span data-key="t-dashboard"><strong>View Suboordinates</strong></span>
+                    </a>
+                </li>
+                {% endif %}
+            </ul>
         </div>
-        <!-- Left Sidebar End -->
+        <!-- Sidebar -->
+    </div>
+</nav>
+<!-- Left Sidebar End -->
 {% endblock left_sidebar %}

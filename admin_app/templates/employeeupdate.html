@@ -148,17 +148,17 @@
                 </div>
                 <div class="form-row">
                     <div class="form-group col-md-6">
-                        <label for="emergency_contact_name" class="required">Emergency Contact Name</label>
-                        <input type="text" name="emergency_contact_name" class="form-control" value="{{ form.instance.emergency_contact_name }}" required>
+                        <label for="emergency_contact_name" >Emergency Contact Name</label>
+                        <input type="text" name="emergency_contact_name" class="form-control" value="{{ form.instance.emergency_contact_name }}" >
                     </div>
                     <div class="form-group col-md-6">
-                        <label for="emergency_contact_phone" class="required">Emergency Contact Phone</label>
-                        <input type="tel" name="emergency_contact_phone" class="form-control" value="{{ form.instance.emergency_contact_phone }}" required>
+                        <label for="emergency_contact_phone" >Emergency Contact Phone</label>
+                        <input type="tel" name="emergency_contact_phone" class="form-control" value="{{ form.instance.emergency_contact_phone }}" >
                     </div>
                 </div>
                 <div class="form-group">
-                    <label for="emergency_contact_relation" class="required">Emergency Contact Relationship</label>
-                    <select name="emergency_contact_relation" class="form-control" required>
+                    <label for="emergency_contact_relation" >Emergency Contact Relationship</label>
+                    <select name="emergency_contact_relation" class="form-control" >
                         <option value="" disabled selected>Choose Relation</option>
                         <option value="Mother" {% if form.instance.emergency_contact_relation == 'Mother' %}selected{% endif %}>Mother</option>
                         <option value="Father" {% if form.instance.emergency_contact_relation == 'Father' %}selected{% endif %}>Father</option>
@@ -231,7 +231,14 @@
                     </div>
                     <div class="form-group col-md-4">
                         <label for="designation" class="required">Designation</label>
-                        <input type="text" name="designation" class="form-control" value="{{ form.instance.designation }}" required>
+                        <select name="designation" class="form-control" required>
+                            <option value="" disabled {% if not form.instance.designation %}selected{% endif %}>Select Designation</option>
+                            {% for role in roles %}
+                                <option value="{{ role.role_name}}" {% if form.instance.designation  == role.role_name %}selected{% endif %}>
+                                    {{ role.role_name }}
+                                </option>
+                            {% endfor %}
+                        </select>
                     </div>
                 </div>
                 <div class="form-row">

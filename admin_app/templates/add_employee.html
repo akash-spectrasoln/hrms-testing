@@ -144,17 +144,17 @@
                 </div>
                 <div class="form-row">
                     <div class="form-group col-md-4">
-                        <label for="emergency_contact_name" class="required">Emergency Contact Name</label>
-                        <input type="text" name="emergency_contact_name" class="form-control" required>
+                        <label for="emergency_contact_name" >Emergency Contact Name</label>
+                        <input type="text" name="emergency_contact_name" class="form-control">
                     </div>
                     <div class="form-group col-md-4">
-                        <label for="emergency_contact_phone" class="required">Emergency Contact Phone</label>
-                        <input type="tel" name="emergency_contact_phone" class="form-control" required>
+                        <label for="emergency_contact_phone" >Emergency Contact Phone</label>
+                        <input type="tel" name="emergency_contact_phone" class="form-control">
                     </div>
                     <div class="form-group col-md-4">
-                        <label for="emergency_contact_relation" class="required">Emergency Contact Relationship</label>
-                        <select name="emergency_contact_relation" class="form-control" required>
-                            <option value="" disabled selected>Choose Relation</option>
+                        <label for="emergency_contact_relation">Emergency Contact Relationship</label>
+                        <select name="emergency_contact_relation" class="form-control">
+                            <option value="null" disabled selected>Choose Relation</option>
                             <option value="Mother">Mother</option>
                             <option value="Father">Father</option>
                             <option value="Brother">Brother</option>
@@ -227,7 +227,7 @@
                         <select name="designation" class="form-control" required>
                             <option value="" disabled {% if not form.instance.designation %}selected{% endif %}>Select Role</option>
                             {% for role in roles %}
-                                <option value="{{ role.id }}" {% if form.instance.designation == role %}selected{% endif %}>{{ role.role_name }}</option>
+                                <option value="{{ role.role_name }}" {% if form.instance.designation == role.role_name %}selected{% endif %}>{{ role.role_name }}</option>
                             {% endfor %}
                         </select>
                     </div>
@@ -267,7 +267,7 @@
                     </div>
                     <div class="form-group col-md-6">
                         <label for="incentive" class="">Incentive</label>
-                        <input type="number" step="0.01" name="incentive" class="form-control" required>
+                        <input type="number" step="0.01" name="incentive" class="form-control" >
                     </div>
                 </div>
 
@@ -364,11 +364,23 @@
                         });
                     });
                 </script>
+                <div class="form-row">
+                    <div class="form-group col-md-12">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="is_admin" id="is_admin"
+                                   {% if form.instance.user.is_superuser %}checked{% endif %}>
+                            <label class="form-check-label" for="is_admin">
+                                Grant admin privileges (make this user an admin)
+                            </label>
+                        </div>
+                    </div>
+                </div>
                 <div class="d-flex justify-content-center mt-3">
                     <button type="submit" class="btn btn-success">
                       <i class="fas fa-user-plus"></i> Save
                     </button>
                   </div>
+                  
             </form>
         </div>
     </div>

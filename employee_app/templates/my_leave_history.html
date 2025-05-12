@@ -199,9 +199,9 @@
                             <tr>
                                 <th>Leave Type</th>
                                 <th>Validity</th>
-                                <th>Available</th>
-                                <th>Used</th>
-                                <th>Planned</th>
+                                <th class="text-center">Available</th>
+                                <th class="text-center">Used</th>
+                                <th class="text-center">Planned</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -210,9 +210,9 @@
                                 <tr>
                                     <td>{{ summary.leave_type }}</td>
                                     <td>{{ summary.validity }}</td>
-                                    <td>{{ summary.available }}</td>
-                                    <td>{{ summary.used }}</td>
-                                    <td>{{ summary.planned }}</td>
+                                    <td class="text-center">{{ summary.available }}</td>
+                                    <td class="text-center">{{ summary.used }}</td>
+                                    <td class="text-center">{{ summary.planned }}</td>
                                 </tr>
                                 {% endfor %}
                             {% else %}
@@ -248,16 +248,16 @@
                                 <th>Leave Type</th>
                                 <th>Description</th>
                                 <th>Status</th>
-                                <th>Leave Days</th>
+                                <th class="text-center">Leave Days</th>
                                 <th>Approved/Rejected By</th>
-                                <th>Action</th>
+                                <th class="text-center">Action</th>
                             </tr>
                         </thead>
                         <tbody>
                             {% if leave_requests %}
                                 {% for leave in leave_requests %}
                                     <tr>
-                                        <td>{{ leave.start_date }}</td>
+                                        <td >{{ leave.start_date }}</td>
                                         <td>{{ leave.end_date }}</td>
                                         <td>{{ leave.leave_type }}</td>
                                         <td>{{ leave.reason }}</td>
@@ -271,7 +271,7 @@
                                                 {{ leave.status }}
                                             </span>
                                         </td>
-                                        <td>{{ leave.leave_days }}</td>
+                                        <td class="text-center">{{ leave.leave_days }}</td>
                                         <td>
                                             {% if not leave.is_pending %}
                                                 {% if leave.approved_by %}
@@ -283,7 +283,7 @@
                                                 &mdash;
                                             {% endif %}
                                         </td>
-                                        <td>
+                                        <td class="text-center">
                                             {% if leave.is_pending or leave.is_approved and leave.start_date >= today %}
                                                 <form method="post" action="{% url 'delete_leave' leave.id %}" style="display:inline">
                                                     {% csrf_token %}

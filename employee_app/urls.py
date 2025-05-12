@@ -40,7 +40,7 @@ path('total_leaves/', total_leaves_view, name='total_leaves'),
 path('holiday_list/',holiday_list,name='holiday_list'),
 
 path('manager/leave-requests/', manager_leave_requests, name='manager_leave_requests'),
-# path('manager/leave-requests/<int:leave_request_id>/', manage_leave_request, name='manage_leave_request'),
+path('manager/leave-requests/<int:leave_request_id>/', manage_leave_request, name='manage_leave_request'),
 
 # path('leave_summary/', employee_leave_summary, name='employee_leave_summary'),
 # path('test/',test,name='test'),

@@ -1273,6 +1273,13 @@ def filter_manager_leave_requests(request):
 from employee_app.utils import calculate_leave_duration
 from datetime import datetime
 
+from django.core.mail import send_mail
+from django.shortcuts import render, get_object_or_404, redirect
+from django.contrib import messages
+from .models import LeaveRequest, Employees, Holiday, FloatingHoliday
+from django.utils.timezone import now
+from datetime import timedelta
+
 @login_required
 def manage_leave_request(request, leave_request_id):
     leave_request = get_object_or_404(LeaveRequest, id=leave_request_id)
@@ -1281,83 +1288,106 @@ def manage_leave_request(request, leave_request_id):
     if not request.user.is_superuser and leave_request.employee_master.manager.user != request.user:
         return render(request, 'employee_app/error.html', {'message': 'Unauthorized action.'})
 
-        # Get the logged-in employee
     try:
         logged_in_employee = Employees.objects.get(user=request.user)
     except Employees.DoesNotExist:
         return render(request, 'employee_app/error.html', {'message': 'Employee profile not found.'})
 
-        # Check if the logged-in employee is a manager
     is_manager = Employees.objects.filter(manager=logged_in_employee).exists()
-
-    current_year = now().year  # Get current year
-    total_used_leaves = logged_in_employee.used_leaves  # Fetch from the Employees model
+    current_year = now().year
+    total_used_leaves = logged_in_employee.used_leaves
 
     if request.method == 'POST':
-        action = request.POST.get('action')  # 'accept' or 'reject'
+        action = request.POST.get('action')
         start_date = leave_request.start_date
         end_date = leave_request.end_date
         employee = leave_request.employee_master
 
-        # Use the calculate_leave_duration function to get the accurate leave days (excluding weekends, holidays)
         leave_duration = 0
         floating_holidays_used = employee.floating_holidays_used
         max_floating_holidays = 2
 
         current_date = start_date
+        holidays = set(Holiday.objects.values_list('date', flat=True))
+        floating_holidays = set(FloatingHoliday.objects.values_list('date', flat=True))
         while current_date <= end_date:
-            if current_date.weekday() in [5, 6]:  # Weekend (Saturday/Sunday)
+            if current_date.weekday() in [5, 6]:
                 current_date += timedelta(days=1)
                 continue
-            if current_date in Holiday.objects.values_list('date', flat=True):  # Regular holiday
+            if current_date in holidays:
                 current_date += timedelta(days=1)
                 continue
-            if current_date in FloatingHoliday.objects.values_list('date', flat=True):  # Floating holiday
+            if current_date in floating_holidays:
                 if floating_holidays_used < max_floating_holidays:
                     floating_holidays_used += 1
                     current_date += timedelta(days=1)
                     continue
-            # Count as a regular leave day
             leave_duration += 1
             current_date += timedelta(days=1)
 
-        print(f"Leave Duration (after exclusions): {leave_duration} days")
-
         if action == 'accept':
             leave_request.status = 'Accepted'
-            print(f"Current Used Leaves: {employee.used_leaves}")
-            print(f"Current Total Leaves: {employee.total_leaves}")
-
-            # Check if the employee has enough leave balance
             if employee.used_leaves + leave_duration <= 15:
-                # Update leave days and floating holidays used
                 employee.used_leaves += leave_duration
                 employee.floating_holidays_used = floating_holidays_used
                 employee.save()
-                print(f"Updated Used Leaves: {employee.used_leaves}")
             else:
                 messages.error(request, "Employee cannot exceed the allowed 15 total leave days.")
-                return redirect('manager_leave_requests')  # Or redirect to another appropriate view
+                return redirect('manager_leave_requests')
+
+            # Email to employee: LEAVE APPROVED
+            send_mail(
+                subject="Your Leave Request Has Been Approved",
+                message=(
+                    f"Dear {employee.first_name},\n\n"
+                    f"Your leave request from {leave_request.start_date} to {leave_request.end_date} ({leave_request.leave_type}) "
+                    "has been approved. Enjoy your time off!\n\n"
+                    "Best regards,\nHR Team"
+                ),
+                from_email="akashaku32@gmail.com",
+                recipient_list=[employee.company_email],
+                fail_silently=False,
+            )
 
         elif action == 'reject':
             leave_request.status = 'Rejected'
 
-        # Set `approved_by` to the user who approved or rejected the leave
+            # Email to employee: LEAVE REJECTED
+            send_mail(
+                subject="Your Leave Request Has Been Rejected",
+                message=(
+                    f"Dear {employee.first_name},\n\n"
+                    f"Your leave request from {leave_request.start_date} to {leave_request.end_date} ({leave_request.leave_type}) "
+                    "has been rejected. For more information, please contact your manager.\n\n"
+                    "Best regards,\nHR Team"
+                ),
+                from_email="akashaku32@gmail.com",
+                recipient_list=[employee.company_email],
+                fail_silently=False,
+            )
+
         if request.user.is_superuser:
-            leave_request.approved_by = request.user  # Admin approves
+            leave_request.approved_by = request.user
         else:
             approver = leave_request.employee_master.manager.user
-            leave_request.approved_by = approver  # Manager approves
+            leave_request.approved_by = approver
 
         leave_request.save()
-
         return redirect('manager_leave_requests' if not request.user.is_superuser else 'admin_leave_requests')
 
-    return render(request, 'manage_leave_requests.html', {'leave_request': leave_request,'is_manager' : is_manager ,'emp_designation':logged_in_employee.designation , 'emp_id' : logged_in_employee.employee_id , 'emp_fname' : logged_in_employee.first_name , 'emp_lname' : logged_in_employee.last_name , 'total_used_leaves' : total_used_leaves})
-
-
-
-
+    return render(
+        request,
+        'manage_leave_requests.html',
+        {
+            'leave_request': leave_request,
+            'is_manager': is_manager,
+            'emp_designation': logged_in_employee.designation,
+            'emp_id': logged_in_employee.employee_id,
+            'emp_fname': logged_in_employee.first_name,
+            'emp_lname': logged_in_employee.last_name,
+            'total_used_leaves': total_used_leaves
+        }
+    )
 
 
 
