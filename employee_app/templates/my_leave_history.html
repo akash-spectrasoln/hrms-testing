@@ -203,6 +203,7 @@
                             <tr>
                                 <th>Leave Type</th>
                                 <th>Validity</th>
+                                <th class="text-center">Total</th>
                                 <th class="text-center">Available</th>
                                 <th class="text-center">Used</th>
                                 <th class="text-center">Planned</th>
@@ -214,6 +215,7 @@
                                 <tr>
                                     <td>{{ summary.leave_type }}</td>
                                     <td>{{ summary.validity }}</td>
+                                    <td class="text-center">{{ summary.total }}</td>
                                     <td class="text-center">{{ summary.available }}</td>
                                     <td class="text-center">{{ summary.used }}</td>
                                     <td class="text-center">{{ summary.planned }}</td>
@@ -238,7 +240,7 @@
                             <option value="" {% if not request.GET.status %}selected{% endif %}>All</option>
                             <option value="pending" {% if request.GET.status == 'pending' %}selected{% endif %}>Pending</option>
                             <option value="upcoming" {% if request.GET.status == 'upcoming' %}selected{% endif %}>Upcoming</option>
-                            <option value="accepted" {% if request.GET.status == 'accepted' %}selected{% endif %}>Accepted</option>
+                            <option value="approved" {% if request.GET.status == 'approved' %}selected{% endif %}>Approved</option>
                             <option value="rejected" {% if request.GET.status == 'rejected' %}selected{% endif %}>Rejected</option>
                             <option value="deleted" {% if request.GET.status == 'deleted' %}selected{% endif %}>Deleted</option>
                         </select>
@@ -255,7 +257,7 @@
                                 <th>Status</th>
                                 <th class="text-center">Leave Days</th>
                                 <th>Approved/Rejected By</th>
-                                <th>Updated_on</th>
+                                <th>Updated_On</th>
                                 <th class="text-center">Action</th>
                             </tr>
                         </thead>

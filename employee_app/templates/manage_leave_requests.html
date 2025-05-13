@@ -135,7 +135,7 @@
     color: #06b6d4; /* teal/cyan */
     font-weight: 600;
 }
-.status-accepted {
+.status-approved{
     color: #22c55e; /* green */
     font-weight: 600;
 }
@@ -178,7 +178,7 @@
                     <span class="
                         {% if leave_request.status|lower == 'pending' %}status-pending
                         {% elif leave_request.status|lower == 'upcoming' %}status-upcoming
-                        {% elif leave_request.status|lower == 'accepted' %}status-accepted
+                        {% elif leave_request.status|lower == 'approved' %}status-approved
                         {% elif leave_request.status|lower == 'rejected' %}status-rejected
                         {% else %}status-other{% endif %}
                     ">
@@ -188,7 +188,7 @@
                 <td>{{ leave_request.modified_on }}</td>
                 
                 <td>
-                    {% if leave_request.status != "Accepted" and leave_request.status != "Rejected" %}
+                    {% if leave_request.status != "Accepted" and leave_request.status != "Rejected" and leave_request.status != "Approved" %}
                     <form method="post"
                           action="{% url 'manage_leave_request' leave_request.id %}"
                           class="action-buttons"

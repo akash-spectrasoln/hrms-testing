@@ -854,7 +854,7 @@ def accept_leave_request(request, leave_request_id):
         employee.save()
 
         # Update leave request (status, approver, leave_days)
-        leave_request.status = "Accepted"
+        leave_request.status = "Approved"
         leave_request.approved_by = request.user
         leave_request.leave_days = casual_days + floating_days  # or just "leave_days" if consistent
         leave_request.save()

@@ -37,7 +37,7 @@ body {
   display: inline-block;
 }
 .status-pending { background: #fef3c7; color: #b45309; }
-.status-accepted { background: #d1fae5; color: #065f46; }
+.status-approved { background: #d1fae5; color: #065f46; }
 .status-rejected { background: #fee2e2; color: #d45050; }
 .status-deleted { background: #fee2e2; color: #990909; }
 @media (max-width: 767.98px) {
@@ -78,7 +78,7 @@ body {
               <select id="statusFilter" class="form-select" onchange="filterResults()">
                 <option value="">All Status</option>
                 <option value="Pending">Pending</option>
-                <option value="Accepted">Accepted</option>
+                <option value="Approved">Approved</option>
                 <option value="Rejected">Rejected</option>
               </select>
             </div>
@@ -115,7 +115,7 @@ body {
                   <td>
                     <span class="status-badge
                       {% if data.leave_request.status == 'Pending' %}status-pending
-                      {% elif data.leave_request.status == 'Accepted' %}status-accepted
+                      {% elif data.leave_request.status == 'Approved' %}status-approved
                       {% elif data.leave_request.status == 'Rejected' %}status-rejected
                       {% elif data.leave_request.status == 'Deleted' %}status-deleted
                       {% endif %}">

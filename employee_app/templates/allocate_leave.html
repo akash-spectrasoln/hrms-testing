@@ -1,259 +1,171 @@
-
 {% extends 'partials/base.html' %}
 
-
 {% block styles %}
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
     <style>
-        .allocate-leave-content {
-            position: fixed;
-            top: 72px;
-            left: 250px;
-            right: 0;
-            bottom: 0;
-            overflow-y: auto;
-            background-color: #f4f4f9;
-            padding: 40px 20px;
-            z-index: 1;
-            display: flex;
-            justify-content: center;
-            align-items: flex-start;
-        }
+        .allocate-leave-content { position: fixed; top: 72px; left: 250px; right: 0; bottom: 0; overflow-y: auto;
+            background-color: #f4f4f9; display: flex; justify-content: center; align-items: center;
+            padding: 20px; z-index: 1; }
+        .form-container { max-width: 450px; width: 100%; background-color: #fff;
+            border-radius: 8px; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); padding: 15px; margin: 0 auto; }
+        .page-header { margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid #e6e6e6; text-align: center; }
+        .page-title { color: #2c3e50; font-size: 1.2rem; font-weight: 600; margin: 0; }
+        .employee-name { color: #64748b; font-size: 0.9rem; margin-top: 4px; }
+        .form-group { margin-bottom: 10px; }
+        .form-label { display: block; margin-bottom: 4px; color: #2c3e50; font-weight: 500; font-size: 0.85rem; }
+        .form-input, .form-select, .form-textarea { width: 100%; padding: 6px 8px; border: 1px solid #e2e8f0; border-radius: 6px;
+            font-size: 0.9rem; background-color: #ffffff; color: #2c3e50; transition: all 0.3s ease;}
+        .form-input:focus, .form-select:focus, .form-textarea:focus {
+            border-color: #3b82f6; box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1); outline: none;}
+        .form-textarea { min-height: 60px; resize: vertical;}
+        .form-select { appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%233b82f6' viewBox='0 0 16 16'%3E%3Cpath d='M8 10l4-4H4z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat; background-position: right 8px center; padding-right: 30px;}
+        .submit-button { width: auto; min-width: 120px; padding: 8px 16px;
+            background-color: #3b82f6; color: #fff; border: none; border-radius: 6px; font-size: 0.95rem; font-weight: 500;
+            cursor: pointer; transition: all 0.3s ease; margin: 10px auto 0; display: block;}
+        .submit-button:hover { background-color: #2563eb; }
+        .back-link { display: block; text-align: center; margin-top: 10px; color: #64748b; text-decoration: none;
+            font-size: 0.85rem; transition: color 0.2s ease;}
+        .back-link:hover { color: #3b82f6; }
+        .messages { margin-bottom: 10px; }
+        .message { padding: 8px; border-radius: 4px; margin-bottom: 8px; font-size: 0.85rem; text-align: center; }
+        .message-success { background-color: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; }
+        .message-error { background-color: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
+        .error-message { color: #dc2626; font-size: 0.8rem; margin-top: 3px; }
 
-        .form-container {
-            width: 70%;
-            max-width: 500px;
-            background-color: #ffffff;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-            padding: 20px;
-            margin: 0 auto;
-            position: relative;
-            left: -60px;
-        }
-
-        .page-header {
-            margin-bottom: 20px;
-            padding-bottom: 12px;
-            border-bottom: 2px solid #e6e6e6;
-            text-align: center;
-            
-        }
-
-        .page-title {
-            color: #2c3e50;
-            font-size: 1.4rem;
-            font-weight: 600;
-            margin-bottom: 4px;
-        }
-
-        .employee-name {
-            color: #64748b;
-            font-size: 0.9rem;
-        }
-
-        .form-group {
-            margin-bottom: 15px;
-        }
-
-        .form-label {
-            display: block;
-            margin-bottom: 6px;
-            color: #2c3e50;
-            font-weight: 500;
-            font-size: 14px;
-        }
-
-        .form-input {
-            width: 100%;
-            padding: 8px 10px;
-            border: 1px solid #e2e8f0;
-            border-radius: 6px;
-            font-size: 14px;
-            transition: border-color 0.2s ease;
-        }
-
-        .form-input:focus {
-            outline: none;
-            border-color: #3b82f6;
-            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
-        }
-
-        textarea.form-input {
-            min-height: 100px;
-            resize: vertical;
-        }
-
-        .date-inputs {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 15px;
-        }
-
-        .button-container {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            margin-top: 20px;
-        }
-
-        .submit-button {
-            background-color: #3b82f6;
-            color: white;
-            padding: 8px 20px;
-            border: none;
-            border-radius: 6px;
-            font-size: 14px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            width: auto;
-            min-width: 120px;
-            text-align: center;
-        }
-
-        .submit-button:hover {
-            background-color: #2563eb;
-            transform: translateY(-1px);
-        }
-
-        .back-link {
-            display: block;
-            text-align: center;
-            margin-top: 15px;
-            color: #64748b;
-            text-decoration: none;
-            font-size: 14px;
-            transition: color 0.2s ease;
-        }
-
-        .back-link:hover {
-            color: #3b82f6;
-        }
-
-        .messages {
-            margin-bottom: 15px;
-        }
-
-        .message {
-            padding: 10px;
-            border-radius: 6px;
-            margin-bottom: 8px;
-            font-size: 14px;
-            text-align: center;
-        }
-
-        .message-success {
-            background-color: #d1fae5;
-            color: #065f46;
-            border: 1px solid #a7f3d0;
-        }
-
-        .message-error {
-            background-color: #fee2e2;
-            color: #991b1b;
-            border: 1px solid #fecaca;
-        }
-
-        /* Responsive styles */
-        @media (max-width: 1200px) {
-            .form-container {
-                width: 75%;
-                left: -40px;
-            }
-        }
-
-        @media (max-width: 1024px) {
-            .allocate-leave-content {
-                left: 200px;
-            }
-            .form-container {
-                width: 80%;
-                left: -30px;
-            }
-        }
-
-        @media (max-width: 768px) {
-            .allocate-leave-content {
-                left: 0;
-                padding: 30px 15px;
-            }
-            .form-container {
-                width: 90%;
-                left: 0;
-                margin: 0 auto;
-            }
-            .date-inputs {
-                grid-template-columns: 1fr;
-            }
-            .submit-button {
-                width: 100%;
-                max-width: 200px;
-            }
-        }
-
-        @media (max-width: 480px) {
-            .allocate-leave-content {
-                padding: 20px 10px;
-            }
-            .form-container {
-                padding: 15px;
-            }
-            .page-title {
-                font-size: 1.2rem;
-            }
-        }
+        /* Flatpickr calendar customization */
+        .flatpickr-calendar { border-radius: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); border: 1px solid #e2e8f0; }
+        .flatpickr-day { border-radius: 4px; }
+        .flatpickr-day.selected, .flatpickr-day.startRange, .flatpickr-day.endRange {
+            background: #3b82f6; border-color: #3b82f6; }
+        .flatpickr-day.selected:hover, .flatpickr-day.startRange:hover, .flatpickr-day.endRange:hover {
+            background: #2563eb; border-color: #2563eb; }
+        .flatpickr-day.today { border-color: #3b82f6; }
+        .holiday { background-color: #fee2e2 !important; border-radius: 4px; }
+        .floating-holiday { background-color: #e0e7ff !important; border-radius: 4px; }
+        .weekend { background-color: #f3f4f6 !important; border-radius: 4px; }
+        .info-indicators { margin: 15px 0 20px 0; display: flex; gap: 15px; }
+        .info-indicator { display: flex; align-items: center; gap: 5px; font-size: 0.8rem; }
+        .indicator-dot { width: 16px; height: 16px; display: inline-block; border-radius: 4px; }
+        .dot-holiday { background-color: #fee2e2; border: 1px solid #fecaca; }
+        .dot-floating { background-color: #e0e7ff; border: 1px solid #c7d2fe; }
+        @media (max-width: 1024px) {.allocate-leave-content { left: 200px; } }
+        @media (max-width: 768px) {.allocate-leave-content { left: 0; }.form-container { margin: 0 auto; padding: 15px; } }
     </style>
 {% endblock %}
 
 {% block content %}
-    <div class="allocate-leave-content">
-        <div class="form-container">
-            <div class="page-header">
-                <h1 class="page-title">Allocate Leave</h1>
-                <div class="employee-name">for {{ employee.first_name }} {{ employee.last_name }}</div>
+<div class="allocate-leave-content">
+    <div class="form-container">
+        <div class="page-header">
+            <h2 class="page-title">Allocate Leave</h2>
+            <div class="employee-name">
+                for {{ employee.first_name }} {{ employee.last_name }}
+            </div>
+        </div>
+        {% if messages %}
+            <div class="messages">
+                {% for message in messages %}
+                <div class="message {% if message.tags %}message-{{ message.tags }}{% endif %}">
+                    {{ message }}
+                </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        <!-- Info indicators -->
+        <div class="info-indicators">
+            <div class="info-indicator">
+                <span class="indicator-dot dot-holiday"></span> Fixed Holiday
+            </div>
+            <div class="info-indicator">
+                <span class="indicator-dot dot-floating"></span> Floating Holiday
+            </div>
+        </div>
+
+        <form method="post" autocomplete="off">
+            {% csrf_token %}
+            <input type="hidden" name="employee_id" value="{{ employee.id }}">
+
+            <div class="form-group">
+                <label class="form-label" for="leave_type">Leave Type</label>
+                <select id="leave_type" name="leave_type"
+                  class="form-select"
+                  {% if remaining_casual_leaves <= 0 and remaining_floating_leaves <= 0 %}disabled{% endif %}
+                  required>
+                    <option value="">Select Type</option>
+                    <option value="Casual Leave"
+                        {% if remaining_casual_leaves <= 0 %}disabled{% endif %}>
+                        Casual Leave ({{ remaining_casual_leaves }} left)
+                    </option>
+                    <option value="Floating Leave"
+                        {% if remaining_floating_leaves <= 0 %}disabled{% endif %}>
+                        Floating Leave ({{ remaining_floating_leaves }} left)
+                    </option>
+                    <option value="Sick Leave">Sick Leave</option>
+                </select>
+                {% if remaining_casual_leaves <= 0 and remaining_floating_leaves <= 0 %}
+                    <div class="error-message">
+                        You have exhausted your Casual and Floating Leave entitlements for this year.
+                    </div>
+                {% endif %}
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="start_date">Start Date</label>
+                <input type="text" id="start_date" name="start_date" class="form-input" required autocomplete="off">
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="end_date">End Date</label>
+                <input type="text" id="end_date" name="end_date" class="form-input" required autocomplete="off">
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="reason">Reason</label>
+                <textarea id="reason" name="reason" class="form-textarea" required></textarea>
             </div>
 
-            {% if messages %}
-                <div class="messages">
-                    {% for message in messages %}
-                        <div class="message {% if message.tags %}message-{{ message.tags }}{% endif %}">
-                            {{ message }}
-                        </div>
-                    {% endfor %}
-                </div>
-            {% endif %}
-
-            <form method="POST">
-                {% csrf_token %}
-
-                <!-- Add hidden input field for employee ID -->
-                <input type="hidden" name="employee_id" value="{{ employee.id }}">
-
-                <div class="date-inputs">
-                    <div class="form-group">
-                        <label class="form-label" for="start_date">Start Date</label>
-                        <input type="date" id="start_date" name="start_date"
-                               class="form-input" required>
-                    </div>
-
-                    <div class="form-group">
-                        <label class="form-label" for="end_date">End Date</label>
-                        <input type="date" id="end_date" name="end_date"
-                               class="form-input" required>
-                    </div>
-                </div>
-
-                <div class="form-group">
-                    <label class="form-label" for="reason">Reason</label>
-                    <textarea id="reason" name="reason" class="form-input"
-                              placeholder="Enter leave reason" required></textarea>
-                </div>
-
-                <div class="button-container">
-                    <button type="submit" class="submit-button">Allocate Leave</button>
-                    <a href="{% url 'view_subordinates' %}" class="back-link">Back to Subordinates</a>
-                </div>
-            </form>
-        </div>
+            <button type="submit" class="submit-button"
+                {% if remaining_casual_leaves <= 0 and remaining_floating_leaves <= 0 %}disabled{% endif %}>
+                Allocate Leave
+            </button>
+            <a href="{% url 'view_subordinates' %}" class="back-link">Back to Subordinates</a>
+        </form>
     </div>
+</div>
+
+{{ holidays|json_script:"holidays-data" }}
+{{ floating_holidays|json_script:"floating-holidays-data" }}
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const holidays = JSON.parse(document.getElementById('holidays-data').textContent);
+    const floatingHolidays = JSON.parse(document.getElementById('floating-holidays-data').textContent);
+
+    function flatpickrDayStyler(dObj, dStr, fp, dayElem) {
+        const dayString = dayElem.dateObj.toLocaleDateString('en-CA');
+        if (dayElem.dateObj.getDay() === 6 || dayElem.dateObj.getDay() === 0) {
+            dayElem.classList.add("weekend");
+        } else if (holidays.includes(dayString)) {
+            dayElem.classList.add("holiday");
+        } else if (floatingHolidays.includes(dayString)) {
+            dayElem.classList.add("floating-holiday");
+        }
+    }
+
+    flatpickr("#start_date", {
+        dateFormat: "Y-m-d",
+        minDate: "today",
+        onDayCreate: flatpickrDayStyler
+    });
+
+    flatpickr("#end_date", {
+        dateFormat: "Y-m-d",
+        minDate: "today",
+        onDayCreate: flatpickrDayStyler
+    });
+});
+</script>
 {% endblock %}

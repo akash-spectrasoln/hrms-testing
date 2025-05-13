@@ -268,7 +268,7 @@ class LeaveRequest(models.Model):
         return (self.end_date - self.start_date).days + 1
 
     def __str__(self):
-        return f"Leave Request by {self.employee.username} from {self.start_date} to {self.end_date}"
+        return f"Leave Request by {self.employee_master.first_name} from {self.start_date} to {self.end_date}"
 
     class Meta:
         verbose_name = "Leave Request"
