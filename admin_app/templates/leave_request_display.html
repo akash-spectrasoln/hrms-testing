@@ -38,7 +38,8 @@ body {
 }
 .status-pending { background: #fef3c7; color: #b45309; }
 .status-accepted { background: #d1fae5; color: #065f46; }
-.status-rejected { background: #fee2e2; color: #b91c1c; }
+.status-rejected { background: #fee2e2; color: #d45050; }
+.status-deleted { background: #fee2e2; color: #990909; }
 @media (max-width: 767.98px) {
   .card-header, .leave-card { border-radius: 0; }
   .action-buttons { flex-direction: column !important; gap: .25rem !important; }
@@ -95,6 +96,7 @@ body {
                   <th class="d-none d-lg-table-cell">End</th>
                   <th class="d-none d-lg-table-cell">Description</th>
                   <th>Days</th>
+                  <th>Approved/Rejected/Deleted  By</th>
                   <th>Status</th>
                   <th>Actions</th>
                 </tr>
@@ -109,11 +111,13 @@ body {
                   <td class="d-none d-lg-table-cell">{{ data.leave_request.end_date }}</td>
                   <td class="d-none d-lg-table-cell">{{ data.leave_request.reason }}</td>
                   <td>{{ data.leave_request.leave_days }}</td>
+                  <td>{{data.leave_request.approved_by}}</td>
                   <td>
                     <span class="status-badge
                       {% if data.leave_request.status == 'Pending' %}status-pending
                       {% elif data.leave_request.status == 'Accepted' %}status-accepted
                       {% elif data.leave_request.status == 'Rejected' %}status-rejected
+                      {% elif data.leave_request.status == 'Deleted' %}status-deleted
                       {% endif %}">
                       {{ data.leave_request.status }}
                     </span>
@@ -130,10 +134,12 @@ body {
                           <button type="submit" class="btn btn-sm btn-danger">Reject</button>
                         </form>
                       {% endif %}
+                      {% if data.leave_request.status != "Deleted" %}
                         <form method="post" action="{% url 'delete_leave_request' data.leave_request.id %}">
                           {% csrf_token %}
                           <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Are you sure you want to delete this leave request?');">Delete</button>
                         </form>
+                      {% endif %}
                     </div>
                   </td>
                 </tr>

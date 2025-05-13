@@ -244,7 +244,7 @@
                                 <td>{{ emp.company_email }}</td>
                                 <td>{{ emp.department }}</td>
                                 <td>
-                                    <a href="{% url 'allocate_leave' manager.id %}">Allocate Leave</a>
+                                    <a href="{% url 'allocate_leave' emp.id %}">Allocate Leave</a>
                                 </td>
                             </tr>
                             {% endfor %}

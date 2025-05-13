@@ -46,6 +46,10 @@
         color: #dc2626;
         font-weight: 600;
     }
+    .status-deleted {
+        color: #6b0707;
+        font-weight: 600;
+    }
     .tables-wrapper {
         display: flex;
         flex-direction: column;
@@ -236,6 +240,7 @@
                             <option value="upcoming" {% if request.GET.status == 'upcoming' %}selected{% endif %}>Upcoming</option>
                             <option value="accepted" {% if request.GET.status == 'accepted' %}selected{% endif %}>Accepted</option>
                             <option value="rejected" {% if request.GET.status == 'rejected' %}selected{% endif %}>Rejected</option>
+                            <option value="deleted" {% if request.GET.status == 'deleted' %}selected{% endif %}>Deleted</option>
                         </select>
                     </form>
                 </div>
@@ -250,6 +255,7 @@
                                 <th>Status</th>
                                 <th class="text-center">Leave Days</th>
                                 <th>Approved/Rejected By</th>
+                                <th>Updated_on</th>
                                 <th class="text-center">Action</th>
                             </tr>
                         </thead>
@@ -266,6 +272,7 @@
                                                 {% if leave.is_pending %}status-pending
                                                 {% elif leave.is_approved %}status-approved
                                                 {% elif leave.is_rejected %}status-rejected
+                                                {% elif leave.is_deleted %}status-deleted
                                                 {% endif %}
                                             ">
                                                 {{ leave.status }}
@@ -283,8 +290,10 @@
                                                 &mdash;
                                             {% endif %}
                                         </td>
+                                        <td>{{ leave.modified_on }}</td>
                                         <td class="text-center">
                                             {% if leave.is_pending or leave.is_approved and leave.start_date >= today %}
+
                                                 <form method="post" action="{% url 'delete_leave' leave.id %}" style="display:inline">
                                                     {% csrf_token %}
                                                     <button type="submit" class="delete-button"

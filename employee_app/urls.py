@@ -50,11 +50,12 @@ path('manager/subordinates/', view_subordinates, name='view_subordinates'),
 
 
 path('filter-manager-leave-requests/', filter_manager_leave_requests, name='filter_manager_leave_requests'),
-path('allocate-leave/<int:manager_id>/',allocate_leave, name='allocate_leave'),
+path('allocate-leave/<int:employee_id>/',allocate_leave, name='allocate_leave'),
 path('navbar/',navbar,name='navbar'),
 path('leftbar/',sidebar,name='leftbar'),
 path('base/',base,name='base'),
 path('check-floating-holidays/', check_floating_holidays, name='check_floating_holidays'),
  path('check-leave-conflicts/', check_leave_conflicts, name='check_leave_conflicts'),
 path('delete-leave/<int:leave_id>/', delete_leave, name='delete_leave'),
+ path('test-email/', test_email, name='test_email'),
 ]

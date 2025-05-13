@@ -14,6 +14,11 @@ from django import forms
 from django.core.exceptions import ValidationError
 from .models import Employees, Resume, Certificate, Country, state
 
+import os
+from django import forms
+from django.core.exceptions import ValidationError
+from .models import Employees, Country, state  # Import your models here
+
 STATUS_CHOICES = (
     ('employed', 'Employed'),
     ('resigned', 'Resigned'),
@@ -37,7 +42,7 @@ class EmployeeEditForm(forms.ModelForm):
     office_phone = forms.CharField(required=False)
     home_phone = forms.CharField(required=False)
     home_city = forms.CharField(required=False)
-    incentive=forms.DecimalField(required=False)
+    incentive = forms.DecimalField(required=False)
     home_post_office = forms.CharField(required=False)
     manager = forms.ModelChoiceField(
         queryset=Employees.objects.all(),
@@ -55,6 +60,13 @@ class EmployeeEditForm(forms.ModelForm):
     )
     resumes = forms.FileField(required=False, widget=forms.ClearableFileInput(attrs={'multiple': True}))
     certificates = forms.FileField(required=False, widget=forms.ClearableFileInput(attrs={'multiple': True}))
+    
+    # Add the Date of Birth field
+    date_of_birth = forms.DateField(
+        required=True,  # You can make it optional with required=False
+        widget=forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
+        label="Date of Birth"  # Optionally, add a label
+    )
 
     class Meta:
         model = Employees
@@ -62,17 +74,18 @@ class EmployeeEditForm(forms.ModelForm):
             'employee_id', 'salutation', 'first_name', 'middle_name', 'last_name',
             'company_email', 'personal_email', 'mobile_phone', 'office_phone',
             'home_phone', 'valid_from', 'valid_to', 'country', 'state', 'home_post_office',
-            'home_city', 'pincode', 'department', 'designation',
-            'manager', 'employee_status', 'emergency_contact_name',
-            'emergency_contact_phone', 'emergency_contact_relation',
-            'base_salary', 'employee_type', 'resignation_date', 'home_house',
-            'resumes', 'certificates','incentive'
+            'home_city', 'pincode', 'department', 'designation', 'manager',
+            'employee_status', 'emergency_contact_name', 'emergency_contact_phone',
+            'emergency_contact_relation', 'base_salary', 'employee_type',
+            'resignation_date', 'home_house', 'resumes', 'certificates', 'incentive',
+            'date_of_birth'  # Add date_of_birth to the fields list
         ]
 
         widgets = {
             'valid_from': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
             'valid_to': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
             'resignation_date': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
+            'date_of_birth': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'})
         }
 
     def __init__(self, *args, **kwargs):
@@ -132,16 +145,7 @@ class EmployeeEditForm(forms.ModelForm):
         if commit:
             instance.save()
 
-            # Handle multiple resumes
-            # if self.request and hasattr(self.request, 'FILES'):
-            #     if 'resumes' in self.request.FILES:
-            #         for resume_file in self.request.FILES.getlist('resumes'):
-            #             Resume.objects.create(employee=instance, file=resume_file)
-
-            #     if 'certificates' in self.request.FILES:
-            #         for certificate_file in self.request.FILES.getlist('certificates'):
-            #             Certificate.objects.create(employee=instance, file=certificate_file)
-
+            
         return instance
 
         

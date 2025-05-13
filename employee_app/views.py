@@ -687,7 +687,7 @@ def request_leave(request):
                     "has been submitted and is pending your manager's approval.\n\n"
                     "Best regards,\nHR Team"
                 ),
-                from_email="akashaku32@gmail.com",
+                from_email="lms@spectrasoln.com",
                 recipient_list=[employee.company_email],
                 fail_silently=False,
             )
@@ -702,7 +702,7 @@ def request_leave(request):
                         "Please log in to the HR portal to review and approve or reject this leave request.\n\n"
                         "Best regards,\nHR Team"
                     ),
-                    from_email="akashaku32@gmail.com",
+                    from_email="lms@spectrasoln.com",
                     recipient_list=[manager.company_email],
                     fail_silently=False,
                 )
@@ -790,6 +790,22 @@ def request_leave(request):
         'remaining_floating_leaves': remaining_floating_leaves,
     }
     return render(request, 'leaverequest.html', context)
+
+from django.core.mail import send_mail
+from django.http import HttpResponse
+
+def test_email(request):
+    try:
+        send_mail(
+            subject='Test Email',
+            message='This is a test email from Django.',
+            from_email='lms@spectrasoln.com',
+            recipient_list=['akashaku32@gmail.com'],  # Add a valid recipient email
+            fail_silently=False,  # Set to False to catch exceptions
+        )
+        return HttpResponse('Email sent successfully.')
+    except Exception as e:
+        return HttpResponse(f'Error occurred: {e}')
 @login_required
 def check_floating_holidays(request):
     if request.method == 'POST':
@@ -904,18 +920,15 @@ def delete_leave(request, leave_id):
     leave = get_object_or_404(LeaveRequest, pk=leave_id, employee_user=request.user)
     employee = leave.employee_master
     if request.method == "POST":
-        # Only revert counters if leave was "Accepted" or "Approved"
         if leave.status in ["Accepted", "Approved"]:
-            # You may want to recompute the duration as you did on accept_leave_request!
-            # For a simple rollback, assume leave.leave_days is correct:
-            # If you tracked floating vs casual breakdown, you'd subtract accordingly
-            
-            # Here is a generic rollback (customize by your app logic):
             employee.used_leaves = max(0, employee.used_leaves - (leave.leave_days or 0))
-            # If you also need to handle floating leave, and you track that breakdown, adjust as needed.
-            # Example: employee.floating_holidays_used = max(0, employee.floating_holidays_used - float_days_of_this_leave)
             employee.save()
-        leave.delete()
+        
+        # Soft delete
+        leave.status = 'Deleted'
+        leave.approved_by = leave.employee_user.email
+        leave.save()
+        
         messages.success(request, "Planned leave deleted successfully.")
     else:
         messages.error(request, "Invalid delete operation.")
@@ -1188,34 +1201,34 @@ def manager_leave_requests(request):
     """View to list leave requests submitted by subordinates."""
     try:
         # Fetch the logged-in user's employee profile
-        manager = Employees.objects.get(user=request.user)
+        employee = Employees.objects.get(user=request.user)
     except Employees.DoesNotExist:
         return render(request, 'employee_app/error.html', {'message': 'Manager profile not found.'})
 
     # Ensure the logged-in user is a manager
-    if not Employees.objects.filter(manager=manager).exists():
+    if not Employees.objects.filter(manager=employee).exists():
         return HttpResponse("cannot access")
 
     # Check if the employee is a manager
-    is_manager = Employees.objects.filter(manager=manager).exists()
+    is_manager = Employees.objects.filter(manager=employee).exists()
 
     current_year = now().year
-    total_used_leaves = manager.used_leaves
+    total_used_leaves = employee.used_leaves
 
     # Filter leave requests for employees managed by the logged-in manager
-    leave_requests = LeaveRequest.objects.filter(employee_master__manager=manager)
+    leave_requests = LeaveRequest.objects.filter(employee_master__manager=employee)
 
     # Get available years for filtering
     available_years = list(set(leave_requests.values_list('start_date__year', flat=True)))
 
     return render(request, 'manage_leave_requests.html', {
         'leave_requests': leave_requests,
-        'manager_name': f"{manager.first_name} {manager.last_name}",
+        'manager_name': f"{employee.first_name} {employee.last_name}",
         'is_manager': is_manager,
-        'emp_designation': manager.designation,
-        'emp_id': manager.employee_id,
-        'emp_fname': manager.first_name,
-        'emp_lname': manager.last_name,
+        'emp_designation': employee.designation,
+        'emp_id': employee.employee_id,
+        'emp_fname':employee.first_name,
+        'emp_lname': employee.last_name,
         'total_used_leaves': total_used_leaves,
         'available_years': sorted(available_years, reverse=True),  # Add this for year filter
     })
@@ -1305,7 +1318,7 @@ def manage_leave_request(request, leave_request_id):
 
         leave_duration = 0
         floating_holidays_used = employee.floating_holidays_used
-        max_floating_holidays = 2
+        max_floating_holidays = employee.floating_holidays_balance+employee.floating_holidays_used
 
         current_date = start_date
         holidays = set(Holiday.objects.values_list('date', flat=True))
@@ -1344,7 +1357,7 @@ def manage_leave_request(request, leave_request_id):
                     "has been approved. Enjoy your time off!\n\n"
                     "Best regards,\nHR Team"
                 ),
-                from_email="akashaku32@gmail.com",
+                from_email="lms@spectrasoln.com",
                 recipient_list=[employee.company_email],
                 fail_silently=False,
             )
@@ -1361,7 +1374,7 @@ def manage_leave_request(request, leave_request_id):
                     "has been rejected. For more information, please contact your manager.\n\n"
                     "Best regards,\nHR Team"
                 ),
-                from_email="akashaku32@gmail.com",
+                from_email="lms@spectrasoln.com",
                 recipient_list=[employee.company_email],
                 fail_silently=False,
             )
@@ -1373,7 +1386,7 @@ def manage_leave_request(request, leave_request_id):
             leave_request.approved_by = approver
 
         leave_request.save()
-        return redirect('manager_leave_requests' if not request.user.is_superuser else 'admin_leave_requests')
+        return redirect('manager_leave_requests')
 
     return render(
         request,
@@ -1435,25 +1448,20 @@ def view_subordinates(request):
 
 
 
+
 from django.shortcuts import render, get_object_or_404, redirect
-from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.core.mail import send_mail
-from datetime import datetime
-from .models import Employees, LeaveRequest, Holiday, FloatingHoliday
-from admin_app.utils import calculate_leave_days  # Ensure correct function is imported
-
-from django.core.mail import send_mail
-from django.contrib import messages
-from django.shortcuts import render, redirect, get_object_or_404
+from django.db.models import Q
 from datetime import datetime
 
-def allocate_leave(request, manager_id):
-    """Manager can allocate leave for a subordinate."""
+def allocate_leave(request, employee_id):
+    """Manager can allocate leave for a subordinate, ensuring no overlapping leave."""
     manager = get_object_or_404(Employees, user=request.user)
-    employee = get_object_or_404(Employees, id=manager_id)
+    employee = get_object_or_404(Employees, id=employee_id)
+    total_used_leaves = employee.used_leaves 
     current_year = datetime.now().year  # Get current year
-    total_used_leaves = employee.used_leaves  # Fetch from Employees model
+     # Fetch from Employees model
 
     # Determine if the logged-in user is a manager
     is_manager = Employees.objects.filter(manager=manager).exists()
@@ -1462,42 +1470,114 @@ def allocate_leave(request, manager_id):
         start_date_str = request.POST.get("start_date")
         end_date_str = request.POST.get("end_date")
         reason = request.POST.get("reason", "").strip()
+        
+        
 
         if not start_date_str or not end_date_str:
             messages.error(request, "Both start and end date are required.")
-            return render(request, 'allocate_leave.html', {'employee': employee})
+            return render(request, 'allocate_leave.html', {
+                'employee': employee,
+                'emp_id': manager.employee_id,
+                'emp_fname': manager.first_name,
+                'emp_lname': manager.last_name,
+                'emp_designation': manager.designation,
+                'total_used_leaves': total_used_leaves,
+                'is_manager': is_manager
+            })
 
         if not reason:
             messages.error(request, "Reason is required.")
-            return render(request, 'allocate_leave.html', {'employee': employee})
+            return render(request, 'allocate_leave.html', {
+                'employee': employee,
+                'emp_id': manager.employee_id,
+                'emp_fname': manager.first_name,
+                'emp_lname': manager.last_name,
+                'emp_designation': manager.designation,
+                'total_used_leaves': total_used_leaves,
+                'is_manager': is_manager
+            })
 
         try:
             start_date = datetime.strptime(start_date_str, "%Y-%m-%d").date()
             end_date = datetime.strptime(end_date_str, "%Y-%m-%d").date()
         except ValueError:
             messages.error(request, "Invalid date format.")
-            return render(request, 'allocate_leave.html', {'employee': employee})
+            return render(request, 'allocate_leave.html', {
+                'employee': employee,
+                'emp_id': manager.employee_id,
+                'emp_fname': manager.first_name,
+                'emp_lname': manager.last_name,
+                'emp_designation': manager.designation,
+                'total_used_leaves': total_used_leaves,
+                'is_manager': is_manager
+            })
 
         if end_date < start_date:
             messages.error(request, "End date cannot be before start date.")
-            return render(request, 'allocate_leave.html', {'employee': employee})
+            return render(request, 'allocate_leave.html', {
+                'employee': employee,
+                'emp_id': manager.employee_id,
+                'emp_fname': manager.first_name,
+                'emp_lname': manager.last_name,
+                'emp_designation': manager.designation,
+                'total_used_leaves': total_used_leaves,
+                'is_manager': is_manager
+            })
 
         # Simple plain calculation: total days including both ends
         leave_days = (end_date - start_date).days + 1
-        print(leave_days)
         if leave_days <= 0:
             messages.error(request, "No valid leave days selected.")
-            return render(request, 'allocate_leave.html', {'employee': employee})
+            return render(request, 'allocate_leave.html', {
+                'employee': employee,
+                'emp_id': manager.employee_id,
+                'emp_fname': manager.first_name,
+                'emp_lname': manager.last_name,
+                'emp_designation': manager.designation,
+                'total_used_leaves': total_used_leaves,
+                'is_manager': is_manager
+            })
 
         # Ensure the employee has enough leave balance
         if employee.used_leaves + leave_days > employee.total_leaves:
             messages.error(request, "Not enough leave balance!")
-            return render(request, 'allocate_leave.html', {'employee': employee})
+            return render(request, 'allocate_leave.html', {
+                'employee': employee,
+                'emp_id': manager.employee_id,
+                'emp_fname': manager.first_name,
+                'emp_lname': manager.last_name,
+                'emp_designation': manager.designation,
+                'total_used_leaves': total_used_leaves,
+                'is_manager': is_manager
+            })
+
+        # ==================
+        # Overlap Check Block
+        # ==================
+        overlapping = LeaveRequest.objects.filter(
+            employee_user=employee.user,
+              # Only consider non-deleted leave requests
+            status__in=['Pending', 'Accepted', 'Approved']  # Only leaves that are active
+        ).filter(
+            Q(start_date__lte=end_date) & Q(end_date__gte=start_date)
+        )
+
+        if overlapping.exists():
+            messages.error(request, "A leave already exists for the employee overlapping these dates.")
+            return render(request, 'allocate_leave.html', {
+                'employee': employee,
+                'emp_id': manager.employee_id,
+                'emp_fname': manager.first_name,
+                'emp_lname': manager.last_name,
+                'emp_designation': manager.designation,
+                'total_used_leaves': total_used_leaves,
+                'is_manager': is_manager
+            })
 
         # Create Leave Request
         LeaveRequest.objects.create(
             employee_user=employee.user,
-            employee_master=employee,
+            employee_master=manager,
             start_date=start_date,
             end_date=end_date,
             reason=reason,
@@ -1520,7 +1600,7 @@ def allocate_leave(request, manager_id):
                 f"Reason: {reason}\n\n"
                 "Best regards,\nHR Team"
             ),
-            from_email="akashaku32@gmail.com",
+            from_email="lms@spectrasoln.com",
             recipient_list=[employee.company_email],
             fail_silently=False,
         )
@@ -1528,6 +1608,7 @@ def allocate_leave(request, manager_id):
         messages.success(request, f"Leave has been allocated to {employee.first_name} {employee.last_name}.")
         return redirect('view_subordinates')
 
+    # GET or initial page load
     return render(request, 'allocate_leave.html', {
         'employee': employee,
         'emp_id': manager.employee_id,

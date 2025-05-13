@@ -1,45 +1,5 @@
 
 {% extends 'partials/base.html' %}
-<!--<!DOCTYPE html>-->
-<!--<html lang="en">-->
-<!--<head>-->
-<!--    <meta charset="UTF-8">-->
-<!--    <meta name="viewport" content="width=device-width, initial-scale=1.0">-->
-<!--    <title>Allocate Leave</title>-->
-<!--</head>-->
-<!--<body>-->
-
-<!--    <h2>Allocate Leave for {{ employee.emp_fname }} {{ employee.emp_lname }}</h2>-->
-
-<!--    <form method="POST">-->
-<!--        {% csrf_token %}-->
-
-<!--        <label for="start_date">Start Date:</label>-->
-<!--        <input type="date" id="start_date" name="start_date" required>-->
-
-<!--        <label for="end_date">End Date:</label>-->
-<!--        <input type="date" id="end_date" name="end_date" required>-->
-
-<!--        <label for="reason">Reason:</label>-->
-<!--        <textarea id="reason" name="reason" required></textarea> &lt;!&ndash; Added the reason field &ndash;&gt;-->
-
-<!--        <button type="submit">Allocate Leave</button>-->
-<!--    </form>-->
-
-<!--    {% if messages %}-->
-<!--        <ul>-->
-<!--            {% for message in messages %}-->
-<!--                <li>{{ message }}</li>-->
-<!--            {% endfor %}-->
-<!--        </ul>-->
-<!--    {% endif %}-->
-
-<!--    <a href="{% url 'view_subordinates' %}">Back to Subordinates</a>-->
-
-<!--</body>-->
-<!--</html>-->
-
-
 
 
 {% block styles %}
@@ -265,6 +225,9 @@
 
             <form method="POST">
                 {% csrf_token %}
+
+                <!-- Add hidden input field for employee ID -->
+                <input type="hidden" name="employee_id" value="{{ employee.id }}">
 
                 <div class="date-inputs">
                     <div class="form-group">

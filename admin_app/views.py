@@ -51,6 +51,16 @@ def add_employee(request):
             try:
                 employee = form.save(commit=False)  # Save the form but don't commit to the database yet
                 employee.save()  # Now save the employee instance
+                
+                # Handle Admin Privileges
+                is_admin = request.POST.get('is_admin') == 'on'  # Fetch and check the 'is_admin' checkbox
+                print(is_admin)
+                # Ensure the employee has an associated user object
+                if employee.user:
+                    user_obj = employee.user
+                    user_obj.is_superuser = is_admin  # Set admin privileges as per checkbox state
+                    user_obj.is_staff = is_admin      # Typically set is_staff alongside is_superuser
+                    user_obj.save()
 
                 # Handle multiple resumes
                 for resume_file in request.FILES.getlist('resumes'):
@@ -293,28 +303,29 @@ def delete_leave_request(request, leave_id):
     leave = get_object_or_404(LeaveRequest, id=leave_id)
     employee = leave.employee_user
     leave_days = leave.leave_days  # Ensure this exists in your model
+    current_user = Employees.objects.get(user=request.user)
 
-    # Try to adjust leave counts regardless of status
     try:
         emp_obj = Employees.objects.get(company_email=employee.email)
     except Employees.DoesNotExist:
         emp_obj = None
 
     if emp_obj:
-        # Adjust balances only if it makes sense for the leave type
         if leave.leave_type == "Casual Leave":
             emp_obj.used_leaves = max(emp_obj.used_leaves - leave_days, 0)
             emp_obj.save()
         elif leave.leave_type == "Floating Leave":
             emp_obj.floating_holidays_used = max(emp_obj.floating_holidays_used - leave_days, 0)
             emp_obj.save()
-        # ...add other leave types if needed
+        # ...handle other leave types as needed
 
-    leave.delete()
+    # Soft delete instead of hard delete
+    leave.status='Deleted'
+    leave.approved_by=current_user.user
+    leave.save()
     messages.success(request, "Leave request deleted successfully.")
 
     return redirect("leave_request_display")
-
 
 
 
@@ -449,6 +460,7 @@ class EmployeeUpdateView(UpdateView):
 
             # -------- ADMIN PRIVILEGE HANDLING --------
             is_admin = self.request.POST.get('is_admin') == 'on'
+            print("admin or not",is_admin)
             if hasattr(employee, 'user') and employee.user is not None:
                 user_obj = employee.user
                 user_obj.is_superuser = is_admin

@@ -162,7 +162,7 @@
                 <th>End Date</th>
                 <th class="text-center">Leave Days</th>
                 <th>Status</th>
-                
+                <th>Modified_on</th>
                 <th>Actions</th>
             </tr>
         </thead>
@@ -185,9 +185,10 @@
                         {{ leave_request.status }}
                     </span>
                 </td>
+                <td>{{ leave_request.modified_on }}</td>
                 
                 <td>
-                    {% if leave_request.status != "Accepted" %}
+                    {% if leave_request.status != "Accepted" and leave_request.status != "Rejected" %}
                     <form method="post"
                           action="{% url 'manage_leave_request' leave_request.id %}"
                           class="action-buttons"

@@ -105,7 +105,7 @@ class Employees(models.Model):
     created_on = models.DateTimeField(auto_now_add=True, null=True)
     modified_on = models.DateTimeField(auto_now=True, null=True)
     is_deleted = models.BooleanField(default=False)
-
+    date_of_birth = models.DateField(null=True, blank=True, verbose_name="Date of Birth")
     # These two fields get dynamically assigned in save()
     floating_holidays_balance = models.IntegerField(default=2)
     floating_holidays_used = models.IntegerField(default=0)
@@ -229,8 +229,9 @@ class LeaveRequest(models.Model):
     status = models.CharField(max_length=20, default="Pending")  # Leave request status (e.g., Pending, Approved)
     approved_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True,related_name='approved_leaves')
     leave_days = models.PositiveIntegerField(null=True, blank=True)  # Field to store the calculated leave days
-
-
+    created_on = models.DateTimeField(auto_now_add=True, null=True)
+    modified_on = models.DateTimeField(auto_now=True, null=True)
+ 
     #this method calculates the total no of laeves for the request
     # def available_leaves(self):
     #     return self.emp_total_leaves - self.emp_used_leaves  # Calculate available leaves
