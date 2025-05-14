@@ -104,21 +104,20 @@
                 </div>
 
                 <!-- Date of Birth Section -->
+                
+
+                <!-- Validity Period Section -->
+                <!-- <div class="section-heading">Validity Period</div> -->
                 <div class="form-row">
                     <div class="form-group col-md-4">
                         <label for="date_of_birth" class="required">Date of Birth</label>
                         <input type="date" name="date_of_birth" class="form-control" required>
                     </div>
-                </div>
-
-                <!-- Validity Period Section -->
-                <!-- <div class="section-heading">Validity Period</div> -->
-                <div class="form-row">
-                    <div class="form-group col-md-6">
+                    <div class="form-group col-md-4">
                         <label for="valid_from" class="required">Valid From</label>
                         <input type="date" name="valid_from" class="form-control" value="{{ default_valid_from|date:'Y-m-d' }}" required>
                     </div>
-                    <div class="form-group col-md-6">
+                    <div class="form-group col-md-4">
                         <label for="valid_to" class="required">Valid To</label>
                         <input type="date" name="valid_to" class="form-control" value="{{ default_valid_to|date:'Y-m-d' }}" required>
                     </div>

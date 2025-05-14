@@ -135,7 +135,7 @@ def export_employees_to_excel(request):
         'Emergency Contact Email', 'Emergency Contact Relation', 'Base Salary',
         'Resume', 'Certificates', 'Created On', 'Modified On', 'Is Deleted',
         'Floating Holidays Balance', 'Floating Holidays Used', 'Total Leaves',
-        'Used Leaves'
+        'Used Leaves','Date Of Birth'
     ]
 
     # Write the header row to the sheet
@@ -158,6 +158,7 @@ def export_employees_to_excel(request):
             employee.first_name,
             employee.middle_name,
             employee.last_name,
+            employee.date_of_birth,
             employee.company_email,
             employee.personal_email,
             employee.mobile_phone,
@@ -501,84 +502,155 @@ from django.views import View
 import pandas as pd
 from .models import Employees, Country, state, Role, Department, Salutation
 
+from django.views import View
+from django.shortcuts import render
+from django.http import JsonResponse
+import pandas as pd
+from .models import Employees, Country, state, Role, Department, Salutation
+from django.utils.dateparse import parse_date
+from datetime import datetime
+import math
+
+import pandas as pd
+import math
+from datetime import datetime, date
+from django.shortcuts import render
+from django.http import JsonResponse
+from django.views import View
+from django.db import transaction
+from .models import Employees, Country, state, Role, Department, Salutation
+from django.contrib.auth.models import User
+from django.utils.dateparse import parse_date
+
 class EmployeeExcelCreateView(View):
     template_name = 'employee_excel_create.html'
 
     def get(self, request):
-        print("GET request received")
         return render(request, self.template_name)
 
     def post(self, request):
-        print("POST request received")
         excel_file = request.FILES.get('excel_file')
-
         if not excel_file:
-            print("No file uploaded")
             return JsonResponse({'error': "Please upload an Excel file."}, status=400)
 
-        created_employees = []  # List to store successfully created employees
+        created_employees = []
+        failed_rows = []
+
+        # Define field lists for checking required/optional.
+        required_fields = ['Employee ID', 'First Name', 'Last Name', 'Company Email', 'Valid From', 'Valid To', 'Country', 'State', 'Department', 'Role', 'Salutation', 'Employee Type']
 
         try:
             df = pd.read_excel(excel_file)
-            print("DataFrame loaded successfully")
-            print(df.head())  # Print the first few rows of the DataFrame for inspection
-
+            df.columns = [c.strip() for c in df.columns]
+            print("Excel columns:", df.columns)
             for index, row in df.iterrows():
-                print(f"Processing row {index + 1}")
                 try:
-                    # Fetch foreign key objects
-                    country = Country.objects.get(country_name=row['Country'])
-                    print(f"Country found: {country}")
-                    state_obj = state.objects.get(name=row['State'], country=country)
-                    print(f"State found: {state_obj}")
-                    role = Role.objects.get(role_name=row['Role'])
-                    print(f"Role found: {role}")
-                    department = Department.objects.get(dep_name=row['Department'])
-                    print(f"Department found: {department}")
-                    salutation = Salutation.objects.get(sal_name=row.get('Salutation', 'Mr.'))
-                    print(f"Salutation found: {salutation}")
-                    manager_id = Employees.objects.get(employee_id=row['Manager ID'])
-                    print(f"Manager found: {manager_id}")
+                    # Helper functions
+                    def parse(x):
+                        if pd.isnull(x) or (isinstance(x, float) and math.isnan(x)): return None
+                        return x
 
-                    # Create a new employee
-                    employee = Employees(
-                        employee_id=row['Employee ID'],
-                        first_name=row['First Name'],
-                        middle_name=row.get('Middle Name', ''),
-                        last_name=row['Last Name'],
-                        company_email=row['Company Email'],
-                        personal_email=row.get('Personal Email', ''),
-                        mobile_phone=row['Mobile Phone'],
-                        office_phone=row.get('Office Phone', ''),
-                        home_phone=row.get('Home Phone', ''),
-                        home_city=row.get('Home City', ''),
-                        home_post_office=row.get('Home Post Office', ''),
-                        home_house=row.get('Home House', ''),
-                        pincode=row.get('Pincode', ''),
-                        department=department,
-                        designation=row.get('Designation', ''),
-                        manager=manager_id,
-                        employee_status=row['Employee Status'],
-                        emergency_contact_name=row.get('Emergency Contact Name', ''),
-                        emergency_contact_phone=row.get('Emergency Contact Phone', ''),
-                        emergency_contact_relation=row.get('Emergency Contact Relation', ''),
-                        base_salary=row.get('Base Salary', 0),
-                        incentive=row.get('incentive',0.0),
-                        employee_type=row['Employee Type'],
-                        resignation_date=row.get('Resignation Date'),
-                        valid_from=row.get('Valid From'),
-                        valid_to=row.get('Valid To'),
-                        country=country,
-                        state=state_obj,
-                        role=role,
-                        salutation=salutation
-                    )
-                    print(f"Employee created: {employee}")
-                    employee.save()
-                    print("Employee saved successfully")
+                    def parse_decimal(val):
+                        if pd.isnull(val) or val == '':
+                            return 0.0
+                        try:
+                            return float(val)
+                        except Exception:
+                            return 0.0
 
-                    # Add the created employee to the list
-                    # Add these fields to the created_employees list in the view
+                    def parse_int(val):
+                        try:
+                            return int(float(val)) if val not in [None, ""] else 0
+                        except Exception:
+                            return 0
+
+                    def parse_date_field(val):
+                        if pd.isnull(val) or not val: return None
+                        if isinstance(val, pd.Timestamp):
+                            return val.date()
+                        if isinstance(val, datetime):
+                            return val.date()
+                        try:
+                            return parse_date(str(val))
+                        except Exception:
+                            return None
+
+                    # Check for required fields in this row
+                    row_missing = [field for field in required_fields if field not in row or pd.isnull(row[field])]
+                    if row_missing:
+                        failed_rows.append({"row": int(index) + 2, "error": f"Missing required fields: {', '.join(row_missing)}"})
+                        continue
+
+                    # FK lookups
+                    country = Country.objects.get(country_name=parse(row['Country']))
+                    state_obj = state.objects.get(name=parse(row['State']), country=country)
+                    # For Role: lookup by role_id if given, else by role_name:
+                    if 'Role ID' in row and not pd.isnull(row['Role ID']):
+                        role = Role.objects.get(role_id=parse(row['Role ID']))
+                    else:
+                        role = Role.objects.get(role_name=parse(row['Role']))
+                    department = Department.objects.get(dep_name=parse(row['Department']))
+                    salutation = Salutation.objects.get(sal_name=parse(row.get('Salutation', 'Mr.')))
+
+                    # Manager (by ID, if present)
+                    manager = None
+                    manager_id_val = parse(row.get('Manager ID'))
+                    if manager_id_val:
+                        try:
+                            manager = Employees.objects.get(employee_id=manager_id_val)
+                        except Employees.DoesNotExist:
+                            pass  # Silently ignore if manager doesn't exist
+
+                    # User fields
+                    company_email = parse(row['Company Email'])
+                    employee_type = parse(row.get('Employee Type')) or 'E-'
+
+                    with transaction.atomic():
+                        employee = Employees(
+                            user=None,  # Will be created in save()
+                            employee_type=employee_type,
+                            employee_id=parse(row['Employee ID']),
+                            salutation=salutation,
+                            first_name=parse(row['First Name']),
+                            middle_name=parse(row.get('Middle Name', '')) or '',
+                            last_name=parse(row['Last Name']),
+                            company_email=company_email,
+                            personal_email=parse(row.get('Personal Email', '')),  # Not required
+                            mobile_phone=str(parse(row.get('Mobile Phone', '')) or ''),
+                            office_phone=str(parse(row.get('Office Phone', '')) or ''),
+                            home_phone=str(parse(row.get('Home Phone', '')) or ''),
+                            valid_from=parse_date_field(row['Valid From']),
+                            valid_to=parse_date_field(row['Valid To']),
+                            country=country,
+                            state=state_obj,
+                            address=parse(row.get('Address', '')) or '',
+                            home_house=parse(row.get('Home House', '')) or '',
+                            home_post_office=parse(row.get('Home Post Office', '')) or '',
+                            home_city=parse(row.get('Home City', '')) or '',
+                            pincode=str(parse(row.get('Pincode', '')) or ''),
+                            role=role,
+                            department=department,
+                            designation=parse(row.get('Designation', '')) or '',
+                            manager=manager,
+                            employee_status=parse(row.get('Employee Status', '')) or '',
+                            emergency_contact_name=parse(row.get('Emergency Contact Name')) or None,
+                            emergency_contact_phone=str(parse(row.get('Emergency Contact Phone', '')) or ''),
+                            emergency_contact_email=parse(row.get('Emergency Contact Email')) or None,
+                            emergency_contact_relation=parse(row.get('Emergency Contact Relation', '')) or None,
+                            base_salary=parse_decimal(row.get('Base Salary')),
+                            incentive=parse_decimal(row.get('Incentive', 0)),
+                            floating_holidays_balance=parse_int(row.get('Floating Holidays Balance')),
+                            floating_holidays_used=parse_int(row.get('Floating Holidays Used')),
+                            total_leaves=parse_int(row.get('Total Leaves')),
+                            used_leaves=parse_int(row.get('Used Leaves')),
+                            date_of_birth=parse_date_field(row.get('Date Of Birth')),
+                            resignation_date=parse_date_field(row.get('Resignation Date')),
+                            # created_on and modified_on not set here (auto)
+                            # password support, if provided in Excel (optional)
+                            password=parse(row.get('Password')) if 'Password' in row else None,
+                        )
+                        employee.save()  # Handles user as well
+
                     created_employees.append({
                         'employee_id': employee.employee_id,
                         'first_name': employee.first_name,
@@ -588,18 +660,22 @@ class EmployeeExcelCreateView(View):
                         'company_email': employee.company_email,
                         'mobile_phone': employee.mobile_phone
                     })
-
                 except Exception as e:
-                    print(f"Error creating employee at row {index + 1}: {str(e)}")
-                    return JsonResponse({'error': f"Error creating employee at row {index + 1}: {str(e)}"}, status=400)
+                    # Log/print traceback for debugging
+                    import traceback
+                    print(traceback.format_exc())
+                    failed_rows.append({'row': int(index)+2, 'error': str(e)})
 
-            # Return all created employees
-            return JsonResponse({'created_employees': created_employees})
+            return JsonResponse({
+                'created_employees': created_employees,
+                'failed_rows': failed_rows,
+            })
 
         except Exception as e:
-            print(f"Failed to process the Excel file: {str(e)}")
+            # Log/print traceback for debugging
+            import traceback
+            print(traceback.format_exc())
             return JsonResponse({'error': f"Failed to process the Excel file: {str(e)}"}, status=400)
-from django.shortcuts import render, redirect
 from django.contrib import messages
 from django.views import View
 from .models import Employees

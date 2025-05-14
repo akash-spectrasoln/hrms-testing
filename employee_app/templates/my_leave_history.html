@@ -56,6 +56,7 @@
         gap: 30px;
     }
     .table-container {
+        width: 100%;
         background: white;
         border-radius: 8px;
         box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
@@ -100,11 +101,11 @@
 
     .table th {
         background-color: #f8f9fa;
-        padding: 12px 25px;
+        padding: 30px 25px;
         text-align: left;
         border-bottom: 2px solid #e2e8f0;
         font-size: 14px;
-        font-weight: 500;
+        font-weight: 1000;
         color: #2c3e50;
         position: sticky;
         top: 0;
@@ -112,7 +113,7 @@
     }
 
     .table td {
-        padding: 10px 25px;
+        padding: 20px 25px;
         border-bottom: 1px solid #e2e8f0;
         font-size: 14px;
         color: #2c3e50;
@@ -207,6 +208,7 @@
                                 <th class="text-center">Available</th>
                                 <th class="text-center">Used</th>
                                 <th class="text-center">Planned</th>
+                                <th class="text-center">Pending for Approval</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -219,6 +221,7 @@
                                     <td class="text-center">{{ summary.available }}</td>
                                     <td class="text-center">{{ summary.used }}</td>
                                     <td class="text-center">{{ summary.planned }}</td>
+                                    <td class="text-center">{{ summary.pending}}</td>
                                 </tr>
                                 {% endfor %}
                             {% else %}

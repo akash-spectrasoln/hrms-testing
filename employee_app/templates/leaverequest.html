@@ -620,6 +620,52 @@
             }
         });
     });
+    
+    document.addEventListener("DOMContentLoaded", function () {
+    const leaveForm = document.getElementById("leave-request-form");
+    if (!leaveForm) return;
+
+    const startDateInput = document.getElementById("id_start_date");
+    const endDateInput = document.getElementById("id_end_date");
+    const dayTypeSelect = document.getElementById("id_day_type");
+    const endDateGroup = document.getElementById("end-date-group");
+
+    function showInlineError(message) {
+        let errorDiv = document.getElementById("date-error-message");
+        if (!errorDiv) {
+            errorDiv = document.createElement('div');
+            errorDiv.id = "date-error-message";
+            errorDiv.className = "error-message";
+            endDateGroup.appendChild(errorDiv);
+        }
+        errorDiv.textContent = message;
+    }
+    function clearInlineError() {
+        const errorDiv = document.getElementById("date-error-message");
+        if (errorDiv) errorDiv.remove();
+    }
+
+    // Restrict End Date's min attribute after Start Date selection
+    if (startDateInput && endDateInput) {
+        startDateInput.addEventListener("change", function () {
+            endDateInput.min = startDateInput.value;
+            // If start > end, reset end date
+            if (endDateInput.value && startDateInput.value > endDateInput.value) {
+                endDateInput.value = startDateInput.value;
+            }
+        });
+    }
+
+    leaveForm.addEventListener("submit", function(event) {
+        clearInlineError();
+        const startDateValue = startDateInput.value;
+        const endDateValue = endDateInput.value;
+        if (startDateValue && endDateValue && startDateValue > endDateValue) {
+            event.preventDefault();
+            showInlineError("Start Date cannot be after End Date.");
+        }
+    });
+});
     </script>
 
 {% endblock %}
