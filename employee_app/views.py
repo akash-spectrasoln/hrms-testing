@@ -262,7 +262,20 @@ def employee_dashboard(request):
 
 
 
+from django.shortcuts import render, get_object_or_404
+from .models import Employees
 
+
+def employee_profile(request, employee_id):
+    employee = get_object_or_404(Employees, pk=employee_id, is_deleted=False)
+
+    # Check if this employee manages anyone
+    is_manager = Employees.objects.filter(manager=employee, is_deleted=False).exists()
+
+    return render(request, 'profile.html', {
+        'employee': employee,
+        'is_manager': is_manager,
+    })
 
 
 from django.shortcuts import render
@@ -1693,7 +1706,11 @@ def allocate_leave(request, employee_id):
     }
     return render(request, 'allocate_leave.html', context)
 def navbar(request):
-    return render(request,'admin_partials/admin_header.html')
+    employee=Employees.objects.get(user=request.user)
+    context={
+        'employee':employee
+    }
+    return render(request,'admin_partials/admin_header.html',context)
 
 
 def sidebar(request):

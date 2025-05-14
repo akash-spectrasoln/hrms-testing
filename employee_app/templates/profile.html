@@ -1,0 +1,116 @@
+{% extends 'partials/base.html' %}
+{% block content %}
+<style>
+  .profile-background {
+      background: linear-gradient(90deg, #e5ecfb 0%, #f5f7fa 100%);
+      min-height: 100vh;
+  }
+  .profile-card {
+      border-radius: 16px;
+      box-shadow: 0 6px 24px 0 rgba(80,100,126,.08);
+      overflow: hidden;
+      background: white;
+      margin-top: 40px;
+  }
+  .profile-avatar {
+      width: 110px;
+      height: 110px;
+      object-fit: cover;
+      border-radius: 50%;
+      border: 5px solid #e5ecfb;
+      box-shadow: 0 2px 8px 0 rgba(80,100,126,.06);
+      margin-bottom: 18px;
+  }
+  .table-profile th { background: #f4f6fb; width: 33%;}
+  .section-heading { font-size: 1.18rem; color: #4669b2; margin-top: 2rem; }
+</style>
+
+<div class="profile-background py-5">
+  <div class="container">
+    <div class="card profile-card w-75 mx-auto">
+      <div class="card-body p-5">
+        <div class="d-flex flex-column align-items-center mb-4">
+          <img src="https://ui-avatars.com/api/?name={{ employee.first_name }}+{{ employee.last_name }}&size=220&background=4669b2&color=fff" class="profile-avatar mb-2" alt="Profile Picture">
+          <h3 class="mb-0" style="font-weight: 600;">
+            {{ employee.salutation }} {{ employee.first_name }} {% if employee.middle_name %}{{ employee.middle_name }}{% endif %} {{ employee.last_name }}
+          </h3>
+          <span class="text-muted mt-0">{{ employee.designation }}</span>
+          <span class="badge rounded-pill bg-primary mt-2">{{ employee.department }}</span>
+        </div>
+        <div>
+          <table class="table table-borderless table-profile mb-2" style="font-size: 1.07rem;">
+            <tbody>
+              <tr>
+                <th><i class="bi bi-person-badge"></i> Employee ID</th>
+                <td>{{ employee.employee_id }}</td>
+              </tr>
+              <tr>
+                <th><i class="bi bi-person-lines-fill"></i> Employee Type</th>
+                <td>{{ employee.get_employee_type_display }}</td>
+              </tr>
+              <tr>
+                <th><i class="bi bi-envelope-at"></i> Company Email</th>
+                <td>{{ employee.company_email }}</td>
+              </tr>
+              <tr>
+                <th><i class="bi bi-envelope"></i> Personal Email</th>
+                <td>{{ employee.personal_email }}</td>
+              </tr>
+              <tr>
+                <th><i class="bi bi-phone"></i> Mobile Phone</th>
+                <td>{{ employee.mobile_phone }}</td>
+              </tr>
+              <tr>
+                <th><i class="bi bi-calendar-plus"></i> Valid From</th>
+                <td>{{ employee.valid_from }}</td>
+              </tr>
+              <tr>
+                <th><i class="bi bi-calendar-x"></i> Valid To</th>
+                <td>{{ employee.valid_to }}</td>
+              </tr>
+              <tr>
+                <th><i class="bi bi-calendar2-heart"></i> Date of Birth</th>
+                <td>{{ employee.date_of_birth|default:"-" }}</td>
+              </tr>
+              <tr>
+                <th><i class="bi bi-diagram-3"></i> Manager</th>
+                <td>
+                  {% if employee.manager %}
+                    {{ employee.manager.first_name }} {{ employee.manager.last_name }}
+                  {% else %}-{% endif %}
+                </td>
+              </tr>
+              
+              <tr>
+                <th><i class="bi bi-calendar-check"></i> Leaves Remaining</th>
+                <td>{{ employee.available_leaves }}</td>
+              </tr>
+            </tbody>
+          </table>
+          <div class="row mt-4">
+            <div class="col-md-6">
+              <div class="section-heading"><i class="bi bi-house-heart"></i> Address</div>
+              <div class="text-muted small">
+                {{ employee.address }}<br>
+                {{ employee.home_house }}, {{ employee.home_post_office }}<br>
+                {{ employee.home_city }}, {{ employee.state }}, {{ employee.country }} - {{ employee.pincode }}
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="section-heading"><i class="bi bi-person-hearts"></i> Emergency Contact</div>
+              <div class="text-muted small">
+                <strong>{{ employee.emergency_contact_name }}</strong><br>
+                {% if employee.emergency_contact_relation %}({{ employee.emergency_contact_relation }})<br>{% endif %}
+                {{ employee.emergency_contact_phone }}<br>
+                {% if employee.emergency_contact_email %}{{ employee.emergency_contact_email }}{% endif %}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- Bootstrap Icons CDN (optional, for pretty icons) -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+{% endblock %}

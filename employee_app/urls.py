@@ -7,7 +7,7 @@ path('login/', employee_login, name='login'),
 path('set_password/', set_password, name='set_password'),
 path('emp_index/',emp_index,name='index'),
 path('emp_logout/',emp_logout,name='emp_logout'),
-
+path('profile/<int:employee_id>/', employee_profile, name='profile'),
 path('request_leave/', request_leave, name='request_leave'),
 path('my_leave_history/', my_leave_history, name='my_leave_history'),
 path('profile/',employee_dashboard, name='profile'),
