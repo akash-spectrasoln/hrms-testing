@@ -377,6 +377,7 @@ def edit_employee_profile(request):
 
     # Render the template with the form, countries, and states
     return render(request, 'edit_profile.html', {
+        'employee':employee,
         'form': form,
         'countries': countries,
         'states': states,
@@ -489,6 +490,7 @@ def change_password(request):
         form = PasswordChangeForm(user=request.user)
 
     return render(request, 'change_password.html', {
+        'employee':employee,
         'form': form,
         'is_manager': is_manager,
         'emp_id': employee.employee_id,  # Employee ID
@@ -829,6 +831,7 @@ def request_leave(request):
         day += timedelta(days=1)
 
     context = {
+        'employee':employee,
         'form': form,
         'employee_name': f"{employee.first_name} {employee.last_name}",
         'employee_email': employee.company_email,
@@ -1139,6 +1142,7 @@ def my_leave_history(request):
 
     # Pass request as context for context-aware selection of the dropdown in template
     return render(request, 'my_leave_history.html', {
+        'employee':employee,
         'leave_requests': leave_requests,
         'leave_summary': leave_summary_data,
         'is_manager': is_manager,
@@ -1215,7 +1219,7 @@ def total_leaves_view(request):
     current_year = date.today().year
     total_leaves = get_total_leaves(employee, year=current_year)
 
-    return render(request, 'total_leaves.html', {'total_leaves': total_leaves, 'year': current_year})
+    return render(request, 'total_leaves.html', {'employee':employee,'total_leaves': total_leaves, 'year': current_year})
 
 
 
@@ -1247,6 +1251,7 @@ def holiday_list(request):
     total_used_leaves = employee.used_leaves  # Fetch from the Employees model
 
     context = {
+        'employee':employee,
         'holidays': holidays,
         'floating_holidays': floating_holidays,
         'is_manager': is_manager,  # Pass manager status to template
@@ -1304,6 +1309,7 @@ def manager_leave_requests(request):
     available_years = list(set(leave_requests.values_list('start_date__year', flat=True)))
 
     return render(request, 'manage_leave_requests.html', {
+        'employee':employee,
         'leave_requests': leave_requests,
         'manager_name': f"{employee.first_name} {employee.last_name}",
         'is_manager': is_manager,
@@ -1474,6 +1480,7 @@ def manage_leave_request(request, leave_request_id):
         request,
         'manage_leave_requests.html',
         {
+            'employee':employee,
             'leave_request': leave_request,
             'is_manager': is_manager,
             'emp_designation': logged_in_employee.designation,
@@ -1518,6 +1525,7 @@ def view_subordinates(request):
     total_used_leaves = manager.used_leaves  # Fetch from the Employees model
 
     return render(request, 'view_subordinates.html', {
+        'employee':manager,
         'subordinates': subordinates,
         'manager': manager,
         'is_manager' : is_manager,
