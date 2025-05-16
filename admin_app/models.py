@@ -231,7 +231,7 @@ class LeaveRequest(models.Model):
     leave_days = models.PositiveIntegerField(null=True, blank=True)  # Field to store the calculated leave days
     created_on = models.DateTimeField(auto_now_add=True, null=True)
     modified_on = models.DateTimeField(auto_now=True, null=True)
- 
+    created_by = models.ForeignKey(User,on_delete=models.SET_NULL,null=True,blank=True,related_name='leave_requests_created')
     #this method calculates the total no of laeves for the request
     # def available_leaves(self):
     #     return self.emp_total_leaves - self.emp_used_leaves  # Calculate available leaves

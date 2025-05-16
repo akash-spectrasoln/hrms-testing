@@ -61,13 +61,10 @@
                 <td>{{ employee.mobile_phone }}</td>
               </tr>
               <tr>
-                <th><i class="bi bi-calendar-plus"></i> Valid From</th>
+                <th><i class="bi bi-calendar-plus"></i>Start Date</th>
                 <td>{{ employee.valid_from }}</td>
               </tr>
-              <tr>
-                <th><i class="bi bi-calendar-x"></i> Valid To</th>
-                <td>{{ employee.valid_to }}</td>
-              </tr>
+              
               <tr>
                 <th><i class="bi bi-calendar2-heart"></i> Date of Birth</th>
                 <td>{{ employee.date_of_birth|default:"-" }}</td>

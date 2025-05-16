@@ -172,7 +172,7 @@
         }
 
         .floating-holiday {
-            background-color: #e0e7ff !important; /* light indigo */
+            background-color: #d39565 !important; /* light indigo */
             border-radius: 4px;
         }
 
@@ -251,7 +251,7 @@
         }
 
         .floating-holiday-indicator {
-            background-color: #e0e7ff;
+            background-color: #d39565;
         }
 
         .weekend-indicator {
@@ -448,80 +448,81 @@
 <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 <script>
     document.addEventListener("DOMContentLoaded", function () {
-        const holidays = JSON.parse(document.getElementById('holidays-data').textContent);
-        const floatingHolidays = JSON.parse(document.getElementById('floating-holidays-data').textContent);
-        const pendingLeaveDates = JSON.parse(document.getElementById('pending-leave-dates-data').textContent);
-        const approvedLeaveDates = JSON.parse(document.getElementById('approved-leave-dates-data').textContent);
-    
-        const startDateInput = document.getElementById("id_start_date");
-        const endDateInput = document.getElementById("id_end_date");
-        const leaveForm = document.getElementById("leave-request-form");
-        const modal = document.getElementById("floatingHolidayModal");
-        const modalMessage = document.getElementById("modal-message");
-        const confirmButton = document.getElementById("confirmButton");
-        const cancelButton = document.getElementById("cancelButton");
-        const dayTypeSelect = document.getElementById("id_day_type");
-        const endDateGroup = document.getElementById("end-date-group");
-    
-        let today = new Date().toISOString().split('T')[0];
-        startDateInput.value = today;
-    
-        flatpickr(startDateInput, {
-            dateFormat: "Y-m-d",
-            minDate: "today",
-            appendTo: document.body,  // <-- same here
-            onDayCreate: function (dObj, dStr, fp, dayElem) {
-                const dayString = dayElem.dateObj.toLocaleDateString('en-CA');
-                if (dayElem.dateObj.getDay() === 6 || dayElem.dateObj.getDay() === 0) {
-                    dayElem.classList.add("weekend");
-                } else if (holidays.includes(dayString)) {
-                    dayElem.classList.add("holiday");
-                } else if (pendingLeaveDates.includes(dayString)) {
-                    dayElem.classList.add("pending-leave");
-                } else if (approvedLeaveDates.includes(dayString)) {
-                    dayElem.classList.add("approved-leave");
-                } else if (floatingHolidays.includes(dayString)) {
-                    dayElem.classList.add("floating-holiday");
-                }
+    const holidays = JSON.parse(document.getElementById('holidays-data').textContent);
+    const floatingHolidays = JSON.parse(document.getElementById('floating-holidays-data').textContent);
+    const pendingLeaveDates = JSON.parse(document.getElementById('pending-leave-dates-data').textContent);
+    const approvedLeaveDates = JSON.parse(document.getElementById('approved-leave-dates-data').textContent);
+
+    const startDateInput = document.getElementById("id_start_date");
+    const endDateInput = document.getElementById("id_end_date");
+
+    const startDatePicker = flatpickr(startDateInput, {
+        dateFormat: "Y-m-d",
+        minDate: "today",
+        appendTo: document.body,
+        onChange: function(selectedDates, dateStr) {
+            if (dayTypeSelect.value === "multiple") {
+                endDatePicker.jumpToDate(dateStr); // Adjust end date calendar view
             }
-        });
-        flatpickr(endDateInput, {
-            dateFormat: "Y-m-d",
-            minDate: "today",
-            appendTo: document.body,  // <-- same here
-            onDayCreate: function (dObj, dStr, fp, dayElem) {
-                const dayString = dayElem.dateObj.toLocaleDateString('en-CA');
-                if (dayElem.dateObj.getDay() === 6 || dayElem.dateObj.getDay() === 0) {
-                    dayElem.classList.add("weekend");
-                } else if (holidays.includes(dayString)) {
-                    dayElem.classList.add("holiday");
-                } else if (pendingLeaveDates.includes(dayString)) {
-                    dayElem.classList.add("pending-leave");
-                } else if (approvedLeaveDates.includes(dayString)) {
-                    dayElem.classList.add("approved-leave");
-                } else if (floatingHolidays.includes(dayString)) {
-                    dayElem.classList.add("floating-holiday");
-                }
+        },
+        onDayCreate: function (dObj, dStr, fp, dayElem) {
+            const dayString = dayElem.dateObj.toLocaleDateString('en-CA');
+            if (dayElem.dateObj.getDay() === 6 || dayElem.dateObj.getDay() === 0) {
+                dayElem.classList.add("weekend");
+            } else if (holidays.includes(dayString)) {
+                dayElem.classList.add("holiday");
+            } else if (pendingLeaveDates.includes(dayString)) {
+                dayElem.classList.add("pending-leave");
+            } else if (approvedLeaveDates.includes(dayString)) {
+                dayElem.classList.add("approved-leave");
+            } else if (floatingHolidays.includes(dayString)) {
+                dayElem.classList.add("floating-holiday");
             }
-        });
-    
+        }
+    });
+
+    const endDatePicker = flatpickr(endDateInput, {
+        dateFormat: "Y-m-d",
+        minDate: "today",
+        appendTo: document.body,
+        onDayCreate: function (dObj, dStr, fp, dayElem) {
+            const dayString = dayElem.dateObj.toLocaleDateString('en-CA');
+            if (dayElem.dateObj.getDay() === 6 || dayElem.dateObj.getDay() === 0) {
+                dayElem.classList.add("weekend");
+            } else if (holidays.includes(dayString)) {
+                dayElem.classList.add("holiday");
+            } else if (pendingLeaveDates.includes(dayString)) {
+                dayElem.classList.add("pending-leave");
+            } else if (approvedLeaveDates.includes(dayString)) {
+                dayElem.classList.add("approved-leave");
+            } else if (floatingHolidays.includes(dayString)) {
+                dayElem.classList.add("floating-holiday");
+            }
+        }
+    });
+
+    // Any other code that interacts with the date picker should follow here
+
         // --- UPDATED: Toggle End Date field based on day duration selection ---
+        const dayTypeSelect = document.getElementById("id_day_type");
+const endDateGroup = document.getElementById("end-date-group");
+
+// Ensure enddate input calendar jumps to start date
         function toggleDateFields() {
             if (dayTypeSelect.value === "one") {
                 endDateGroup.style.display = "none";
-                // Always fill end date with start date so it submits!
                 endDateInput.value = startDateInput.value;
             } else {
                 endDateGroup.style.display = "block";
+                endDatePicker.jumpToDate(startDateInput.value); // Jump to start date in the calendar
             }
         }
         toggleDateFields();
         dayTypeSelect.addEventListener("change", toggleDateFields);
-    
-        // On start date change, if it's "One Day", auto-fill (sync)
+
         startDateInput.addEventListener("change", function () {
-            if (dayTypeSelect.value === "one") {
-                endDateInput.value = startDateInput.value;
+            if (dayTypeSelect.value === "multiple") {
+                endDatePicker.jumpToDate(startDateInput.value);
             }
         });
     

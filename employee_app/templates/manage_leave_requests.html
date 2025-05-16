@@ -8,8 +8,6 @@
         padding: 0;
         background: #f4f4f9;
     }
-
-    /* FLEX LAYOUT for sidebar and main content */
     #layout-wrapper {
         display: flex;
         flex-direction: row;
@@ -22,7 +20,6 @@
         border-right: 1px solid #e4e6ef;
         height: 100vh;
         z-index: 9;
-        /* put any sidebar styling you need here! */
     }
     #main-content {
         flex: 1 1 0%;
@@ -31,8 +28,6 @@
         display: flex;
         flex-direction: column;
     }
-
-    /* Main content styles */
     .leave-requests-table-container {
         padding: 40px 20px;
         background-color: #f4f4f9;
@@ -95,8 +90,6 @@
         font-size: 1.05rem;
         background-color: #fff;
     }
-
-    /* Responsive styles */
     @media (max-width: 1100px) {
         #admin-sidebar { width: 200px; }
     }
@@ -128,35 +121,86 @@
         }
     }
     .status-pending {
-    color: #ca8a04; /* amber/yellow */
-    font-weight: 600;
-}
-.status-upcoming {
-    color: #06b6d4; /* teal/cyan */
-    font-weight: 600;
-}
-.status-approved{
-    color: #22c55e; /* green */
-    font-weight: 600;
-}
-.status-rejected {
-    color: #ef4444; /* red */
-    font-weight: 600;
-}
-.status-deleted {
-    color: #850d0d; /* red */
-    font-weight: 600;
-}
-.status-other {
-    color: #64748b; /* slate gray */
-    font-weight: 600;
-}
+        color: #ca8a04;
+        font-weight: 600;
+    }
+    .status-upcoming {
+        color: #06b6d4;
+        font-weight: 600;
+    }
+    .status-approved{
+        color: #22c55e;
+        font-weight: 600;
+    }
+    .status-rejected {
+        color: #ef4444;
+        font-weight: 600;
+    }
+    .status-deleted {
+        color: #850d0d;
+        font-weight: 600;
+    }
+    .status-other {
+        color: #64748b;
+        font-weight: 600;
+    }
+    .btn-search {
+        padding: 7px 18px;
+        border-radius: 4px;
+        background: #3b82f6;
+        color: white;
+        border: none;
+        font-weight: 500;
+        font-size: 15px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        transition: all 0.18s;
+    }
+    .btn-search:hover {
+        background: #2563eb;
+    }
 </style>
+<!-- Font Awesome icon for search button (CDN) -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css"/>
 {% endblock %}
 
-{% block content %} 
+{% block content %}
 <div class="leave-requests-table-container mt-4">
     <div class="leave-requests-heading mt-2">Manage Leave Requests</div>
+
+    <!-- FILTER FORM (with SEARCH button) -->
+    <form method="get" style="display: flex; justify-content: center; margin-bottom: 20px;">
+        <input type="text"
+               name="employee_name"
+               placeholder="Employee Name"
+               value="{{ selected_employee_name|default:'' }}"
+               style="padding: 7px 12px; border-radius: 4px; border: 1px solid #ddd; margin-right: 12px; font-size: 15px;">
+        <select name="status"
+                style="padding: 7px 9px; border-radius: 4px; border: 1px solid #ddd; margin-right: 12px; font-size: 15px;">
+            <option value="">Status</option>
+            <option value="Pending" {% if selected_status == 'Pending' %}selected{% endif %}>Pending</option>
+            <option value="Upcoming" {% if selected_status == 'Upcoming' %}selected{% endif %}>Upcoming</option>
+            <option value="Approved" {% if selected_status == 'Approved' %}selected{% endif %}>Approved</option>
+            <option value="Rejected" {% if selected_status == 'Rejected' %}selected{% endif %}>Rejected</option>
+            <option value="Deleted" {% if selected_status == 'Deleted' %}selected{% endif %}>Deleted</option>
+        </select>
+        <select name="year"
+                style="padding: 7px 9px; border-radius: 4px; border: 1px solid #ddd; margin-right: 12px; font-size: 15px;">
+            {% for year in available_years %}
+                <option value="{{ year }}"
+                    {% if selected_year|stringformat:"s" == year|stringformat:"s" %}selected{% endif %}>
+                    {{ year }}
+                </option>
+            {% endfor %}
+        </select>
+        <button type="submit" class="btn-search">
+            <i class="fa fa-search"></i> Search
+        </button>
+    </form>
+    <!-- END FILTER FORM -->
+
     <table class="leave-requests-table">
         <thead>
             <tr>
@@ -166,6 +210,7 @@
                 <th>End Date</th>
                 <th class="text-center">Leave Days</th>
                 <th>Status</th>
+                <th>Description</th>
                 <th>Modified_on</th>
                 <th>Approved/Rejected/Deleted by</th>
                 <th>Actions</th>
@@ -178,7 +223,7 @@
                 <td>{{ leave_request.leave_type }}</td>
                 <td>{{ leave_request.start_date }}</td>
                 <td>{{ leave_request.end_date }}</td>
-                <td class="text-center">{{leave_request.leave_days}}</td>
+                <td class="text-center">{{ leave_request.leave_days }}</td>
                 <td>
                     <span class="
                         {% if leave_request.status|lower == 'pending' %}status-pending
@@ -191,9 +236,9 @@
                         {{ leave_request.status }}
                     </span>
                 </td>
+                <td>{{leave_request.reason}}</td>
                 <td>{{ leave_request.modified_on }}</td>
                 <td>{{ leave_request.approved_by }}</td>
-                
                 <td>
                     {% if leave_request.status != "Accepted" and leave_request.status != "Rejected" and leave_request.status != "Approved" and leave_request.status != "Deleted" %}
                     <form method="post"
@@ -212,7 +257,7 @@
             </tr>
             {% empty %}
             <tr>
-                <td colspan="6" class="no-requests-row">No leave requests found.</td>
+                <td colspan="10" class="no-requests-row">No leave requests found.</td>
             </tr>
             {% endfor %}
         </tbody>

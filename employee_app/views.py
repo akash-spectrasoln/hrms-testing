@@ -722,6 +722,7 @@ def request_leave(request):
             leave_request.leave_type = leave_type
             leave_request.status = 'Pending'
             leave_request.leave_days = leave_duration
+            leave_request.created_at = request.user
             leave_request.save()
 
             # ==== EMAIL NOTIFICATION LOGIC ====
@@ -1279,50 +1280,66 @@ from .models import LeaveRequest, Employees
 from datetime import datetime
 from django.utils.timezone import now
 
+from django.shortcuts import render
+from django.http import HttpResponse
+from django.db.models import Q
+from django.utils.timezone import now
 
-@signin_required
+from .models import Employees, LeaveRequest
+
 def manager_leave_requests(request):
-    """View to list leave requests submitted by subordinates."""
+    is_manager=False
     try:
-        # Fetch the logged-in user's employee profile
         employee = Employees.objects.get(user=request.user)
     except Employees.DoesNotExist:
         return render(request, 'employee_app/error.html', {'message': 'Manager profile not found.'})
 
-    # Ensure the logged-in user is a manager
+    # Ensure only managers see this page
     if not Employees.objects.filter(manager=employee).exists():
         return HttpResponse("cannot access")
 
-    # Check if the employee is a manager
-    is_manager = Employees.objects.filter(manager=employee).exists()
+    # Get all subordinates managed by the logged-in manager
+    subordinates = Employees.objects.filter(manager=employee)
+    if subordinates:
+        is_manager=True
+    leave_requests = LeaveRequest.objects.filter(employee_master__in=subordinates)
+
+    # Filtering logic
+    employee_name = request.GET.get('employee_name', '').strip()
+    status = request.GET.get('status', '')
+    year = request.GET.get('year', '')
+
+    if employee_name:
+        leave_requests = leave_requests.filter(
+            Q(employee_master__first_name__icontains=employee_name) |
+            Q(employee_master__last_name__icontains=employee_name)
+        )
+    if status:
+        leave_requests = leave_requests.filter(status__iexact=status)
 
     current_year = now().year
-    total_used_leaves = employee.used_leaves
+    if year:
+        leave_requests = leave_requests.filter(start_date__year=year)
+    else:
+        leave_requests = leave_requests.filter(start_date__year=current_year)
+        year = str(current_year)
 
-    # Filter leave requests for employees managed by the logged-in manager
-    # leave_requests = LeaveRequest.objects.filter(employee_master__manager=employee)
-    subordinates = Employees.objects.filter(manager=employee)
-    print(subordinates)
-    leave_requests = LeaveRequest.objects.filter(employee_master__in=subordinates)
-    print(leave_requests)
-    # Get available years for filtering
-    available_years = list(set(leave_requests.values_list('start_date__year', flat=True)))
+    available_years = sorted(set(
+        LeaveRequest.objects.filter(employee_master__in=subordinates)
+            .values_list('start_date__year', flat=True)
+    ), reverse=True)
 
-    return render(request, 'manage_leave_requests.html', {
-        'employee':employee,
-        'leave_requests': leave_requests,
-        'manager_name': f"{employee.first_name} {employee.last_name}",
-        'is_manager': is_manager,
-        'emp_designation': employee.designation,
-        'emp_id': employee.employee_id,
-        'emp_fname':employee.first_name,
-        'emp_lname': employee.last_name,
-        'total_used_leaves': total_used_leaves,
-        'available_years': sorted(available_years, reverse=True),  # Add this for year filter
-    })
-
-
-# Add new view for handling filter requests
+    context = {
+        'is_manager':is_manager,
+        'employee': employee,
+        'leave_requests': leave_requests.order_by('-start_date'),
+        'available_years': available_years,
+        'selected_employee_name': employee_name,
+        'selected_status': status,
+        'selected_year': year,
+        # No 'ajax_request' since we aren't using AJAX!
+    }
+    return render(request, 'manage_leave_requests.html', context)
 @signin_required
 def filter_manager_leave_requests(request):
     try:
@@ -1673,11 +1690,12 @@ def allocate_leave(request, employee_id):
                 employee_master=employee,
                 start_date=start_date,
                 end_date=end_date,
-                reason=reason,
+                reason=f'{reason} (Manager allocated)',
                 leave_type=leave_type,
                 status="Approved",
                 leave_days=leave_days,
-                approved_by=request.user
+                approved_by=request.user,
+                created_by=request.user
                 
             )
             if leave_type == "Floating Leave":
