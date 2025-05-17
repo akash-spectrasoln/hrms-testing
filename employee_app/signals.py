@@ -98,7 +98,7 @@ def send_notification_to_manager(sender, instance, created, **kwargs):
             send_mail(
                 subject="New Leave Request Notification",
                 message=email_plain_content,
-                from_email="akashaku32@gmail.com",
+                from_email="lms@spectrasoln.com",
                 recipient_list=[manager.company_email],
                 html_message=email_html_content,
             )
@@ -136,7 +136,7 @@ def send_leave_status_update_to_employee(sender, instance, created, **kwargs):
                 send_mail(
                     subject="Your Leave Request Status Update",
                     message=email_plain_content,
-                    from_email="akashaku32@gmail.com",
+                    from_email="lms@spectrasoln.com",
                     recipient_list=[employee.company_email],
                     html_message=email_html_content,
                 )

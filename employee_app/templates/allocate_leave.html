@@ -43,13 +43,13 @@
             background: #2563eb; border-color: #2563eb; }
         .flatpickr-day.today { border-color: #3b82f6; }
         .holiday { background-color: #fee2e2 !important; border-radius: 4px; }
-        .floating-holiday { background-color: #e0e7ff !important; border-radius: 4px; }
+        .floating-holiday { background-color:  #d39565 !important; border-radius: 4px; }
         .weekend { background-color: #f3f4f6 !important; border-radius: 4px; }
         .info-indicators { margin: 15px 0 20px 0; display: flex; gap: 15px; }
         .info-indicator { display: flex; align-items: center; gap: 5px; font-size: 0.8rem; }
         .indicator-dot { width: 16px; height: 16px; display: inline-block; border-radius: 4px; }
         .dot-holiday { background-color: #fee2e2; border: 1px solid #fecaca; }
-        .dot-floating { background-color: #e0e7ff; border: 1px solid #c7d2fe; }
+        .dot-floating { background-color:  #d39565; border: 1px solid  #d39565; }
         @media (max-width: 1024px) {.allocate-leave-content { left: 200px; } }
         @media (max-width: 768px) {.allocate-leave-content { left: 0; }.form-container { margin: 0 auto; padding: 15px; } }
     </style>
@@ -139,6 +139,7 @@
 
 {% block scripts %}
 <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 <script>
 document.addEventListener("DOMContentLoaded", function () {
     const holidays = JSON.parse(document.getElementById('holidays-data').textContent);
@@ -155,16 +156,42 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     }
 
-    flatpickr("#start_date", {
+    const startDateInput = document.getElementById('start_date');
+    const endDateInput = document.getElementById('end_date');
+
+    // Initialize endDatePicker variable so it can be accessed in startDatePicker's onChange
+    let endDatePicker;
+
+    // START DATE PICKER with onChange event
+    const startDatePicker = flatpickr(startDateInput, {
+        dateFormat: "Y-m-d",
+        minDate: "today",
+        onDayCreate: flatpickrDayStyler,
+        onChange: function(selectedDates, dateStr, instance) {
+            if(dateStr) {
+                // Set end date value to start date value
+                endDateInput.value = dateStr;
+                // Set end date picker's value and jump calendar to selected date
+                if (endDatePicker) {
+                    endDatePicker.setDate(dateStr, true);
+                }
+            }
+        }
+    });
+
+    // END DATE PICKER
+    endDatePicker = flatpickr(endDateInput, {
         dateFormat: "Y-m-d",
         minDate: "today",
         onDayCreate: flatpickrDayStyler
     });
 
-    flatpickr("#end_date", {
-        dateFormat: "Y-m-d",
-        minDate: "today",
-        onDayCreate: flatpickrDayStyler
+    // Optional: Also sync end date if user types date manually in start date
+    startDateInput.addEventListener("input", function() {
+        if (startDateInput.value) {
+            endDateInput.value = startDateInput.value;
+            endDatePicker.setDate(startDateInput.value, true);
+        }
     });
 });
 </script>

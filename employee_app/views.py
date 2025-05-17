@@ -1579,17 +1579,18 @@ def daterange(start_date, end_date):
         yield start_date + timedelta(n)
 
 @signin_required
+
+
 def allocate_leave(request, employee_id):
     manager = get_object_or_404(Employees, user=request.user)
     employee = get_object_or_404(Employees, id=employee_id)
     today = date.today()
     current_year = today.year
 
-    # Check the requesting user is actually this employee's manager
     subordinates = Employees.objects.filter(manager=manager)
     is_manager = subordinates.exists()
 
-    # For Flatpickr and leave calculation
+    # Get fixed holidays (DO NOT include floating holidays in this set)
     regular_holidays = set(Holiday.objects.filter(year=current_year).values_list('date', flat=True))
     floating_holiday_dates = set(FloatingHoliday.objects.filter(year=current_year).values_list('date', flat=True))
 
@@ -1602,7 +1603,6 @@ def allocate_leave(request, employee_id):
     casual_leaves = (policy.ordinary_holidays_count if policy else 0) + (policy.extra_holidays if policy else 0)
     floating_leaves = floating_policy.allowed_floating_holidays if floating_policy else 0
 
-    # Used and pending leaves for this employee
     used_casual_leaves = leave_days_agg(LeaveRequest.objects.filter(
         employee_user=employee.user, leave_type='Casual Leave', status='Approved', start_date__year=current_year
     ))
@@ -1649,24 +1649,24 @@ def allocate_leave(request, employee_id):
 
         if not error and start_date and end_date:
             # Calculate leave days
-            leave_days = 0
             requested_dates = list(daterange(start_date, end_date))
+
             if leave_type == "Floating Leave":
+                # Only floating holidays are allowed
                 leave_days = sum(1 for d in requested_dates if d in floating_holiday_dates)
-                # Only allow selecting floating holidays for Floating Leave
                 invalid = [d for d in requested_dates if d not in floating_holiday_dates]
                 if invalid:
                     error = "Selected dates include days that are not floating holidays."
             else:
-                # For Casual and other types, count only weekdays that are not any holidays
+                # For Casual Leave, count all weekdays except fixed holidays (floating holidays on a weekday are allowed & counted)
                 leave_days = sum(
                     1 for d in requested_dates
-                    if d.weekday() < 5 and d not in regular_holidays
+                    if d.weekday() < 5 and d not in regular_holidays  # DO NOT skip floating holidays here
                 )
-            if leave_days <= 0 and not error:
+            if not error and leave_days <= 0:
                 error = "No valid leave days selected (after skipping weekends/fixed holidays)."
 
-        # Check balances (after computing leave_days)
+        # Check balances
         if not error and leave_type == "Floating Leave" and leave_days > remaining_floating_leaves:
             error = f"Not enough floating leave balance! Only {remaining_floating_leaves} left."
         elif not error and leave_type == "Casual Leave" and leave_days > remaining_casual_leaves:
@@ -1696,7 +1696,6 @@ def allocate_leave(request, employee_id):
                 leave_days=leave_days,
                 approved_by=request.user,
                 created_by=request.user
-                
             )
             if leave_type == "Floating Leave":
                 employee.floating_holidays_used += leave_days
