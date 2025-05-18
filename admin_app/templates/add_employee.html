@@ -61,9 +61,7 @@
             </div>
             <form method="post" enctype="multipart/form-data" id="employeeForm">
                 {% csrf_token %}
-                
                 <!-- Basic Information Section -->
-                <!-- <div class="section-heading">Basic Information</div> -->
                 <div class="form-row">
                     <div class="form-group col-md-4">
                         <label for="employee_type" class="required">Employee Type</label>
@@ -83,7 +81,7 @@
                         <select name="salutation" class="form-control" required>
                             <option value="" disabled selected>Select</option>
                             {% for sal in salutations %}
-                            <option value="{{ sal.id }}">{{ sal.sal_name }}</option>
+                            <option value="{{ sal.id }}">{{ sal.id }} - {{ sal.sal_name }}</option>
                             {% endfor %}
                         </select>
                     </div>
@@ -102,12 +100,7 @@
                         <input type="text" name="last_name" class="form-control" required>
                     </div>
                 </div>
-
-                <!-- Date of Birth Section -->
-                
-
-                <!-- Validity Period Section -->
-                <!-- <div class="section-heading">Validity Period</div> -->
+                <!-- Date of Birth & Validity -->
                 <div class="form-row">
                     <div class="form-group col-md-4">
                         <label for="date_of_birth" class="required">Date of Birth</label>
@@ -122,9 +115,7 @@
                         <input type="date" name="valid_to" class="form-control" value="{{ default_valid_to|date:'Y-m-d' }}" required>
                     </div>
                 </div>
-
-                <!-- Contact Information Section -->
-                <!-- <div class="section-heading">Contact Information</div> -->
+                <!-- Contact Information -->
                 <div class="form-row">
                     <div class="form-group col-md-6">
                         <label for="company_email" class="required">Company Email</label>
@@ -149,19 +140,20 @@
                         <input type="tel" name="home_phone" class="form-control">
                     </div>
                 </div>
+                <!-- Emergency Contact -->
                 <div class="form-row">
                     <div class="form-group col-md-4">
-                        <label for="emergency_contact_name" >Emergency Contact Name</label>
+                        <label for="emergency_contact_name">Emergency Contact Name</label>
                         <input type="text" name="emergency_contact_name" class="form-control">
                     </div>
                     <div class="form-group col-md-4">
-                        <label for="emergency_contact_phone" >Emergency Contact Phone</label>
+                        <label for="emergency_contact_phone">Emergency Contact Phone</label>
                         <input type="tel" name="emergency_contact_phone" class="form-control">
                     </div>
                     <div class="form-group col-md-4">
                         <label for="emergency_contact_relation">Emergency Contact Relationship</label>
                         <select name="emergency_contact_relation" class="form-control">
-                            <option value="null" disabled selected>Choose Relation</option>
+                            <option value="" disabled selected>Choose Relation</option>
                             <option value="Mother">Mother</option>
                             <option value="Father">Father</option>
                             <option value="Brother">Brother</option>
@@ -171,16 +163,14 @@
                         </select>
                     </div>
                 </div>
-
-                <!-- Address Information Section -->
-                <!-- <div class="section-heading">Address Information</div> -->
+                <!-- Address -->
                 <div class="form-row">
                     <div class="form-group col-md-4">
                         <label for="country" class="required">Country</label>
                         <select name="country" id="country" class="form-control" required>
                             <option value="">Select Country</option>
                             {% for country in countries %}
-                            <option value="{{ country.id }}">{{ country.country_name }}</option>
+                            <option value="{{ country.id }}">{{ country.id }} - {{ country.country_name }}</option>
                             {% endfor %}
                         </select>
                     </div>
@@ -188,20 +178,16 @@
                         <label for="state" class="required">State</label>
                         <select name="state" id="state" class="form-control" required>
                             <option value="">Select State</option>
+                            {% for state in states %}
+                            <option value="{{ state.id }}">{{ state.id }} - {{ state.name }}</option>
+                            {% endfor %}
                         </select>
-                        {% if form.errors.state %}
-                            <ul class="errorlist">
-                                <li>{{ form.errors.state }}</li>
-                            </ul>
-                        {% endif %}
                     </div>
                     <div class="form-group col-md-4">
                         <label for="home_city" class="required">City</label>
                         <input type="text" name="home_city" class="form-control" required>
                     </div>
-                    
                 </div>
-                
                 <div class="form-row">
                     <div class="form-group col-md-4">
                         <label for="home_house" class="required">Home</label>
@@ -216,41 +202,37 @@
                         <input type="text" name="pincode" class="form-control" required>
                     </div>
                 </div>
-
-                <!-- Employment Details Section -->
-                <!-- <div class="section-heading">Employment Details</div> -->
+                <!-- Employment Details -->
                 <div class="form-row">
-                    <div class="form-group col-md-6">
+                    <div class="form-group col-md-4">
                         <label for="department" class="required">Department</label>
                         <select name="department" class="form-control" required>
                             <option value="" disabled selected>Select Department</option>
                             {% for department in departments %}
-                            <option value="{{ department.id }}">{{ department.dep_name }}</option>
+                            <option value="{{ department.id }}">{{ department.id }} - {{ department.dep_name }}</option>
                             {% endfor %}
                         </select>
                     </div>
-                    <div class="form-group col-md-6">
-                        <label for="designation" class="required">Role</label>
-                        <select name="designation" class="form-control" required>
-                            <option value="" disabled {% if not form.instance.designation %}selected{% endif %}>Select Role</option>
+                    <div class="form-group col-md-4">
+                        <label for="role" class="">Role</label>
+                        <select name="role" class="form-control">
+                            <option value="" disabled selected>Select Role</option>
                             {% for role in roles %}
-                                <option value="{{ role.role_name }}" {% if form.instance.designation == role.role_name %}selected{% endif %}>{{ role.role_name }}</option>
+                            <option value="{{ role.role_id }}">{{ role.role_id }} - {{ role.role_name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group col-md-4">
+                        <label for="manager">Manager</label>
+                        <select name="manager" class="form-control">
+                            <option value="">None</option>
+                            {% for employee in employees %}
+                            <option value="{{ employee.employee_id }}">{{ employee.employee_id }} - {{ employee.first_name }} {{ employee.last_name }}</option>
                             {% endfor %}
                         </select>
                     </div>
                 </div>
                 <div class="form-row">
-                    <div class="form-group col-md-6">
-                        <label for="manager">Manager</label>
-                        <select name="manager" class="form-control">
-                            <option value="" {% if form.instance.manager is None %}selected{% endif %}>None</option>
-                            {% for employee in employees %}
-                            <option value="{{ employee.id }}" {% if form.instance.manager and form.instance.manager.id == employee.id %}selected{% endif %}>
-                                {{ employee.first_name }} {{ employee.last_name }} ({{ employee.employee_id }})
-                            </option>
-                            {% endfor %}
-                        </select>
-                    </div>
                     
                     <div class="form-group col-md-6">
                         <label for="employee_status" class="required">Employee Status</label>
@@ -277,117 +259,115 @@
                         <input type="number" step="0.01" name="incentive" class="form-control" >
                     </div>
                 </div>
-
-                <!-- Documents Section -->
-                <!-- <div class="section-heading">Documents</div> -->
-                <div class="form-group">
-                    <label for="resumes">Resumes</label>
-                    <div class="file-input-container" id="resumeContainer">
-                        <div class="file-input-wrapper">
-                            <input type="file" name="resumes" class="form-control-file" accept=".pdf,.doc,.docx" multiple>
-                            <i class="fas fa-plus-circle add-file ml-2" style="color: #28a745; cursor: pointer;"></i>
-                            <i class="fas fa-trash-alt delete-file ml-2" style="color: #dc3545; cursor: pointer;"></i>
-                        </div>
+                 <!-- Documents Section -->
+            <!-- <div class="section-heading">Documents</div> -->
+            <div class="form-group">
+                <label for="resumes">Resumes</label>
+                <div class="file-input-container" id="resumeContainer">
+                    <div class="file-input-wrapper">
+                        <input type="file" name="resumes" class="form-control-file" accept=".pdf,.doc,.docx" multiple>
+                        <i class="fas fa-plus-circle add-file ml-2" style="color: #28a745; cursor: pointer;"></i>
+                        <i class="fas fa-trash-alt delete-file ml-2" style="color: #dc3545; cursor: pointer;"></i>
                     </div>
-                    {% if form.instance.resumes.all %}
-                    <div class="current-file">
-                        <span>Current files:</span>
-                        <ul>
-                            {% for resume in form.instance.resumes.all %}
-                            <li>
-                                <a href="{{ resume.file.url }}" target="_blank">{{ resume.file.name }}</a>
-                                <label>
-                                    <input type="checkbox" name="delete_resumes" value="{{ resume.id }}"> Delete
-                                </label>
-                            </li>
-                            {% endfor %}
-                        </ul>
-                    </div>
-                    {% endif %}
                 </div>
-                
-                <div class="form-group">
-                    <label for="certificates">Other Certifications</label>
-                    <div class="file-input-container" id="certificateContainer">
-                        <div class="file-input-wrapper">
-                            <input type="file" name="certificates" class="form-control-file" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" multiple>
-                            <i class="fas fa-plus-circle add-file ml-2" style="color: #28a745; cursor: pointer;"></i>
-                            <i class="fas fa-trash-alt delete-file ml-2" style="color: #dc3545; cursor: pointer;"></i>
-                        </div>
-                    </div>
-                    {% if form.instance.certificates.all %}
-                    <div class="current-file">
-                        <span>Current files:</span>
-                        <ul>
-                            {% for certificate in form.instance.certificates.all %}
-                            <li>
-                                <a href="{{ certificate.file.url }}" target="_blank">{{ certificate.file.name }}</a>
-                                <label>
-                                    <input type="checkbox" name="delete_certificates" value="{{ certificate.id }}"> Delete
-                                </label>
-                            </li>
-                            {% endfor %}
-                        </ul>
-                    </div>
-                    {% endif %}
-                </div>
-                
-                <script>
-                    document.addEventListener('DOMContentLoaded', function() {
-                        // Use event delegation to handle clicks on add-file icons
-                        document.body.addEventListener('click', function(event) {
-                            if (event.target.classList.contains('add-file')) {
-                                const container = event.target.closest('.file-input-container');
-                                const newInputWrapper = document.createElement('div');
-                                newInputWrapper.className = 'file-input-wrapper';
-                                const newInput = document.createElement('input');
-                                newInput.type = 'file';
-                                newInput.name = container.id === 'resumeContainer' ? 'resumes' : 'certificates';
-                                newInput.className = 'form-control-file mt-2';
-                                newInput.accept = container.id === 'resumeContainer' ? '.pdf,.doc,.docx' : '.pdf,.doc,.docx,.jpg,.jpeg,.png';
-                                const addIcon = document.createElement('i');
-                                addIcon.className = 'fas fa-plus-circle add-file ml-2';
-                                addIcon.style.color = '#28a745';
-                                addIcon.style.cursor = 'pointer';
-                                const deleteIcon = document.createElement('i');
-                                deleteIcon.className = 'fas fa-trash-alt delete-file ml-2';
-                                deleteIcon.style.color = '#dc3545';
-                                deleteIcon.style.cursor = 'pointer';
-                                newInputWrapper.appendChild(newInput);
-                                newInputWrapper.appendChild(addIcon);
-                                newInputWrapper.appendChild(deleteIcon);
-                                container.appendChild(newInputWrapper);
-                            }
-                        });
-                
-                        // Use event delegation to handle clicks on delete-file icons
-                        document.body.addEventListener('click', function(event) {
-                            if (event.target.classList.contains('delete-file')) {
-                                const wrapper = event.target.closest('.file-input-wrapper');
-                                if (wrapper) {
-                                    wrapper.remove();
-                                }
-                            }
-                        });
-                    });
-                </script>
-                <div class="form-row">
-                    <div class="form-group col-md-12">
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" name="is_admin" id="is_admin"
-                                   {% if form.instance.user.is_superuser %}checked{% endif %}>
-                            <label class="form-check-label" for="is_admin">
-                                Grant admin privileges (make this user an admin)
+                {% if form.instance.resumes.all %}
+                <div class="current-file">
+                    <span>Current files:</span>
+                    <ul>
+                        {% for resume in form.instance.resumes.all %}
+                        <li>
+                            <a href="{{ resume.file.url }}" target="_blank">{{ resume.file.name }}</a>
+                            <label>
+                                <input type="checkbox" name="delete_resumes" value="{{ resume.id }}"> Delete
                             </label>
-                        </div>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% endif %}
+            </div>
+            
+            <div class="form-group">
+                <label for="certificates">Other Certifications</label>
+                <div class="file-input-container" id="certificateContainer">
+                    <div class="file-input-wrapper">
+                        <input type="file" name="certificates" class="form-control-file" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" multiple>
+                        <i class="fas fa-plus-circle add-file ml-2" style="color: #28a745; cursor: pointer;"></i>
+                        <i class="fas fa-trash-alt delete-file ml-2" style="color: #dc3545; cursor: pointer;"></i>
                     </div>
                 </div>
+                {% if form.instance.certificates.all %}
+                <div class="current-file">
+                    <span>Current files:</span>
+                    <ul>
+                        {% for certificate in form.instance.certificates.all %}
+                        <li>
+                            <a href="{{ certificate.file.url }}" target="_blank">{{ certificate.file.name }}</a>
+                            <label>
+                                <input type="checkbox" name="delete_certificates" value="{{ certificate.id }}"> Delete
+                            </label>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% endif %}
+            </div>
+            
+            <script>
+                document.addEventListener('DOMContentLoaded', function() {
+                    // Use event delegation to handle clicks on add-file icons
+                    document.body.addEventListener('click', function(event) {
+                        if (event.target.classList.contains('add-file')) {
+                            const container = event.target.closest('.file-input-container');
+                            const newInputWrapper = document.createElement('div');
+                            newInputWrapper.className = 'file-input-wrapper';
+                            const newInput = document.createElement('input');
+                            newInput.type = 'file';
+                            newInput.name = container.id === 'resumeContainer' ? 'resumes' : 'certificates';
+                            newInput.className = 'form-control-file mt-2';
+                            newInput.accept = container.id === 'resumeContainer' ? '.pdf,.doc,.docx' : '.pdf,.doc,.docx,.jpg,.jpeg,.png';
+                            const addIcon = document.createElement('i');
+                            addIcon.className = 'fas fa-plus-circle add-file ml-2';
+                            addIcon.style.color = '#28a745';
+                            addIcon.style.cursor = 'pointer';
+                            const deleteIcon = document.createElement('i');
+                            deleteIcon.className = 'fas fa-trash-alt delete-file ml-2';
+                            deleteIcon.style.color = '#dc3545';
+                            deleteIcon.style.cursor = 'pointer';
+                            newInputWrapper.appendChild(newInput);
+                            newInputWrapper.appendChild(addIcon);
+                            newInputWrapper.appendChild(deleteIcon);
+                            container.appendChild(newInputWrapper);
+                        }
+                    });
+            
+                    // Use event delegation to handle clicks on delete-file icons
+                    document.body.addEventListener('click', function(event) {
+                        if (event.target.classList.contains('delete-file')) {
+                            const wrapper = event.target.closest('.file-input-wrapper');
+                            if (wrapper) {
+                                wrapper.remove();
+                            }
+                        }
+                    });
+                });
+            </script>
+            <div class="form-row">
+                <div class="form-group col-md-12">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="is_admin" id="is_admin"
+                               {% if form.instance.user.is_superuser %}checked{% endif %}>
+                        <label class="form-check-label" for="is_admin">
+                            Grant admin privileges (make this user an admin)
+                        </label>
+                    </div>
+                </div>
+            </div>
                 <div class="d-flex justify-content-center mt-3">
                     <button type="submit" class="btn btn-success">
-                      <i class="fas fa-user-plus"></i> Save
+                        <i class="fas fa-user-plus"></i> Save
                     </button>
-                  </div>
-                  
+                </div>
             </form>
         </div>
     </div>
@@ -413,7 +393,7 @@
                     success: function(response) {
                         if (Array.isArray(response)) {
                             response.forEach(state => {
-                                stateSelect.append(new Option(state.name, state.id));
+                                stateSelect.append(new Option(state.id + ' - ' + state.name, state.id));
                             });
                         }
                     },

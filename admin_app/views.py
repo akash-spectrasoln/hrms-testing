@@ -182,7 +182,6 @@ def export_employees_to_excel(request):
             employee.emergency_contact_email,
             employee.emergency_contact_relation,
             float(employee.base_salary),
-            
             created_on,
             modified_on,
             employee.is_deleted,
@@ -510,17 +509,28 @@ from .models import Employees, Country, state, Role, Department, Salutation
 from django.utils.dateparse import parse_date
 from datetime import datetime
 import math
-
-import pandas as pd
-import math
-from datetime import datetime, date
+from django.views import View
 from django.shortcuts import render
 from django.http import JsonResponse
-from django.views import View
 from django.db import transaction
-from .models import Employees, Country, state, Role, Department, Salutation
-from django.contrib.auth.models import User
 from django.utils.dateparse import parse_date
+from datetime import datetime
+import pandas as pd
+import math
+
+from .models import Employees, Country, state, Role, Department, Salutation
+
+
+from django.views import View
+from django.shortcuts import render
+from django.http import JsonResponse
+from django.db import transaction
+from django.utils.dateparse import parse_date
+from datetime import datetime
+import pandas as pd
+import math
+
+from .models import Employees, Country, state, Department, Salutation, Role
 
 class EmployeeExcelCreateView(View):
     template_name = 'employee_excel_create.html'
@@ -529,6 +539,8 @@ class EmployeeExcelCreateView(View):
         return render(request, self.template_name)
 
     def post(self, request):
+        import traceback
+
         excel_file = request.FILES.get('excel_file')
         if not excel_file:
             return JsonResponse({'error': "Please upload an Excel file."}, status=400)
@@ -536,135 +548,169 @@ class EmployeeExcelCreateView(View):
         created_employees = []
         failed_rows = []
 
-        # Define field lists for checking required/optional.
-        required_fields = ['Employee ID', 'First Name', 'Last Name', 'Company Email', 'Valid From', 'Valid To', 'Country', 'State', 'Department', 'Role', 'Salutation', 'Employee Type']
+        required_fields = [
+            'Employee Type', 'Employee ID', 'Salutation ID', 'First Name', 'Last Name',
+            'Company Email', 'Personal Email', 'Mobile Phone',
+            'Valid From', 'Valid To', 'Country ID', 'State ID',
+            'Home House', 'Home Post Office', 'Home City',
+            'Department ID', 'Employee Status', 'Base Salary'
+        ]
 
         try:
             df = pd.read_excel(excel_file)
             df.columns = [c.strip() for c in df.columns]
-            print("Excel columns:", df.columns)
+            print("[DEBUG] Excel columns:", list(df.columns))
+
             for index, row in df.iterrows():
                 try:
-                    # Helper functions
-                    def parse(x):
-                        if pd.isnull(x) or (isinstance(x, float) and math.isnan(x)): return None
-                        return x
-
-                    def parse_decimal(val):
-                        if pd.isnull(val) or val == '':
-                            return 0.0
-                        try:
-                            return float(val)
-                        except Exception:
-                            return 0.0
-
-                    def parse_int(val):
-                        try:
-                            return int(float(val)) if val not in [None, ""] else 0
-                        except Exception:
-                            return 0
-
-                    def parse_date_field(val):
-                        if pd.isnull(val) or not val: return None
-                        if isinstance(val, pd.Timestamp):
-                            return val.date()
-                        if isinstance(val, datetime):
-                            return val.date()
-                        try:
-                            return parse_date(str(val))
-                        except Exception:
-                            return None
-
-                    # Check for required fields in this row
-                    row_missing = [field for field in required_fields if field not in row or pd.isnull(row[field])]
-                    if row_missing:
-                        failed_rows.append({"row": int(index) + 2, "error": f"Missing required fields: {', '.join(row_missing)}"})
+                    emp_id_str = str(row.get('Employee ID', 'unknown'))
+                    excel_row_num = int(index) + 2
+                    print(f"[DEBUG] Processing row {excel_row_num} (Employee ID: {emp_id_str})")
+                    
+                    # Check for missing required fields
+                    missing_fields = [
+                        field for field in required_fields
+                        if field not in row or pd.isnull(row[field]) or row[field] == ''
+                    ]
+                    if missing_fields:
+                        print(f"[DEBUG] Row {excel_row_num}: Missing fields: {missing_fields}")
+                        failed_rows.append({
+                            "row": excel_row_num,
+                            "employee_id": emp_id_str,
+                            "error": "Missing required fields: " + ", ".join(missing_fields)
+                        })
                         continue
 
-                    # FK lookups
-                    country = Country.objects.get(country_name=parse(row['Country']))
-                    state_obj = state.objects.get(name=parse(row['State']), country=country)
-                    # For Role: lookup by role_id if given, else by role_name:
-                    if 'Role ID' in row and not pd.isnull(row['Role ID']):
-                        role = Role.objects.get(role_id=parse(row['Role ID']))
-                    else:
-                        role = Role.objects.get(role_name=parse(row['Role']))
-                    department = Department.objects.get(dep_name=parse(row['Department']))
-                    salutation = Salutation.objects.get(sal_name=parse(row.get('Salutation', 'Mr.')))
-
-                    # Manager (by ID, if present)
-                    manager = None
-                    manager_id_val = parse(row.get('Manager ID'))
-                    if manager_id_val:
+                    # Type validation
+                    type_errors = []
+                    for date_field in ['Valid From', 'Valid To', 'Date of Birth', 'Resignation Date']:
+                        if date_field in row and not pd.isnull(row[date_field]) and \
+                            not isinstance(row[date_field], (pd.Timestamp, datetime)) and not parse_date(str(row[date_field])):
+                            type_errors.append(f'"{date_field}": "{row[date_field]}"')
+                    try:
+                        float(row['Base Salary'])
+                    except Exception as te:
+                        print(f"[DEBUG] Row {excel_row_num}: Invalid Base Salary: {row['Base Salary']}")
+                        type_errors.append(f'"Base Salary": "{row["Base Salary"]}"')
+                    if 'Incentive' in row and not pd.isnull(row['Incentive']):
                         try:
-                            manager = Employees.objects.get(employee_id=manager_id_val)
-                        except Employees.DoesNotExist:
-                            pass  # Silently ignore if manager doesn't exist
+                            float(row['Incentive'])
+                        except Exception as te:
+                            print(f"[DEBUG] Row {excel_row_num}: Invalid Incentive: {row['Incentive']}")
+                            type_errors.append(f'"Incentive": "{row["Incentive"]}"')
 
-                    # User fields
-                    company_email = parse(row['Company Email'])
-                    employee_type = parse(row.get('Employee Type')) or 'E-'
+                    if type_errors:
+                        print(f"[DEBUG] Row {excel_row_num}: Type errors: {type_errors}")
+                        failed_rows.append({
+                            "row": excel_row_num,
+                            "employee_id": emp_id_str,
+                            "error": "Invalid value(s): " + ", ".join(type_errors)
+                        })
+                        continue
 
-                    with transaction.atomic():
-                        employee = Employees(
-                            user=None,  # Will be created in save()
-                            employee_type=employee_type,
-                            employee_id=parse(row['Employee ID']),
-                            salutation=salutation,
-                            first_name=parse(row['First Name']),
-                            middle_name=parse(row.get('Middle Name', '')) or '',
-                            last_name=parse(row['Last Name']),
-                            company_email=company_email,
-                            personal_email=parse(row.get('Personal Email', '')),  # Not required
-                            mobile_phone=str(parse(row.get('Mobile Phone', '')) or ''),
-                            office_phone=str(parse(row.get('Office Phone', '')) or ''),
-                            home_phone=str(parse(row.get('Home Phone', '')) or ''),
-                            valid_from=parse_date_field(row['Valid From']),
-                            valid_to=parse_date_field(row['Valid To']),
-                            country=country,
-                            state=state_obj,
-                            address=parse(row.get('Address', '')) or '',
-                            home_house=parse(row.get('Home House', '')) or '',
-                            home_post_office=parse(row.get('Home Post Office', '')) or '',
-                            home_city=parse(row.get('Home City', '')) or '',
-                            pincode=str(parse(row.get('Pincode', '')) or ''),
-                            role=role,
-                            department=department,
-                            designation=parse(row.get('Designation', '')) or '',
-                            manager=manager,
-                            employee_status=parse(row.get('Employee Status', '')) or '',
-                            emergency_contact_name=parse(row.get('Emergency Contact Name')) or None,
-                            emergency_contact_phone=str(parse(row.get('Emergency Contact Phone', '')) or ''),
-                            emergency_contact_email=parse(row.get('Emergency Contact Email')) or None,
-                            emergency_contact_relation=parse(row.get('Emergency Contact Relation', '')) or None,
-                            base_salary=parse_decimal(row.get('Base Salary')),
-                            incentive=parse_decimal(row.get('Incentive', 0)),
-                            floating_holidays_balance=parse_int(row.get('Floating Holidays Balance')),
-                            floating_holidays_used=parse_int(row.get('Floating Holidays Used')),
-                            total_leaves=parse_int(row.get('Total Leaves')),
-                            used_leaves=parse_int(row.get('Used Leaves')),
-                            date_of_birth=parse_date_field(row.get('Date Of Birth')),
-                            resignation_date=parse_date_field(row.get('Resignation Date')),
-                            # created_on and modified_on not set here (auto)
-                            # password support, if provided in Excel (optional)
-                            password=parse(row.get('Password')) if 'Password' in row else None,
-                        )
-                        employee.save()  # Handles user as well
+                    # FK LOOKUPS
+                    try:
+                        print(f"[DEBUG] Row {excel_row_num}: Fetching FKs")
+                        country = Country.objects.get(id=int(row['Country ID']))
+                        print(f"   Country: {country}")
+                        state_obj = state.objects.get(id=int(row['State ID']))
+                        print(f"   State: {state_obj}")
+                        department = Department.objects.get(id=int(row['Department ID']))
+                        print(f"   Department: {department}")
+                        salutation = Salutation.objects.get(id=int(row['Salutation ID']))
+                        print(f"   Salutation: {salutation}")
+                        role_obj = None
+                        if 'Role ID' in row and not pd.isnull(row['Role ID']) and row['Role ID'] != '':
+                            role_obj = Role.objects.get(role_id=row['Role ID'])
+                            print(f"   Role: {role_obj}")
+                    except Exception as e:
+                        debug_info = traceback.format_exc()
+                        print(f"[DEBUG] Row {excel_row_num}: Foreign key error:\n{debug_info}")
+                        failed_rows.append({
+                            "row": excel_row_num,
+                            "employee_id": emp_id_str,
+                            "error": f"Foreign key lookup error: {e}"
+                        })
+                        continue
 
-                    created_employees.append({
-                        'employee_id': employee.employee_id,
-                        'first_name': employee.first_name,
-                        'last_name': employee.last_name,
-                        'department': employee.department.dep_name if employee.department else '',
-                        'designation': employee.designation,
-                        'company_email': employee.company_email,
-                        'mobile_phone': employee.mobile_phone
+                    # Helpers
+                    def parse(val): return None if pd.isnull(val) or val == '' else val
+                    def parse_decimal(val):
+                        try: return float(val)
+                        except: return 0.0
+                    def parse_date_field(val):
+                        if pd.isnull(val) or not val: return None
+                        if isinstance(val, (pd.Timestamp, datetime)): return val.date()
+                        return parse_date(str(val))
+
+                    try:
+                        print(f"[DEBUG] Row {excel_row_num}: Creating Employee object")
+                        with transaction.atomic():
+                            employee = Employees(
+                                employee_type=parse(row['Employee Type']),
+                                employee_id=parse(row['Employee ID']),
+                                salutation=salutation,
+                                first_name=parse(row['First Name']),
+                                middle_name=parse(row['Middle Name']) if 'Middle Name' in row else '',
+                                last_name=parse(row['Last Name']),
+                                company_email=parse(row['Company Email']),
+                                personal_email=parse(row['Personal Email']),
+                                mobile_phone=str(parse(row['Mobile Phone'])),
+                                office_phone=str(parse(row['Office Phone'])) if 'Office Phone' in row else '',
+                                home_phone=str(parse(row['Home Phone'])) if 'Home Phone' in row else '',
+                                valid_from=parse_date_field(row['Valid From']),
+                                valid_to=parse_date_field(row['Valid To']),
+                                country=country,
+                                state=state_obj,
+                                address=parse(row['Address']) if 'Address' in row else '',
+                                home_house=parse(row['Home House']),
+                                home_post_office=parse(row['Home Post Office']),
+                                home_city=parse(row['Home City']),
+                                pincode=str(parse(row['Pincode'])) if 'Pincode' in row else '',
+                                department=department,
+                                role=role_obj,
+                                
+                                employee_status=parse(row['Employee Status']),
+                                emergency_contact_name=parse(row['Emergency Contact Name']) if 'Emergency Contact Name' in row else None,
+                                emergency_contact_phone=str(parse(row['Emergency Contact Phone'])) if 'Emergency Contact Phone' in row else '',
+                                emergency_contact_email=parse(row['Emergency Contact Email']) if 'Emergency Contact Email' in row else None,
+                                emergency_contact_relation=parse(row['Emergency Contact Relation']) if 'Emergency Contact Relation' in row else None,
+                                base_salary=parse_decimal(row['Base Salary']),
+                                date_of_birth=parse_date_field(row['Date of Birth']) if 'Date of Birth' in row else None,
+                                resignation_date=parse_date_field(row['Resignation Date']) if 'Resignation Date' in row else None,
+                                incentive=parse_decimal(row['Incentive']) if 'Incentive' in row else 0.0
+                            )
+                            employee.save()
+                        print(f"[DEBUG] Row {excel_row_num}: Employee created: {employee}")
+
+                        created_employees.append({
+                            'row': excel_row_num,
+                            'employee_id': employee.employee_id,
+                            'first_name': employee.first_name,
+                            'last_name': employee.last_name,
+                            'department': employee.department.dep_name if employee.department else '',
+                            'role': str(employee.role) if employee.role else '',
+                            'company_email': employee.company_email,
+                            'mobile_phone': employee.mobile_phone
+                        })
+
+                    except Exception as e:
+                        debug_info = traceback.format_exc()
+                        print(f"[DEBUG] Row {excel_row_num}: Exception in model save:\n{debug_info}")
+                        failed_rows.append({
+                            'row': excel_row_num,
+                            'employee_id': emp_id_str,
+                            'error': f"Error on create/save: {e}"
+                        })
+
+                except Exception as row_e:
+                    debug_info = traceback.format_exc()
+                    print(f"[DEBUG] Fatal error for row {excel_row_num}:\n{debug_info}")
+                    failed_rows.append({
+                        'row': excel_row_num,
+                        'employee_id': emp_id_str,
+                        'error': f"Fatal row error: {row_e}"
                     })
-                except Exception as e:
-                    # Log/print traceback for debugging
-                    import traceback
-                    print(traceback.format_exc())
-                    failed_rows.append({'row': int(index)+2, 'error': str(e)})
 
             return JsonResponse({
                 'created_employees': created_employees,
@@ -672,8 +718,8 @@ class EmployeeExcelCreateView(View):
             })
 
         except Exception as e:
-            # Log/print traceback for debugging
             import traceback
+            print("[DEBUG] Top-level exception in POST handler:")
             print(traceback.format_exc())
             return JsonResponse({'error': f"Failed to process the Excel file: {str(e)}"}, status=400)
 from django.contrib import messages
