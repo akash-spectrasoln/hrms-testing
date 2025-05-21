@@ -58,7 +58,6 @@ body {
 }
 
 .table {
-   
     margin-bottom: 0;
     border-radius: 12px;
     overflow: hidden;
@@ -110,21 +109,36 @@ body {
 {% block content %}
 <div class="container">
     <div class="main-content">
-        <!-- Compact Filter Form -->
+        <!-- Filter Form -->
         <form method="GET" action="{% url 'employee_list' %}" class="form-inline mb-3" id="employeeFilterForm">
+            <!-- Country Filter -->
             <div class="form-group mr-2">
-                <input type="text" name="employee_id" class="form-control form-control-sm" value="{{ request.GET.employee_id }}" placeholder="Employee ID" id="empIdInput">
+                <select name="country_id" class="form-control form-control-sm" id="countrySelect">
+                    <option value="">All Countries</option>
+                    {% for country in country_list %}
+                        <option value="{{ country.id }}"
+                                {% if current_filters.country_id|stringformat:"s" == country.id|stringformat:"s" %}selected{% endif %}>
+                            {{ country.country_name }}
+                        </option>
+                    {% endfor %}
+                </select>
             </div>
-
+            <!-- Employee ID Filter -->
             <div class="form-group mr-2">
-                <input type="text" name="name" class="form-control form-control-sm" value="{{ request.GET.name }}" placeholder="Name" id="nameInput">
+                <input type="text" name="employee_id" class="form-control form-control-sm"
+                       value="{{ current_filters.emp_id }}" placeholder="Employee ID" id="empIdInput">
             </div>
-
+            <!-- Name Filter -->
+            <div class="form-group mr-2">
+                <input type="text" name="name" class="form-control form-control-sm"
+                       value="{{ current_filters.name }}" placeholder="Name" id="nameInput">
+            </div>
+            <!-- Status Filter -->
             <div class="form-group mr-2">
                 <select name="employee_status" class="form-control form-control-sm" id="statusSelect">
-                    <option value="all">All Statuses</option>
-                    <option value="employed" {% if not request.GET.employee_status or request.GET.employee_status == 'employed' %}selected{% endif %}>Employed</option>
-                    <option value="resigned" {% if request.GET.employee_status == 'resigned' %}selected{% endif %}>Resigned</option>
+                    <option value="all" {% if current_filters.status == 'all' %}selected{% endif %}>All Statuses</option>
+                    <option value="employed" {% if current_filters.status == 'employed' %}selected{% endif %}>Employed</option>
+                    <option value="resigned" {% if current_filters.status == 'resigned' %}selected{% endif %}>Resigned</option>
                 </select>
             </div>
         </form>
@@ -138,6 +152,7 @@ body {
                             <tr>
                                 <th>ID</th>
                                 <th>Name</th>
+                                <th>Country</th>
                                 <th>Email</th>
                                 <th>Phone</th>
                                 <th>Department</th>
@@ -152,6 +167,7 @@ body {
                                 <tr>
                                     <td>{{ employee.employee_id }}</td>
                                     <td>{{ employee.first_name }} {{ employee.last_name }}</td>
+                                    <td>{{ employee.country }}</td>
                                     <td>{{ employee.company_email }}</td>
                                     <td>{{ employee.mobile_phone }}</td>
                                     <td>{{ employee.department }}</td>
@@ -171,10 +187,10 @@ body {
                                     <td>
                                         <div class="btn-group mr-2" role="group">
                                             <a href="{% url 'employee_edit' employee.pk %}" class="btn btn-primary btn-sm">
-                                                <i class="fas fa-edit"></i> 
+                                                <i class="fas fa-edit"></i>
                                             </a>
                                             <a href="{% url 'employee_delete' employee.pk %}" class="btn btn-danger btn-sm">
-                                                <i class="fas fa-trash"></i> 
+                                                <i class="fas fa-trash"></i>
                                             </a>
                                         </div>
                                     </td>
@@ -182,7 +198,7 @@ body {
                                 {% endfor %}
                             {% else %}
                                 <tr>
-                                    <td colspan="8" class="no-data">
+                                    <td colspan="9" class="no-data">
                                         <i class="fas fa-user-slash"></i> No Employees Found
                                     </td>
                                 </tr>
@@ -203,23 +219,25 @@ document.addEventListener('DOMContentLoaded', function() {
     const empIdInput = document.getElementById('empIdInput');
     const nameInput = document.getElementById('nameInput');
     const statusSelect = document.getElementById('statusSelect');
-    
+    const countrySelect = document.getElementById('countrySelect');
+
     // Function to submit the form
     function submitForm() {
         form.submit();
     }
-    
+
     // Add event listeners for input changes with debounce
     let debounceTimer;
-    
+
     function debounceSubmit() {
         clearTimeout(debounceTimer);
         debounceTimer = setTimeout(submitForm, 500); // 500ms delay
     }
-    
+
     empIdInput.addEventListener('input', debounceSubmit);
     nameInput.addEventListener('input', debounceSubmit);
     statusSelect.addEventListener('change', submitForm);
+    countrySelect.addEventListener('change', submitForm);
 });
 </script>
-{% endblock %}`
+{% endblock %}

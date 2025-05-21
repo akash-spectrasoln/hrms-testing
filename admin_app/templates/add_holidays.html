@@ -111,7 +111,20 @@
 
                     <form method="post" id="holidayForm" novalidate>
                         {% csrf_token %}
-
+                        <div class="mb-3">
+                            <label for="id_country" class="form-label">Country</label>
+                            <select name="country" id="id_country" class="form-select" required>
+                                <option value="">Select Country</option>
+                                {% for country in form.fields.country.queryset %}
+                                    <option value="{{ country.id }}" {% if form.country.value|stringformat:"s" == country.id|stringformat:"s" %}selected{% endif %}>{{ country.country_name }}</option>
+                                {% endfor %}
+                            </select>
+                            {% if form.country.errors %}
+                                <div class="field-error">
+                                    {% for error in form.country.errors %}{{ error }}{% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
                         <div class="mb-3">
                             <label for="id_leave_type" class="form-label">Leave Type</label>
                             <select name="leave_type" id="id_leave_type" class="form-select" required>
@@ -137,20 +150,7 @@
                         </div>
 
                         <!-- Country dropdown added here -->
-                        <div class="mb-3">
-                            <label for="id_country" class="form-label">Country</label>
-                            <select name="country" id="id_country" class="form-select" required>
-                                <option value="">Select Country</option>
-                                {% for country in form.fields.country.queryset %}
-                                    <option value="{{ country.id }}" {% if form.country.value|stringformat:"s" == country.id|stringformat:"s" %}selected{% endif %}>{{ country.country_name }}</option>
-                                {% endfor %}
-                            </select>
-                            {% if form.country.errors %}
-                                <div class="field-error">
-                                    {% for error in form.country.errors %}{{ error }}{% endfor %}
-                                </div>
-                            {% endif %}
-                        </div>
+                        
 
                         <div class="mb-3">
                             <label for="id_date" class="form-label">Holiday Date</label>
@@ -171,15 +171,16 @@
             <div class="col-md-6">
                 <div class="holiday-list-container">
                     <div class="page-header">
-                        <label for="country-filter" class="form-label mt-2 me-2">Filter by Country</label>
+                        
+                        <h2 class="page-title">Holidays for <span id="selected-year">{{ current_year }}</span></h2>
+                        <div class="d-flex align-items-center mb-3">
+                            <label for="country-filter" class="form-label mt-2 me-2">Country</label>
                             <select id="country-filter" class="form-select form-select-sm" style="width: auto;">
                                 <option value="" selected>All Countries</option>
                                 {% for country in form.fields.country.queryset %}
                                     <option value="{{ country.id }}">{{ country.country_name }}</option>
                                 {% endfor %}
                             </select>
-                        <h2 class="page-title">Holidays for <span id="selected-year">{{ current_year }}</span></h2>
-                        <div class="d-flex align-items-center mb-3">
                             <label for="year-filter" class="form-label mt-2 me-2">Select a Year</label>
                             <select id="year-filter" class="form-select form-select-sm" style="width: auto; margin-right: 10px;">
                                 <!-- Year options populated by JS -->

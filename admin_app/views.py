@@ -220,45 +220,58 @@ from django.db.models import Q
 from django.utils import timezone
 from .models import Employees
 
+from django.shortcuts import render
+from django.db.models import Q
+from django.utils import timezone
+from .models import Employees, Country  # Adjust as needed
+from datetime import date
+
 def list_employees(request):
-    # Start with base queryset
     queryset = Employees.objects.filter(is_deleted=False)
+    country_list = Country.objects.all().order_by('country_name')
 
     # Get filter parameters
     emp_id = request.GET.get('employee_id', '').strip()
     name = request.GET.get('name', '').strip()
-    status = request.GET.get('employee_status', 'employed')  # Default to employed
-    print(emp_id)
-    print(name)
-    # Apply status filter
+    status = request.GET.get('employee_status', 'employed')
+    country_id = request.GET.get('country_id', '').strip()
+
+    # Default to India's id if no country selected
+    if not country_id:
+        try:
+            india = Country.objects.filter(country_name__iexact="India").first()
+            country_id = india.id if india else ''
+        except Country.DoesNotExist:
+            country_id = ''
+
+    # Status filter
     if status != 'all':
         queryset = queryset.filter(employee_status=status)
-
-    # Apply other filters
+    # Employee ID filter
     if emp_id:
         queryset = queryset.filter(employee_id__icontains=emp_id)
+    # Name filter
     if name:
         queryset = queryset.filter(
             Q(first_name__icontains=name) |
             Q(last_name__icontains=name)
         )
+    # Country filter
+    if country_id:
+        queryset = queryset.filter(country__id=country_id)
 
-    # Prepare employee data
     today = timezone.now().date()
     employee_list = []
 
-    for employee in queryset.select_related('manager', 'department'):
-        # Skip if no primary key
+    for employee in queryset.select_related('manager', 'department', 'role', 'country'):
         if not employee.pk:
             continue
 
-        # Manager info
         manager_display = (
             f"{employee.manager.employee_id} ({employee.manager.first_name})"
             if employee.manager else "None"
         )
 
-        # Resignation info
         resignation_tooltip = ""
         if employee.employee_status == 'resigned' and employee.resignation_date:
             formatted_date = employee.resignation_date.strftime('%b %d, %Y')
@@ -273,7 +286,8 @@ def list_employees(request):
             'company_email': employee.company_email,
             'mobile_phone': employee.mobile_phone,
             'department': employee.department.dep_name if employee.department else "",
-            'designation': employee.role.role_name,
+            'designation': employee.role.role_name if employee.role else "",
+            'country': employee.country.country_name if employee.country else "",
             'employee_status': employee.employee_status,
             'manager_display': manager_display,
             'resignation_tooltip': resignation_tooltip,
@@ -283,17 +297,16 @@ def list_employees(request):
 
     context = {
         'employee_list': employee_list,
+        'country_list': country_list,
         'current_filters': {
             'emp_id': emp_id,
             'name': name,
-            'status': status
+            'status': status,
+            'country_id': country_id,
         }
     }
 
     return render(request, 'list_employees.html', context)
-
-
-
 
 from django.shortcuts import get_object_or_404, redirect
 from django.contrib import messages
@@ -551,11 +564,11 @@ class EmployeeExcelCreateView(View):
         failed_rows = []
 
         required_fields = [
-            'Employee Type', 'Employee ID', 'Salutation ID', 'First Name', 'Last Name',
+            'Employee Type',  'Salutation ID', 'First Name', 'Last Name',
             'Company Email', 'Personal Email', 'Mobile Phone',
             'Valid From', 'Valid To', 'Country ID', 'State ID',
             'Home House', 'Home Post Office', 'Home City',
-            'Department ID', 'Employee Status', 'Base Salary'
+            'Department ID',  'Base Salary'
         ]
 
         try:
@@ -565,9 +578,9 @@ class EmployeeExcelCreateView(View):
 
             for index, row in df.iterrows():
                 try:
-                    emp_id_str = str(row.get('Employee ID', 'unknown'))
+                    
                     excel_row_num = int(index) + 2
-                    print(f"[DEBUG] Processing row {excel_row_num} (Employee ID: {emp_id_str})")
+                    print(f"[DEBUG] Processing row {excel_row_num} ")
                     
                     # Check for missing required fields
                     missing_fields = [
@@ -578,7 +591,7 @@ class EmployeeExcelCreateView(View):
                         print(f"[DEBUG] Row {excel_row_num}: Missing fields: {missing_fields}")
                         failed_rows.append({
                             "row": excel_row_num,
-                            "employee_id": emp_id_str,
+                            
                             "error": "Missing required fields: " + ", ".join(missing_fields)
                         })
                         continue
@@ -605,7 +618,7 @@ class EmployeeExcelCreateView(View):
                         print(f"[DEBUG] Row {excel_row_num}: Type errors: {type_errors}")
                         failed_rows.append({
                             "row": excel_row_num,
-                            "employee_id": emp_id_str,
+                            
                             "error": "Invalid value(s): " + ", ".join(type_errors)
                         })
                         continue
@@ -621,6 +634,7 @@ class EmployeeExcelCreateView(View):
                         print(f"   Department: {department}")
                         salutation = Salutation.objects.get(id=int(row['Salutation ID']))
                         print(f"   Salutation: {salutation}")
+                        employee_type_obj=EmployeeType.objects.get(id=int(row['Employee Type']))
                         role_obj = None
                         if 'Role ID' in row and not pd.isnull(row['Role ID']) and row['Role ID'] != '':
                             role_obj = Role.objects.get(role_id=row['Role ID'])
@@ -630,7 +644,7 @@ class EmployeeExcelCreateView(View):
                         print(f"[DEBUG] Row {excel_row_num}: Foreign key error:\n{debug_info}")
                         failed_rows.append({
                             "row": excel_row_num,
-                            "employee_id": emp_id_str,
+                            
                             "error": f"Foreign key lookup error: {e}"
                         })
                         continue
@@ -649,8 +663,8 @@ class EmployeeExcelCreateView(View):
                         print(f"[DEBUG] Row {excel_row_num}: Creating Employee object")
                         with transaction.atomic():
                             employee = Employees(
-                                employee_type=parse(row['Employee Type']),
-                                employee_id=parse(row['Employee ID']),
+                                employee_type=employee_type_obj,
+                                employee_id = generate_employee_id(employee_type_obj.code),
                                 salutation=salutation,
                                 first_name=parse(row['First Name']),
                                 middle_name=parse(row['Middle Name']) if 'Middle Name' in row else '',
@@ -672,7 +686,7 @@ class EmployeeExcelCreateView(View):
                                 department=department,
                                 role=role_obj,
                                 
-                                employee_status=parse(row['Employee Status']),
+                                
                                 emergency_contact_name=parse(row['Emergency Contact Name']) if 'Emergency Contact Name' in row else None,
                                 emergency_contact_phone=str(parse(row['Emergency Contact Phone'])) if 'Emergency Contact Phone' in row else '',
                                 emergency_contact_email=parse(row['Emergency Contact Email']) if 'Emergency Contact Email' in row else None,
@@ -680,7 +694,8 @@ class EmployeeExcelCreateView(View):
                                 base_salary=parse_decimal(row['Base Salary']),
                                 date_of_birth=parse_date_field(row['Date of Birth']) if 'Date of Birth' in row else None,
                                 resignation_date=parse_date_field(row['Resignation Date']) if 'Resignation Date' in row else None,
-                                incentive=parse_decimal(row['Incentive']) if 'Incentive' in row else 0.0
+                                joining_bonus=parse_decimal(row['Joining Bonus']) if 'Joining Bonus' in row else 0.0
+
                             )
                             employee.save()
                         print(f"[DEBUG] Row {excel_row_num}: Employee created: {employee}")
@@ -701,7 +716,7 @@ class EmployeeExcelCreateView(View):
                         print(f"[DEBUG] Row {excel_row_num}: Exception in model save:\n{debug_info}")
                         failed_rows.append({
                             'row': excel_row_num,
-                            'employee_id': emp_id_str,
+                            
                             'error': f"Error on create/save: {e}"
                         })
 
@@ -710,7 +725,7 @@ class EmployeeExcelCreateView(View):
                     print(f"[DEBUG] Fatal error for row {excel_row_num}:\n{debug_info}")
                     failed_rows.append({
                         'row': excel_row_num,
-                        'employee_id': emp_id_str,
+                        
                         'error': f"Fatal row error: {row_e}"
                     })
 
@@ -1457,6 +1472,38 @@ def generate_emp_id(request):
 
     return JsonResponse({"error": "Invalid request method"}, status=405)
 
+def generate_employee_id(employee_type_code):
+    """
+    Generates the next unique Employee ID given the employee type code.
+    """
+
+     # Change 'app' to your Django app name
+
+    # Clean input
+    
+    employee_type_code = employee_type_code.strip()
+    if not employee_type_code:
+        raise ValueError("employee_type_code cannot be empty")
+
+    # Get last employee with this type
+    last_employee = Employees.objects.filter(employee_id__startswith=employee_type_code).order_by("-employee_id").first()
+
+    # Decide new number
+    if last_employee:
+        prefix_len = len(employee_type_code)
+        numeric_part = last_employee.employee_id[prefix_len:]
+        try:
+            last_number = int(numeric_part)
+        except (ValueError, TypeError):
+            last_number = 100000
+        new_number = last_number + 1
+    else:
+        new_number = 100000
+
+    # Compose new Employee ID
+    return f"{employee_type_code}{new_number}"
+
+  # e.g., C-100026
 
 from django.http import JsonResponse
 from .models import Holiday, FloatingHoliday

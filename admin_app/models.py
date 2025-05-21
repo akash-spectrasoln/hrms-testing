@@ -78,6 +78,7 @@ class Employees(models.Model):
     STATUS_CHOICES = [
         ('employed', 'Employed'),
         ('resigned', 'Resigned'),
+        ('Inern to employee','Inern to employee')
     ]
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="employee_profile", null=True, blank=True)
     # employee_type = models.CharField(max_length=3, choices=EMPLOYEE_TYPE_CHOICES, verbose_name="Employee Type", null=True)
@@ -85,28 +86,28 @@ class Employees(models.Model):
     employee_id = models.CharField(max_length=10, unique=True)
     salutation = models.ForeignKey('Salutation', on_delete=models.CASCADE)
     first_name = models.CharField(max_length=50, verbose_name="First Name")
-    middle_name = models.CharField(max_length=50, verbose_name="Middle Name", blank=True)
+    middle_name = models.CharField(max_length=50, verbose_name="Middle Name", blank=True,null=True,)
     last_name = models.CharField(max_length=50, verbose_name="Last Name")
     company_email = models.EmailField(unique=True, verbose_name="Company Email")
     personal_email = models.EmailField(verbose_name="Personal Email")
     mobile_phone = models.CharField(max_length=15)
-    office_phone = models.CharField(max_length=15, blank=True)
-    home_phone = models.CharField(max_length=15, blank=True)
+    office_phone = models.CharField(max_length=15, blank=True,null=True,)
+    home_phone = models.CharField(max_length=15, blank=True,null=True,)
     valid_from = models.DateField()
     valid_to = models.DateField()
     country = models.ForeignKey('Country', on_delete=models.CASCADE)
     state = models.ForeignKey('state', on_delete=models.CASCADE)
-    address = models.CharField(max_length=150, blank=True)
+    address = models.CharField(max_length=150, blank=True,null=True,)
     home_house = models.TextField()
     home_post_office = models.TextField()
     home_city = models.TextField()
-    pincode = models.CharField(max_length=10, blank=True)
+    pincode = models.CharField(max_length=10, blank=True,null=True,)
     role = models.ForeignKey('Role', on_delete=models.CASCADE, to_field="role_id", null=True, blank=True)
     department = models.ForeignKey('Department', on_delete=models.CASCADE)
     
     manager = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True, related_name='employees_managed')
     employee_status = models.CharField(
-    max_length=10,
+    max_length=50,
     choices=STATUS_CHOICES,
     default='employed'
     )
@@ -182,7 +183,7 @@ class Employees(models.Model):
         super().save(*args, **kwargs)
 
     def __str__(self):
-        return f"{self.employee_id} ({self.get_employee_type_display()})"
+        return f"{self.employee_id} "
 
 
 class Resume(models.Model):
