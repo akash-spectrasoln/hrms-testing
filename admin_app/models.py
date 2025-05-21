@@ -78,7 +78,7 @@ class Employees(models.Model):
     STATUS_CHOICES = [
         ('employed', 'Employed'),
         ('resigned', 'Resigned'),
-        ('Inern to employee','Inern to employee')
+        ('Intern to employee','Intern to employee')
     ]
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="employee_profile", null=True, blank=True)
     # employee_type = models.CharField(max_length=3, choices=EMPLOYEE_TYPE_CHOICES, verbose_name="Employee Type", null=True)

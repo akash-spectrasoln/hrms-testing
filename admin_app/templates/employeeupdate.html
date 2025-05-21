@@ -247,6 +247,7 @@
                             <option value="" disabled selected>Choose Status</option>
                             <option value="employed" {% if form.instance.employee_status == 'employed' %}selected{% endif %}>Employed</option>
                             <option value="resigned" {% if form.instance.employee_status == 'resigned' %}selected{% endif %}>Resigned</option>
+                            <option value="Intern to employee" {% if form.instance.employee_status == 'Intern to employee' %}selected{% endif %}>Intern To Employee</option>
                         </select>
 
                     </div>
