@@ -67,9 +67,11 @@
                         <label for="employee_type" class="required">Employee Type</label>
                         <select id="employee_type" name="employee_type" class="form-control" required>
                             <option value="" disabled selected>Select Employee Type</option>
-                            <option value="C-">Contractor</option>
-                            <option value="I-">Intern</option>
-                            <option value="E-">Employee</option>
+                            {% for etype in employee_types %}
+                                <option value="{{ etype.id }}" data-code="{{ etype.code }}">
+                                    {{ etype.id }} - {{ etype.name }}
+                                </option>
+                            {% endfor %}
                         </select>
                     </div>
                     <div class="form-group col-md-4">
@@ -232,30 +234,18 @@
                         </select>
                     </div>
                 </div>
+                
                 <div class="form-row">
-                    
-                    <div class="form-group col-md-6">
-                        <label for="employee_status" class="required">Employee Status</label>
-                        <select name="employee_status" class="form-control" required>
-                            <option value="" disabled>Select Status</option>
-                            <option value="employed" selected>Employed</option>
-                            <option value="resigned">Resigned</option>
-                            <option value="maternal_leave">Maternal Leave</option>
-                        </select>
-                        {% if form.errors.employee_status %}
-                            <ul class="errorlist">
-                                <li>{{ form.errors.employee_status }}</li>
-                            </ul>
-                        {% endif %}
-                    </div>
-                </div>
-                <div class="form-row">
-                    <div class="form-group col-md-6">
+                    <div class="form-group col-md-4">
                         <label for="base_salary" class="required">Salary</label>
                         <input type="number" step="0.01" name="base_salary" class="form-control" required>
                     </div>
-                    <div class="form-group col-md-6">
+                    <div class="form-group col-md-4">
                         <label for="incentive" class="">Incentive</label>
+                        <input type="number" step="0.01" name="incentive" class="form-control" >
+                    </div>
+                    <div class="form-group col-md-4">
+                        <label for="joining_bonus" class="">Joining Bonus</label>
                         <input type="number" step="0.01" name="incentive" class="form-control" >
                     </div>
                 </div>
@@ -409,32 +399,31 @@
 
         // Fetch Employee ID based on Employee Type
         $('#employee_type').change(function() {
-            const empType = $(this).val();
-            const empIdField = $('#employee_id');
+    const selectedOption = $(this).find('option:selected');
+    const employeeTypeCode = selectedOption.data('code');
+    const empIdField = $('#employee_id');
 
-            if (!empType) {
+    if (!employeeTypeCode) {
+        empIdField.val('');
+        return;
+    }
+
+    $.ajax({
+        url: `/admin_app/generate-emp-id/?employee_type=${employeeTypeCode}`,
+        method: 'GET',
+        dataType: 'json',
+        success: function(data) {
+            if (data.employee_id) {
+                empIdField.val(data.employee_id);
+            } else {
                 empIdField.val('');
-                return;
             }
-
-            $.ajax({
-                url: `/admin_app/generate-emp-id/?employee_type=${empType}`,
-                method: 'GET',
-                dataType: 'json',
-                success: function(data) {
-                    if (data.emp_id) {
-                        empIdField.val(data.emp_id);
-                    } else {
-                        empIdField.val('');
-                    }
-                },
-                error: function() {
-                    alert('Failed to generate Employee ID. Please try again.');
-                }
-            });
-        });
-
-        // Function to add more file inputs for resumes
+        },
+        error: function() {
+            alert('Failed to generate Employee ID. Please try again.');
+        }
+    });
+}); // Function to add more file inputs for resumes
         $('#addResume').click(function() {
             const resumeContainer = $('#resumeContainer');
             const newInputWrapper = $('<div class="file-input-wrapper"></div>');

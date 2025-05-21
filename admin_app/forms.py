@@ -25,7 +25,14 @@ STATUS_CHOICES = (
     ('maternal_leave', 'Maternal Leave'),
 )
 
+import os
+from django import forms
+from django.core.exceptions import ValidationError
+from .models import Employees, Country, state, EmployeeType  # Adjust imports accordingly
+
+
 class EmployeeEditForm(forms.ModelForm):
+    
     country = forms.ModelChoiceField(
         queryset=Country.objects.all(),
         required=False,
@@ -37,20 +44,22 @@ class EmployeeEditForm(forms.ModelForm):
         empty_label="Select a State"
     )
     home_house = forms.CharField(required=True)
-    employee_status = forms.ChoiceField(choices=STATUS_CHOICES, required=True)
+     # assuming you have STATUS_CHOICES constant
     middle_name = forms.CharField(required=False)
     office_phone = forms.CharField(required=False)
     home_phone = forms.CharField(required=False)
     home_city = forms.CharField(required=False)
-    incentive = forms.DecimalField(required=False)
+    incentive = forms.DecimalField(required=False, max_digits=10, decimal_places=2)
+    joining_bonus = forms.DecimalField(required=False, max_digits=10, decimal_places=2)
     home_post_office = forms.CharField(required=False)
     manager = forms.ModelChoiceField(
         queryset=Employees.objects.all(),
         required=False,
         empty_label="None"
     )
-    employee_type = forms.ChoiceField(
-        choices=Employees.EMPLOYEE_TYPE_CHOICES,
+    # Changed employee_type from ChoiceField to ModelChoiceField for FK relation
+    employee_type = forms.ModelChoiceField(
+        queryset=EmployeeType.objects.all(),
         required=True,
         widget=forms.Select(attrs={'class': 'form-control'})
     )
@@ -61,11 +70,10 @@ class EmployeeEditForm(forms.ModelForm):
     resumes = forms.FileField(required=False, widget=forms.ClearableFileInput(attrs={'multiple': True}))
     certificates = forms.FileField(required=False, widget=forms.ClearableFileInput(attrs={'multiple': True}))
     
-    # Add the Date of Birth field
     date_of_birth = forms.DateField(
-        required=True,  # You can make it optional with required=False
+        required=True,  # or False if optional
         widget=forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
-        label="Date of Birth"  # Optionally, add a label
+        label="Date of Birth"
     )
 
     class Meta:
@@ -74,25 +82,25 @@ class EmployeeEditForm(forms.ModelForm):
             'employee_id', 'salutation', 'first_name', 'middle_name', 'last_name',
             'company_email', 'personal_email', 'mobile_phone', 'office_phone',
             'home_phone', 'valid_from', 'valid_to', 'country', 'state', 'home_post_office',
-            'home_city', 'pincode', 'department', 'designation', 'manager',
-            'employee_status', 'emergency_contact_name', 'emergency_contact_phone',
-            'emergency_contact_relation', 'base_salary', 'employee_type',
-            'resignation_date', 'home_house', 'resumes', 'certificates', 'incentive',
-            'date_of_birth'  # Add date_of_birth to the fields list
+            'home_city', 'pincode', 'department', 'role', 'manager',
+             
+            'base_salary', 'employee_type',
+            'resignation_date', 'home_house', 'resumes', 'certificates', 'incentive', 'joining_bonus',
+            'date_of_birth'
         ]
 
         widgets = {
             'valid_from': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
             'valid_to': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
             'resignation_date': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
-            'date_of_birth': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'})
+            'date_of_birth': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
         }
 
     def __init__(self, *args, **kwargs):
         self.request = kwargs.pop('request', None)
         super().__init__(*args, **kwargs)
 
-        # Populate state queryset based on the country
+        # Populate state queryset based on selected country in form data or instance
         if 'country' in self.data:
             try:
                 country_id = int(self.data.get('country'))
@@ -102,9 +110,11 @@ class EmployeeEditForm(forms.ModelForm):
         elif self.instance.pk and self.instance.country:
             self.fields['state'].queryset = state.objects.filter(country=self.instance.country).order_by('name')
 
-        # Set resignation date requirement based on employee status
-        if self.instance.employee_status == 'resigned':
+        # Set resignation date required if employee_status is 'resigned'
+        if self.instance and self.instance.employee_status == 'resigned':
             self.fields['resignation_date'].required = True
+        else:
+            self.fields['resignation_date'].required = False
 
     def clean(self):
         cleaned_data = super().clean()
@@ -137,15 +147,12 @@ class EmployeeEditForm(forms.ModelForm):
     def save(self, commit=True):
         instance = super().save(commit=False)
 
-        # Handle employee status and resignation date
-        instance.employee_status = self.cleaned_data['employee_status']
+        # Handle employee status and resignation date logic (already handled in cleaning)
         if instance.employee_status == 'employed':
             instance.resignation_date = None
 
         if commit:
             instance.save()
-
-            
         return instance
 
         
@@ -182,9 +189,7 @@ class AdminRegistrationForm(forms.ModelForm):
 
 
 
-from django import forms
 
-from django import forms
 
 
 class Holiday_Form(forms.Form):
@@ -196,11 +201,13 @@ class Holiday_Form(forms.Form):
     leave_type = forms.ChoiceField(choices=LEAVE_TYPE_CHOICES, label="Leave Type")
     name = forms.CharField(max_length=100, label="Holiday Name")
     date = forms.DateField(
-        widget=forms.DateInput(attrs={'type': 'date',
-            'min': None,  # Explicitly remove min
-            'max': None,  }),
+        widget=forms.DateInput(attrs={'type': 'date', 'min': None, 'max': None}),
         label="Holiday Date",
-
+    )
+    country = forms.ModelChoiceField(
+        queryset=Country.objects.all(),
+        empty_label="Select Country",
+        label="Country"
     )
 def clean_date(self):
     return self.cleaned_data['date']  # Accept any valid date without validation

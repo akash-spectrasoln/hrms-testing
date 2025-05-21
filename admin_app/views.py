@@ -92,6 +92,7 @@ def add_employee(request):
         'employees': Employees.objects.all(),
         'default_valid_from': date.today(),
         'default_valid_to': date(9999, 12, 31),
+        'employee_types' : EmployeeType.objects.all().order_by('id')
     }
     return render(request, 'add_employee.html', context)
 
@@ -272,7 +273,7 @@ def list_employees(request):
             'company_email': employee.company_email,
             'mobile_phone': employee.mobile_phone,
             'department': employee.department.dep_name if employee.department else "",
-            'designation': employee.designation,
+            'designation': employee.role.role_name,
             'employee_status': employee.employee_status,
             'manager_display': manager_display,
             'resignation_tooltip': resignation_tooltip,
@@ -407,6 +408,7 @@ class EmployeeUpdateView(UpdateView):
             context['selected_state'] = employee.state if employee.state else None
             context['home_post_office'] = employee.home_post_office
             context['incentive'] = employee.incentive
+            context['joining_bonus'] = employee.joining_bonus
             return context
         except Exception as e:
             logger.error(f"Error in get_context_data: {str(e)}")
@@ -1048,6 +1050,8 @@ from datetime import datetime
 from .models import Holiday, FloatingHoliday
 from .forms import Holiday_Form
 
+
+
 def add_holidays(request):
     current_year = datetime.now().year
 
@@ -1059,19 +1063,33 @@ def add_holidays(request):
             selected_date = form.cleaned_data['date']
             selected_year = selected_date.year
             selected_day = selected_date.strftime("%A")
+            country = form.cleaned_data['country']  # Fetch the selected country
 
             if leave_type == 'fixed':
-                if Holiday.objects.filter(date=selected_date).exists():
-                    messages.warning(request, "⚠️ The date you have entered is already added as a Fixed Holiday.")
+                # Check if a fixed holiday with the same date and country already exists
+                if Holiday.objects.filter(date=selected_date, country=country).exists():
+                    messages.warning(request, "⚠️ The date you have entered is already added as a Fixed Holiday for this country.")
                 else:
-                    Holiday.objects.create(date=selected_date, name=name, day=selected_day, year=selected_year)
+                    Holiday.objects.create(
+                        date=selected_date, 
+                        name=name, 
+                        day=selected_day, 
+                        year=selected_year, 
+                        country=country
+                    )
                     messages.success(request, "✅ Fixed holiday added successfully!")
 
             elif leave_type == 'floating':
-                if FloatingHoliday.objects.filter(date=selected_date).exists():
-                    messages.warning(request, "⚠️ The date you have entered is already added as a Floating Holiday.")
+                # Check if a floating holiday with the same date and country already exists
+                if FloatingHoliday.objects.filter(date=selected_date, country=country).exists():
+                    messages.warning(request, "⚠️ The date you have entered is already added as a Floating Holiday for this country.")
                 else:
-                    FloatingHoliday.objects.create(name=name, date=selected_date, year=selected_year)
+                    FloatingHoliday.objects.create(
+                        name=name, 
+                        date=selected_date, 
+                        year=selected_year, 
+                        country=country
+                    )
                     messages.success(request, "✅ Floating holiday added successfully!")
 
             return redirect('add_holidays')
@@ -1079,7 +1097,7 @@ def add_holidays(request):
     else:
         form = Holiday_Form()
 
-    # Fetch holidays for the current year
+    # Fetch holidays for the current year (optionally you can filter by country, or show all)
     fixed_holidays = Holiday.objects.filter(year=current_year)
     floating_holidays = FloatingHoliday.objects.filter(year=current_year)
 
@@ -1095,13 +1113,22 @@ def add_holidays(request):
 from django.http import JsonResponse
 from .models import Holiday, FloatingHoliday
 
+
+
 def filter_holidays_by_year(request, year):
-    holiday_type = request.GET.get('type', '')  # Get the type from the query parameters
+    holiday_type = request.GET.get('type', '')  # Leave type filter ('fixed', 'floating', or '')
+    country_id = request.GET.get('country', '')  # Country id filter as string
+
     holidays = []
 
+    # Prepare filtering kwargs
+    filter_kwargs = {'date__year': year}
+    if country_id:
+        filter_kwargs['country_id'] = country_id  # filter by country if provided
+
     if holiday_type == 'fixed' or holiday_type == '':
-        # Order fixed holidays by date in ascending order
-        fixed_holidays = Holiday.objects.filter(date__year=year).order_by('date')
+        # Get fixed holidays filtered by year and country (if any)
+        fixed_holidays = Holiday.objects.filter(**filter_kwargs).order_by('date')
         holidays.extend([{
             'name': holiday.name,
             'date': holiday.date.strftime('%Y-%m-%d'),
@@ -1109,8 +1136,8 @@ def filter_holidays_by_year(request, year):
         } for holiday in fixed_holidays])
 
     if holiday_type == 'floating' or holiday_type == '':
-        # Order floating holidays by date in ascending order
-        floating_holidays = FloatingHoliday.objects.filter(date__year=year).order_by('date')
+        # Get floating holidays filtered by year and country (if any)
+        floating_holidays = FloatingHoliday.objects.filter(**filter_kwargs).order_by('date')
         holidays.extend([{
             'name': holiday.name,
             'date': holiday.date.strftime('%Y-%m-%d'),
@@ -1184,32 +1211,128 @@ from .models import LeaveRequest
 from django.shortcuts import render
 from .models import LeaveRequest, Employees
 
+from django.db.models import Q
+
+from django.db.models import Q
+from datetime import date
+def get_financial_year_dates(request, country, reference_date=None):
+    """
+    Calculate financial year start and end based on country reset period.
+    Defaults to calendar year if reset period not set.
+    """
+    if reference_date is None:
+        reference_date = date.today()
+
+    current_year = reference_date.year
+    try:
+        reset_period = HolidayResetPeriod.objects.get(country=country)
+        start_month = reset_period.start_month
+        start_day = reset_period.start_day
+
+        fy_start_candidate = date(current_year, start_month, start_day)
+        if reference_date < fy_start_candidate:
+            fy_start = date(current_year - 1, start_month, start_day)
+        else:
+            fy_start = fy_start_candidate
+
+        try:
+            fy_end = fy_start.replace(year=fy_start.year + 1) - timedelta(days=1)
+        except ValueError:
+            fy_end = fy_start + timedelta(days=365) - timedelta(days=1)
+
+        return fy_start, fy_end
+
+    except HolidayResetPeriod.DoesNotExist:
+        return date(current_year, 1, 1), date(current_year, 12, 31)
+
+
+from django.db.models import Q
+from datetime import date
+from .models import Country  # Import your Country model
+
+
 def admin_leave_requests(request):
-    print("🚀 Debug - View is being called!")  # Check if the view is triggered
+    countries = Country.objects.all().order_by('country_name')
 
-    # Use select_related to optimize database queries
-    leave_requests = LeaveRequest.objects.select_related('employee_user', 'employee_master').all()
+    country_id_str = request.GET.get('country')
+    default_country = countries.filter(country_name='India').first() or (countries.first() if countries else None)
 
-    # Extract available years for filtering dropdown
-    available_years = list(set(leave_requests.values_list('start_date__year', flat=True)))
-    print("🚀 Debug - Available Years:", available_years)  # Debugging
+    try:
+        country_id = int(country_id_str)
+        country_obj = countries.get(id=country_id)
+    except (TypeError, ValueError, Country.DoesNotExist):
+        country_obj = default_country
+        country_id = country_obj.id if country_obj else None
+
+    employee_name_filter = request.GET.get('employee_name', '').strip()
+    status_filter = request.GET.get('status', 'Pending').strip()
+
+    year_filter_str = request.GET.get('year', '').strip()
+
+    today = date.today()
+    reference_year = None
+    try:
+        reference_year = int(year_filter_str)
+    except Exception:
+        reference_year = None
+
+    if reference_year:
+        reference_date = date(reference_year, 7, 1)
+    else:
+        reference_date = today
+
+    # Pass country_obj (Country instance) directly
+    fy_start, fy_end = get_financial_year_dates(request, country_obj, reference_date=reference_date)
+
+    leave_requests = LeaveRequest.objects.select_related('employee_user', 'employee_master').filter(
+        start_date__lte=fy_end,
+        end_date__gte=fy_start,
+        employee_master__country=country_obj,
+    )
+
+    if employee_name_filter:
+        leave_requests = leave_requests.filter(
+            Q(employee_master__first_name__icontains=employee_name_filter) |
+            Q(employee_master__last_name__icontains=employee_name_filter)
+        )
+
+    if status_filter:
+        leave_requests = leave_requests.filter(status=status_filter)
+
+    all_leave_requests_country = LeaveRequest.objects.filter(employee_master__country=country_obj)
+
+    available_years = sorted(set(
+        all_leave_requests_country.values_list('start_date__year', flat=True)
+    ), reverse=True)
+
+    if not reference_year:
+        reference_year = fy_start.year
 
     leave_requests_data = [
         {
             "employee_name": (
-                f"{leave_request.employee_master.first_name} {leave_request.employee_master.last_name}"
-                if leave_request.employee_master else "Not Available"
+                f"{lr.employee_master.first_name} {lr.employee_master.last_name}"
+                if lr.employee_master else "Not Available"
             ),
-            "employee_email": leave_request.employee_user.email if leave_request.employee_user else "Not Available",
-            "leave_request": leave_request,
+            "employee_email": lr.employee_user.email if lr.employee_user else "Not Available",
+            "leave_request": lr,
         }
-        for leave_request in leave_requests
+        for lr in leave_requests.order_by('-start_date')
     ]
 
-    return render(request, "leave_request_display.html", {
+    context = {
         "leave_requests_data": leave_requests_data,
-        "available_years": sorted(available_years, reverse=True),  # Ensure years are sorted in descending order
-    })
+        "available_years": available_years,
+        "current_year": reference_year,
+        "current_employee_name": employee_name_filter,
+        "current_status": status_filter,
+        "current_country_id": country_id,
+        "countries": countries,
+        "financial_year_start": fy_start,
+        "financial_year_end": fy_end,
+    }
+
+    return render(request, "leave_request_display.html", context)
 from django.http import JsonResponse
 from django.db.models import Q
 from .models import LeaveRequest
@@ -1299,30 +1422,38 @@ from django.views.decorators.csrf import csrf_exempt
 from .models import Employees # Import your Employee model
 
 @csrf_exempt
+
+
 def generate_emp_id(request):
     """
-    Generates a unique Employee ID based on the selected employee type.
+    Generates a unique Employee ID based on the selected employee type code.
+    Expects 'employee_type' parameter as the code string, e.g. 'C-', 'I-', 'E-'.
     """
     if request.method == "GET":
-        employee_type = request.GET.get("employee_type", "").strip()
+        employee_type_code = request.GET.get("employee_type", "").strip()
 
-        if not employee_type:
+        if not employee_type_code:
             return JsonResponse({"error": "Missing employee_type parameter"}, status=400)
 
-        # Get the latest employee ID of the given type
-        last_employee = Employees.objects.filter(employee_id__startswith=employee_type).order_by("-employee_id").first()
+        # Filter Employees whose employee_id starts with the employee type code
+        last_employee = Employees.objects.filter(employee_id__startswith=employee_type_code).order_by("-employee_id").first()
 
         if last_employee:
-            # Extract the numeric part and increment
-            last_number = int(last_employee.employee_id.split("-")[1])
+            # Remove prefix code length from employee_id to extract number part
+            prefix_len = len(employee_type_code)
+            numeric_part = last_employee.employee_id[prefix_len:]
+            try:
+                last_number = int(numeric_part)
+            except ValueError:
+                # If parse fails, fallback to default start number
+                last_number = 100000
             new_number = last_number + 1
         else:
-            new_number = 100000 # Start from 1000 if no previous records exist
+            new_number = 100000  # Start from 100000 if no employees found
 
-        # Generate the new Employee ID
-        new_emp_id = f"{employee_type}{new_number}"
+        new_employee_id = f"{employee_type_code}{new_number}"
 
-        return JsonResponse({"emp_id": new_emp_id})
+        return JsonResponse({"employee_id": new_employee_id})
 
     return JsonResponse({"error": "Invalid request method"}, status=405)
 

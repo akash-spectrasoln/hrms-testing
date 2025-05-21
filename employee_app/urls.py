@@ -55,7 +55,7 @@ path('navbar/',navbar,name='navbar'),
 path('leftbar/',sidebar,name='leftbar'),
 path('base/',base,name='base'),
 path('check-floating-holidays/', check_floating_holidays, name='check_floating_holidays'),
- path('check-leave-conflicts/', check_leave_conflicts, name='check_leave_conflicts'),
+path('check-leave-conflicts/', check_leave_conflicts, name='check_leave_conflicts'),
 path('delete-leave/<int:leave_id>/', delete_leave, name='delete_leave'),
  path('test-email/', test_email, name='test_email'),
 ]

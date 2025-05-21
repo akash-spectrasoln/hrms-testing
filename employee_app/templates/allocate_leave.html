@@ -165,7 +165,7 @@ document.addEventListener("DOMContentLoaded", function () {
     // START DATE PICKER with onChange event
     const startDatePicker = flatpickr(startDateInput, {
         dateFormat: "Y-m-d",
-        minDate: "today",
+        
         onDayCreate: flatpickrDayStyler,
         onChange: function(selectedDates, dateStr, instance) {
             if(dateStr) {
@@ -182,7 +182,7 @@ document.addEventListener("DOMContentLoaded", function () {
     // END DATE PICKER
     endDatePicker = flatpickr(endDateInput, {
         dateFormat: "Y-m-d",
-        minDate: "today",
+        
         onDayCreate: flatpickrDayStyler
     });
 

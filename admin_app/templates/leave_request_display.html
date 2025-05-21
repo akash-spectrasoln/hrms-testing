@@ -59,28 +59,43 @@ body {
 
         <div class="card-body">
           <!-- Filter Section -->
-          <form class="row g-2 mb-3 align-items-end filter-section">
-            <div class="col-sm-6 col-md-4">
-              <label for="yearFilter" class="form-label mb-1">Year</label>
-              <select id="yearFilter" class="form-select" onchange="filterResults()">
-                <option value="">All Years</option>
-                {% for year in available_years %}
-                  <option value="{{ year }}" {% if year == current_year %}selected{% endif %}>{{ year }}</option>
+          <form class="row g-2 mb-3 align-items-end filter-section" method="GET" action="">
+            <div class="col-12 col-sm-6 col-md-3">
+              <label for="countryFilter" class="form-label mb-1">Country</label>
+              <select id="countryFilter" name="country" class="form-select">
+                {% for c in countries %}
+                  <option value="{{ c.id }}" {% if c.id == current_country_id %}selected{% endif %}>{{ c.country_name }}</option>
                 {% endfor %}
               </select>
             </div>
-            <div class="col-sm-6 col-md-4">
-              <label for="employeeNameFilter" class="form-label mb-1">Employee Name</label>
-              <input type="text" id="employeeNameFilter" class="form-control" placeholder="Enter employee name" onkeyup="debouncedFilter()">
-            </div>
-            <div class="col-sm-6 col-md-4">
-              <label for="statusFilter" class="form-label mb-1">Status</label>
-              <select id="statusFilter" class="form-select" onchange="filterResults()">
-                <option value="">All Status</option>
-                <option value="Pending">Pending</option>
-                <option value="Approved">Approved</option>
-                <option value="Rejected">Rejected</option>
+
+            <div class="col-sm-6 col-md-2">
+              <label for="yearFilter" class="form-label mb-1">Year</label>
+              <select id="yearFilter" name="year" class="form-select">
+                <option value="">All Years</option>
+                {% for year in available_years %}
+                  <option value="{{ year }}" {% if current_year == year %}selected{% endif %}>{{ year }}</option>
+                {% endfor %}
               </select>
+            </div>
+            
+            <div class="col-sm-6 col-md-3">
+              <label for="employeeNameFilter" class="form-label mb-1">Employee Name</label>
+              <input type="text" id="employeeNameFilter" name="employee_name" class="form-control" placeholder="Enter employee name" value="{{ current_employee_name }}">
+            </div>
+            
+            <div class="col-sm-6 col-md-2">
+              <label for="statusFilter" class="form-label mb-1">Status</label>
+              <select id="statusFilter" name="status" class="form-select">
+                <option value="">All Status</option>
+                <option value="Pending" {% if not current_status or current_status == "Pending" %}selected{% endif %}>Pending</option>
+                <option value="Approved" {% if current_status == "Approved" %}selected{% endif %}>Approved</option>
+                <option value="Rejected" {% if current_status == "Rejected" %}selected{% endif %}>Rejected</option>
+              </select>
+            </div>
+            
+            <div class="col-sm-6 col-md-2 d-flex align-items-end">
+              <button type="submit" class="btn btn-primary w-100">Search</button>
             </div>
           </form>
 
@@ -96,7 +111,7 @@ body {
                   <th class="d-none d-lg-table-cell">End</th>
                   <th class="d-none d-lg-table-cell">Description</th>
                   <th>Days</th>
-                  <th>Approved/Rejected/Deleted  By</th>
+                  <th>Approved/Rejected/Deleted By</th>
                   <th>Status</th>
                   <th>Actions</th>
                 </tr>
@@ -111,7 +126,7 @@ body {
                   <td class="d-none d-lg-table-cell">{{ data.leave_request.end_date }}</td>
                   <td class="d-none d-lg-table-cell">{{ data.leave_request.reason }}</td>
                   <td>{{ data.leave_request.leave_days }}</td>
-                  <td>{{data.leave_request.approved_by}}</td>
+                  <td>{{ data.leave_request.approved_by }}</td>
                   <td>
                     <span class="status-badge
                       {% if data.leave_request.status == 'Pending' %}status-pending
@@ -145,7 +160,7 @@ body {
                 </tr>
                 {% empty %}
                 <tr>
-                  <td colspan="9" class="text-center">No leave requests found.</td>
+                  <td colspan="10" class="text-center">No leave requests found.</td>
                 </tr>
                 {% endfor %}
               </tbody>

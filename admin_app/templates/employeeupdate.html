@@ -65,7 +65,6 @@
                 {% csrf_token %}
                 
                 <!-- Basic Information Section -->
-                <!-- <div class="section-heading">Basic Information</div> -->
                 <div class="form-row">
                     <div class="form-group col-md-4">
                         <label for="employee_type" class="required">Employee Type</label>
@@ -108,7 +107,6 @@
                 </div>
                 
                 <!-- Validity Period Section -->
-                <!-- <div class="section-heading">Validity Period</div> -->
                 <div class="form-row">
                     <div class="form-group col-md-4">
                         <label for="date_of_birth" class="required">Date of Birth</label>
@@ -125,7 +123,6 @@
                 </div>
 
                 <!-- Contact Information Section -->
-                <!-- <div class="section-heading">Contact Information</div> -->
                 <div class="form-row">
                     <div class="form-group col-md-6">
                         <label for="company_email" class="required">Company Email</label>
@@ -174,7 +171,6 @@
                 </div>
 
                 <!-- Address Information Section -->
-                <!-- <div class="section-heading">Address Information</div> -->
                 <div class="form-row">
                     <div class="form-group col-md-6">
                         <label for="country" class="required">Country</label>
@@ -216,7 +212,6 @@
                 
 
                 <!-- Employment Details Section -->
-                <!-- <div class="section-heading">Employment Details</div> -->
                 <div class="form-row">
                     <div class="form-group col-md-4">
                         <label for="home_post_office" class="required">Post Office</label>
@@ -253,7 +248,15 @@
                             <option value="employed" {% if form.instance.employee_status == 'employed' %}selected{% endif %}>Employed</option>
                             <option value="resigned" {% if form.instance.employee_status == 'resigned' %}selected{% endif %}>Resigned</option>
                         </select>
+
                     </div>
+                    
+                    <!-- Resignation Date container - hidden/shown with JS -->
+                    <div class="form-group col-md-4" id="resignation_date_row" style="display:none;">
+                      <label for="resignation_date" class="required">Resignation Date</label>
+                      <input type="date" name="resignation_date" id="resignation_date" class="form-control" value="{{ form.instance.resignation_date|date:'Y-m-d' }}">
+                    </div>
+
                     <div class="form-group col-md-4">
                         <label for="manager">Manager</label>
                         <select name="manager" class="form-control">
@@ -265,115 +268,111 @@
                             {% endfor %}
                         </select>
                     </div>
-                    
-    
                 </div>
                 <div class="form-row">
-                    <div class="form-group col-md-6">
+                    <div class="form-group col-md-4">
                         <label for="base_salary" class="required">Salary</label>
                         <input type="text" name="base_salary" class="form-control" value="{{ form.instance.base_salary|default_if_none:'' }}" required>
                     </div>
-                    <div class="form-group col-md-6">
+                    <div class="form-group col-md-4">
                         <label for="incentive">Incentive</label>
                         <input type="text" name="incentive" class="form-control" value="{{ form.instance.incentive|default_if_none:'0.0' }}">
                     </div>
+                    <div class="form-group col-md-4">
+                        <label for="joining_bonus">Joining Bonus</label>
+                        <input type="text" name="joining_bonus" id="joining_bonus" class="form-control" value="{{ joining_bonus|default_if_none:'' }}">
+                      </div>
                 </div>
+                <!-- Joining Bonus -->
+                
+                
                 <!-- Documents Section -->
-                <!-- <div class="section-heading">Documents</div> -->
-                
-                    <div class="form-group">
-                        <label for="resumes">Resumes</label>
-                        <div class="file-input-container" id="resumeContainer">
-                            <div class="file-input-wrapper">
-                                <input type="file" name="resumes" class="form-control-file" accept=".pdf,.doc,.docx" id="resumeInput">
-                                <span id="resumeFileName" class="file-name"></span>
-                                <i class="fas fa-plus-circle add-icon" title="Add another file"></i>
-                                <i class="fas fa-trash-alt delete-icon" title="Delete this file"></i>
-                            </div>
+                <div class="form-group">
+                    <label for="resumes">Resumes</label>
+                    <div class="file-input-container" id="resumeContainer">
+                        <div class="file-input-wrapper">
+                            <input type="file" name="resumes" class="form-control-file" accept=".pdf,.doc,.docx" id="resumeInput">
+                            <span id="resumeFileName" class="file-name"></span>
+                            <i class="fas fa-plus-circle add-icon" title="Add another file"></i>
+                            <i class="fas fa-trash-alt delete-icon" title="Delete this file"></i>
                         </div>
-                        {% if form.instance.resumes.all %}
-                        <div class="current-file mt-4">
-                            <label>Current Files</label>
-                            <div class="list-group">
-                                {% for resume in form.instance.resumes.all %}
-                                <div class="list-group-item d-flex justify-content-between align-items-center">
-                                    <h6 class="mb-1">{{ resume.file.name|basename }}</h6>
-                                    <div class="d-flex">
-                                        <a href="{{ resume.file.url }}" target="_blank" class="btn btn-link btn-sm p-0 mr-2">
-                                            <i class="fas fa-download"></i> View
-                                        </a>
-                                        <a href="#" class="btn btn-danger btn-sm delete-file-link" data-file-id="{{ resume.id }}" data-file-type="resume" title="Delete this file">
-                                            <i class="fas fa-trash-alt"></i>
-                                        </a>
-                                    </div>
-                                </div>
-                                {% endfor %}
-                            </div>
-                        </div>
-                        {% endif %}
                     </div>
-                    <div class="form-group">
-                        <label for="certificates">Other Certifications</label>
-                        <div class="file-input-container" id="certificateContainer">
-                            <div class="file-input-wrapper">
-                                <input type="file" name="certificates" class="form-control-file" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" id="certificateInput">
-                                <span id="certificateFileName" class="file-name"></span>
-                                <i class="fas fa-plus-circle add-icon" title="Add another file"></i>
-                                <i class="fas fa-trash-alt delete-icon" title="Delete this file"></i>
-                            </div>
-                        </div>
-                        {% if form.instance.certificates.all %}
-                        <div class="current-file mt-4">
-                            <label>Current Files</label>
-                            <div class="list-group">
-                                {% for certificate in form.instance.certificates.all %}
-                                <div class="list-group-item d-flex justify-content-between align-items-center">
-                                    <h6 class="mb-1">{{ certificate.file.name|basename }}</h6>
-                                    <div class="d-flex">
-                                        <a href="{{ certificate.file.url }}" target="_blank" class="btn btn-link btn-sm p-0 mr-2">
-                                            <i class="fas fa-download"></i> View
-                                        </a>
-                                        <a href="#" class="btn btn-danger btn-sm delete-file-link" data-file-id="{{ certificate.id }}" data-file-type="certificate" title="Delete this file">
-                                            <i class="fas fa-trash-alt"></i>
-                                        </a>
-                                    </div>
+                    {% if form.instance.resumes.all %}
+                    <div class="current-file mt-4">
+                        <label>Current Files</label>
+                        <div class="list-group">
+                            {% for resume in form.instance.resumes.all %}
+                            <div class="list-group-item d-flex justify-content-between align-items-center">
+                                <h6 class="mb-1">{{ resume.file.name|basename }}</h6>
+                                <div class="d-flex">
+                                    <a href="{{ resume.file.url }}" target="_blank" class="btn btn-link btn-sm p-0 mr-2">
+                                        <i class="fas fa-download"></i> View
+                                    </a>
+                                    <a href="#" class="btn btn-danger btn-sm delete-file-link" data-file-id="{{ resume.id }}" data-file-type="resume" title="Delete this file">
+                                        <i class="fas fa-trash-alt"></i>
+                                    </a>
                                 </div>
-                                {% endfor %}
                             </div>
+                            {% endfor %}
                         </div>
-                        {% endif %}
                     </div>
-                
-                
-                <script>
-                    document.addEventListener('DOMContentLoaded', function() {
-                        // Function to update file name display
-                        function updateFileName(inputId, displayId) {
-                            const input = document.getElementById(inputId);
-                            const display = document.getElementById(displayId);
-                            input.addEventListener('change', function() {
-                                const fileName = this.files.length > 0 ? this.files[0].name : '';
-                                display.textContent = fileName;
-                            });
-                        }
-                
-                        // Update file name display for resumes
-                        updateFileName('resumeInput', 'resumeFileName');
-                
-                        // Update file name display for certificates
-                        updateFileName('certificateInput', 'certificateFileName');
-                    });
-                </script>
+                    {% endif %}
+                </div>
+                <div class="form-group">
+                    <label for="certificates">Other Certifications</label>
+                    <div class="file-input-container" id="certificateContainer">
+                        <div class="file-input-wrapper">
+                            <input type="file" name="certificates" class="form-control-file" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" id="certificateInput">
+                            <span id="certificateFileName" class="file-name"></span>
+                            <i class="fas fa-plus-circle add-icon" title="Add another file"></i>
+                            <i class="fas fa-trash-alt delete-icon" title="Delete this file"></i>
+                            <i class="fas fa-trash-alt delete-icon" title="Delete this file"></i>
+                        </div>
+                    </div>
+                    {% if form.instance.certificates.all %}
+                    <div class="current-file mt-4">
+                        <label>Current Files</label>
+                        <div class="list-group">
+                            {% for certificate in form.instance.certificates.all %}
+                            <div class="list-group-item d-flex justify-content-between align-items-center">
+                                <h6 class="mb-1">{{ certificate.file.name|basename }}</h6>
+                                <div class="d-flex">
+                                    <a href="{{ certificate.file.url }}" target="_blank" class="btn btn-link btn-sm p-0 mr-2">
+                                        <i class="fas fa-download"></i> View
+                                    </a>
+                                    <a href="#" class="btn btn-danger btn-sm delete-file-link" data-file-id="{{ certificate.id }}" data-file-type="certificate" title="Delete this file">
+                                        <i class="fas fa-trash-alt"></i>
+                                    </a>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- Is Admin Checkbox (visible only if current user is staff or superuser) -->
+                {% if form.instance.user.is_superuser or form.instance.user.is_staff %}
+                <div class="form-group form-check mt-3">
+                    <input type="checkbox" class="form-check-input" id="is_admin" name="is_admin"
+                    {% if form.instance.user %}
+                        {% if form.instance.user.is_staff or form.instance.user.is_superuser %}
+                            checked
+                        {% endif %}
+                    {% endif %}>
+                    <label class="form-check-label" for="is_admin">Is Admin / Superuser</label>
+                </div>
+                {% endif %}
+
                 <div class="d-flex justify-content-center mt-3">
                     <button type="submit" class="btn btn-success">
-                      <i class="fas fa-user-plus"></i> Save
+                        <i class="fas fa-user-plus"></i> Save
                     </button>
-                  </div>
+                </div>
             </form>
         </div>
     </div>
 </div>
-
 
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.bundle.min.js"></script>
@@ -457,38 +456,67 @@
                 }
             });
         });
+
+        // Delete file ajax
         $(document).on('click', '.delete-file-link', function(e) {
-        e.preventDefault(); // Prevent default anchor behavior
+            e.preventDefault(); // Prevent default anchor behavior
 
-        const fileId = $(this).data('file-id');
-        const fileType = $(this).data('file-type');
-        const listItem = $(this).closest('.list-group-item');
+            const fileId = $(this).data('file-id');
+            const fileType = $(this).data('file-type');
+            const listItem = $(this).closest('.list-group-item');
 
-        if (confirm('Are you sure you want to delete this file?')) {
-            $.ajax({
-                url: "{% url 'delete_file' %}",  // Update with your actual URL
-                method: 'POST',
-                data: {
-                    'file_id': fileId,
-                    'file_type': fileType,
-                    'csrfmiddlewaretoken': '{{ csrf_token }}'
-                },
-                success: function(response) {
-                    if (response.success) {
-                        listItem.remove();
-                    } else {
-                        alert('Failed to delete the file. Please try again.');
+            if (confirm('Are you sure you want to delete this file?')) {
+                $.ajax({
+                    url: "{% url 'delete_file' %}",  // Update with your actual URL
+                    method: 'POST',
+                    data: {
+                        'file_id': fileId,
+                        'file_type': fileType,
+                        'csrfmiddlewaretoken': '{{ csrf_token }}'
+                    },
+                    success: function(response) {
+                        if (response.success) {
+                            listItem.remove();
+                        } else {
+                            alert('Failed to delete the file. Please try again.');
+                        }
+                    },
+                    error: function() {
+                        alert('Error occurred while deleting the file. Please try again.');
                     }
-                },
-                error: function() {
-                    alert('Error occurred while deleting the file. Please try again.');
-                }
-            });
-        }
-    });
-    $('#employeeForm').on('submit', function() {
-    $(this).find('button[type="submit"]').prop('disabled', true);
-    });
+                });
+            }
+        });
+
+        // Disable submit button on form submit to prevent multiple submits
+        $('#employeeForm').on('submit', function() {
+            $(this).find('button[type="submit"]').prop('disabled', true);
+        });
     });
 </script>
+
+<!-- Script to toggle resignation date field -->
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const employeeStatusEl = document.querySelector('select[name="employee_status"]');
+    const resignationRow = document.getElementById('resignation_date_row');
+    const resignationInput = document.getElementById('resignation_date');
+    const form = document.getElementById('employeeForm');
+
+    function toggleResignationDate() {
+        if (employeeStatusEl.value === 'resigned') {
+            resignationRow.style.display = 'block';
+            resignationInput.setAttribute('required', 'required');
+        } else {
+            resignationRow.style.display = 'none';
+            resignationInput.removeAttribute('required');
+            resignationInput.value = '';
+        }
+    }
+
+    employeeStatusEl.addEventListener('change', toggleResignationDate);
+    toggleResignationDate();
+});
+</script>
+
 {% endblock content %}

@@ -61,7 +61,12 @@ from django.contrib.auth.models import User
 from django.db import models
 from django.contrib.auth.models import User
 from datetime import date
+class EmployeeType(models.Model):
+    code = models.CharField(max_length=3, unique=True)
+    name = models.CharField(max_length=100)
 
+    def __str__(self):
+        return self.name
  # adjust if your policies are in a different file
 
 class Employees(models.Model):
@@ -70,9 +75,13 @@ class Employees(models.Model):
         ('I-', 'Intern'),
         ('E-', 'Employee'),
     ]
-
+    STATUS_CHOICES = [
+        ('employed', 'Employed'),
+        ('resigned', 'Resigned'),
+    ]
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="employee_profile", null=True, blank=True)
-    employee_type = models.CharField(max_length=3, choices=EMPLOYEE_TYPE_CHOICES, verbose_name="Employee Type", null=True)
+    # employee_type = models.CharField(max_length=3, choices=EMPLOYEE_TYPE_CHOICES, verbose_name="Employee Type", null=True)
+    employee_type = models.ForeignKey(EmployeeType, on_delete=models.SET_NULL, null=True, blank=True)
     employee_id = models.CharField(max_length=10, unique=True)
     salutation = models.ForeignKey('Salutation', on_delete=models.CASCADE)
     first_name = models.CharField(max_length=50, verbose_name="First Name")
@@ -94,9 +103,13 @@ class Employees(models.Model):
     pincode = models.CharField(max_length=10, blank=True)
     role = models.ForeignKey('Role', on_delete=models.CASCADE, to_field="role_id", null=True, blank=True)
     department = models.ForeignKey('Department', on_delete=models.CASCADE)
-    designation = models.CharField(max_length=100)
+    
     manager = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True, related_name='employees_managed')
-    employee_status = models.CharField(max_length=10)
+    employee_status = models.CharField(
+    max_length=10,
+    choices=STATUS_CHOICES,
+    default='employed'
+    )
     emergency_contact_name = models.CharField(max_length=100,null=True)
     emergency_contact_phone = models.CharField(max_length=15,null=True)
     emergency_contact_email = models.EmailField(null=True)
@@ -115,6 +128,8 @@ class Employees(models.Model):
     password = models.CharField(max_length=128, null=True, blank=True)
     resignation_date = models.DateField(null=True, blank=True)
     incentive = models.DecimalField(max_digits=10, decimal_places=2, default=0.0,null=True)
+    joining_bonus=models.DecimalField(max_digits=10, decimal_places=2, default=0.0,null=True)
+    
 
     def available_leaves(self):
         return self.total_leaves - self.used_leaves
@@ -190,11 +205,11 @@ class Certificate(models.Model):
 
 from datetime import datetime
 class Holiday(models.Model):
-    date=models.DateField(unique=True)
+    date=models.DateField()
     name=models.CharField(max_length=100)
     day=models.CharField(max_length=50,null=True)
     year = models.IntegerField(default=datetime.now().year)
-
+    country = models.ForeignKey('Country', on_delete=models.CASCADE)
 
 #
 # below is the leave request model
@@ -282,7 +297,7 @@ class FloatingHoliday(models.Model):
     name = models.CharField(max_length=100)  # e.g., New Year, Maha Shivaratri, etc.
     date = models.DateField()  # The specific date for the holiday
     year=models.IntegerField(default=datetime.now().year)
-
+    country = models.ForeignKey('Country', on_delete=models.CASCADE)
     def __str__(self):
         return self.name
 
@@ -295,6 +310,7 @@ class HolidayPolicy(models.Model):
     ordinary_holidays_count = models.PositiveIntegerField(help_text="Total ordinary holidays for the year.")
     min_years_experience = models.PositiveIntegerField(help_text="Minimum years of experience for extra holidays to apply.")
     extra_holidays = models.PositiveIntegerField(help_text="Extra holidays allocated for experience.")
+    country = models.ForeignKey('Country', on_delete=models.CASCADE)
 
     def __str__(self):
         return (f"{self.year}: {self.ordinary_holidays_count} ordinary, "
@@ -304,8 +320,32 @@ class FloatingHolidayPolicy(models.Model):
     """
     Stores the yearly policy for floating holidays.
     """
-    year = models.PositiveIntegerField(unique=True)
+    year = models.PositiveIntegerField()
     allowed_floating_holidays = models.PositiveIntegerField(help_text="Number of floating holidays allowed this year.")
-
+    country = models.ForeignKey('Country', on_delete=models.CASCADE)
     def __str__(self):
         return f"{self.year}: {self.allowed_floating_holidays} floating holidays allowed"
+
+class HolidayResetPeriod(models.Model):
+    country = models.OneToOneField(Country, on_delete=models.CASCADE, related_name="holiday_reset")
+    start_month = models.PositiveSmallIntegerField(
+        choices=[(i, i) for i in range(1, 13)],
+        help_text="Start month of holiday reset period"
+    )
+    start_day = models.PositiveSmallIntegerField(
+        choices=[(i, i) for i in range(1, 32)],
+        help_text="Start day of holiday reset period"
+    )
+    end_month = models.PositiveSmallIntegerField(
+        choices=[(i, i) for i in range(1, 13)],
+        help_text="End month of holiday reset period"
+    )
+    end_day = models.PositiveSmallIntegerField(
+        choices=[(i, i) for i in range(1, 32)],
+        help_text="End day of holiday reset period"
+    )
+
+    def __str__(self):
+        return f"Holiday reset for {self.country.country_name}: {self.start_month}/{self.start_day} to {self.end_month}/{self.end_day}"
+    
+    

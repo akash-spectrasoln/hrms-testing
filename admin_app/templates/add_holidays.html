@@ -136,6 +136,22 @@
                             {% endif %}
                         </div>
 
+                        <!-- Country dropdown added here -->
+                        <div class="mb-3">
+                            <label for="id_country" class="form-label">Country</label>
+                            <select name="country" id="id_country" class="form-select" required>
+                                <option value="">Select Country</option>
+                                {% for country in form.fields.country.queryset %}
+                                    <option value="{{ country.id }}" {% if form.country.value|stringformat:"s" == country.id|stringformat:"s" %}selected{% endif %}>{{ country.country_name }}</option>
+                                {% endfor %}
+                            </select>
+                            {% if form.country.errors %}
+                                <div class="field-error">
+                                    {% for error in form.country.errors %}{{ error }}{% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+
                         <div class="mb-3">
                             <label for="id_date" class="form-label">Holiday Date</label>
                             <input type="date" name="date" id="id_date" class="form-control" required value="{{ form.date.value|date:'Y-m-d'|default:'' }}">
@@ -155,17 +171,26 @@
             <div class="col-md-6">
                 <div class="holiday-list-container">
                     <div class="page-header">
+                        <label for="country-filter" class="form-label mt-2 me-2">Filter by Country</label>
+                            <select id="country-filter" class="form-select form-select-sm" style="width: auto;">
+                                <option value="" selected>All Countries</option>
+                                {% for country in form.fields.country.queryset %}
+                                    <option value="{{ country.id }}">{{ country.country_name }}</option>
+                                {% endfor %}
+                            </select>
                         <h2 class="page-title">Holidays for <span id="selected-year">{{ current_year }}</span></h2>
                         <div class="d-flex align-items-center mb-3">
                             <label for="year-filter" class="form-label mt-2 me-2">Select a Year</label>
                             <select id="year-filter" class="form-select form-select-sm" style="width: auto; margin-right: 10px;">
-                                <!-- Year options will be populated by JavaScript -->
+                                <!-- Year options populated by JS -->
                             </select>
                             <label for="type-filter" class="form-label mt-2 me-2">Select Type</label>
-                            <select id="type-filter" class="form-select form-select-sm" style="width: auto;">
+                            <select id="type-filter" class="form-select form-select-sm" style="width: auto; margin-right: 10px;">
                                 <option value="fixed" selected>Fixed Holiday</option>
                                 <option value="floating">Floating Holiday</option>
                             </select>
+                            <!-- Country filter dropdown added here -->
+                            
                         </div>
                     </div>
                     <table class="holiday-table" id="holiday-table">
@@ -177,7 +202,7 @@
                             </tr>
                         </thead>
                         <tbody id="holiday-tbody">
-                            <!-- Holidays will be dynamically loaded here -->
+                            <!-- Holidays dynamically loaded here -->
                         </tbody>
                     </table>
                     <div id="no-entries" class="text-center mt-3" style="display: none;">
@@ -198,6 +223,7 @@
         const leaveTypeSelect = document.getElementById('id_leave_type');
         const yearFilter = document.getElementById('year-filter');
         const typeFilter = document.getElementById('type-filter');
+        const countryFilter = document.getElementById('country-filter');
         const holidayTbody = document.getElementById('holiday-tbody');
         const noEntries = document.getElementById('no-entries');
         const selectedYearSpan = document.getElementById('selected-year');
@@ -238,6 +264,16 @@
                 form.name.classList.remove('is-invalid');
             }
 
+            // Validate country selection
+            if (!countryFilter.value && !form.country) {
+                // fallback if no country field - skip
+            } else if (form.country && !form.country.value) {
+                isValid = false;
+                document.getElementById('id_country').classList.add('is-invalid');
+            } else {
+                document.getElementById('id_country').classList.remove('is-invalid');
+            }
+
             // Validate date
             if (!dateInput.value) {
                 isValid = false;
@@ -263,17 +299,17 @@
             yearFilter.appendChild(option);
         }
 
-        // Function to fetch holidays for the selected year and type
-        function fetchHolidaysForYearAndType(year, type) {
-            let url = `/admin_app/filter-holidays/${year}/`;
-            if (type) {
-                url += `?type=${type}`;
+        // Fetch holidays with year, type, country filters
+        function fetchHolidaysForYearTypeCountry(year, type, countryId) {
+            let url = `/admin_app/filter-holidays/${year}/?type=${encodeURIComponent(type)}`;
+            if (countryId) {
+                url += `&country=${encodeURIComponent(countryId)}`;
             }
 
             fetch(url)
                 .then(response => response.json())
                 .then(data => {
-                    holidayTbody.innerHTML = ''; // Clear existing rows
+                    holidayTbody.innerHTML = '';
                     const holidays = data.holidays;
                     let hasEntries = false;
 
@@ -288,23 +324,27 @@
                 })
                 .catch(error => {
                     console.error('Error fetching holidays:', error);
+                    holidayTbody.innerHTML = '';
                     noEntries.style.display = 'block';
                 });
         }
 
-        // Initial fetch for the current year with fixed holidays as default
-        fetchHolidaysForYearAndType(currentYear, 'fixed');
+        // Initial fetch on page load
+        fetchHolidaysForYearTypeCountry(currentYear, 'fixed', '');
 
-        // Handle year filter change
+        // Event listeners for filters
         yearFilter.addEventListener('change', function() {
             const selectedYear = parseInt(yearFilter.value);
             selectedYearSpan.textContent = selectedYear;
-            fetchHolidaysForYearAndType(selectedYear, typeFilter.value);
+            fetchHolidaysForYearTypeCountry(selectedYear, typeFilter.value, countryFilter.value);
         });
 
-        // Handle type filter change
         typeFilter.addEventListener('change', function() {
-            fetchHolidaysForYearAndType(yearFilter.value, typeFilter.value);
+            fetchHolidaysForYearTypeCountry(yearFilter.value, typeFilter.value, countryFilter.value);
+        });
+
+        countryFilter.addEventListener('change', function() {
+            fetchHolidaysForYearTypeCountry(yearFilter.value, typeFilter.value, countryFilter.value);
         });
     });
 </script>
