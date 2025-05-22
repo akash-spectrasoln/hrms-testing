@@ -43,12 +43,14 @@ class EmployeeEditForm(forms.ModelForm):
         required=False,
         empty_label="Select a State"
     )
-    home_house = forms.CharField(required=True)
+    home_house = forms.CharField(required=False)
      # assuming you have STATUS_CHOICES constant
     middle_name = forms.CharField(required=False)
     office_phone = forms.CharField(required=False)
     home_phone = forms.CharField(required=False)
     home_city = forms.CharField(required=False)
+    emergency_contact_email=forms.EmailField(required=False)
+    
     incentive = forms.DecimalField(required=False, max_digits=10, decimal_places=2)
     joining_bonus = forms.DecimalField(required=False, max_digits=10, decimal_places=2)
     home_post_office = forms.CharField(required=False)
@@ -75,15 +77,16 @@ class EmployeeEditForm(forms.ModelForm):
         widget=forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
         label="Date of Birth"
     )
-
+    emergency_contact_phone=forms.CharField(required=False)
+    emergency_contact_name=forms.CharField(required=False)
     class Meta:
         model = Employees
         fields = [
             'employee_id', 'salutation', 'first_name', 'middle_name', 'last_name',
             'company_email', 'personal_email', 'mobile_phone', 'office_phone',
-            'home_phone', 'valid_from', 'valid_to', 'country', 'state', 'home_post_office',
-            'home_city', 'pincode', 'department', 'role', 'manager',
-             
+            'home_phone', 'valid_from', 'valid_to', 'country', 'state', 
+            'department', 'role', 'manager','home_city','pincode','emergency_contact_name','emergency_contact_phone','emergency_contact_email',
+             'emergency_contact_relation',
             'base_salary', 'employee_type',
             'resignation_date', 'home_house', 'resumes', 'certificates', 'incentive', 'joining_bonus',
             'date_of_birth'

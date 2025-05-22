@@ -68,11 +68,14 @@
                 <div class="form-row">
                     <div class="form-group col-md-4">
                         <label for="employee_type" class="required">Employee Type</label>
-                        <select id="employee_type" name="employee_type" class="form-control" required>
-                            <option value="" disabled>Select Employee Type</option>
-                            <option value="C-" {% if form.instance.employee_type == "C-" %}selected{% endif %}>Contractor</option>
-                            <option value="I-" {% if form.instance.employee_type == "I-" %}selected{% endif %}>Intern</option>
-                            <option value="E-" {% if form.instance.employee_type == "E-" %}selected{% endif %}>Employee</option>
+                        <select id="employee_type" name="employee_type" class="form-control" readonly required>
+                            <option value="" disabled {% if not form.instance.employee_type %}selected{% endif %}>Select Employee Type</option>
+                            {% for etype in employee_type %}
+                                <option value="{{ etype.id }}"
+                                    {% if form.instance.employee_type and form.instance.employee_type.id == etype.id %}selected{% endif %}>
+                                    {{ etype.id }} - {{ etype.name }}
+                                </option>
+                            {% endfor %}
                         </select>
                     </div>
                     <div class="form-group col-md-4">
@@ -197,16 +200,16 @@
                 </div>
                 <div class="form-row">
                     <div class="form-group col-md-4">
-                        <label for="home_house" class="required">Home</label>
-                        <input type="text" name="home_house"  class="form-control" value="{{ form.instance.home_house }}"required>
+                        <label for="home_house" >Home</label>
+                        <input type="text" name="home_house"  class="form-control" value="{{ form.instance.home_house }}">
                     </div>
                     <div class="form-group col-md-4">
                         <label for="home_city" class="required">City</label>
                         <input type="text" name="home_city" class="form-control"value="{{ form.instance.home_city }}" required>
                     </div>
                     <div class="form-group col-md-4">
-                        <label for="pincode" class="required">Pincode</label>
-                        <input type="text" name="pincode" class="form-control" value="{{ form.instance.pincode }}" required>
+                        <label for="pincode" >Pincode</label>
+                        <input type="text" name="pincode" class="form-control" value="{{ form.instance.pincode }}" >
                     </div>
                 </div>
                 
@@ -214,8 +217,8 @@
                 <!-- Employment Details Section -->
                 <div class="form-row">
                     <div class="form-group col-md-4">
-                        <label for="home_post_office" class="required">Post Office</label>
-                        <input type="text" name="home_post_office" class="form-control" value="{{ form.instance.home_post_office }}" required>
+                        <label for="home_post_office" >Post Office</label>
+                        <input type="text" name="home_post_office" class="form-control" value="{{ form.instance.home_post_office }}" >
                     </div>
                     <div class="form-group col-md-4">
                         <label for="department" class="required">Department</label>
@@ -230,10 +233,10 @@
                     </div>
                     <div class="form-group col-md-4">
                         <label for="designation" class="required">Designation</label>
-                        <select name="designation" class="form-control" required>
-                            <option value="" disabled {% if not form.instance.designation %}selected{% endif %}>Select Designation</option>
+                        <select name="role" class="form-control" required>
+                            <option value="" disabled>Select Designation</option>
                             {% for role in roles %}
-                                <option value="{{ role.role_name}}" {% if form.instance.designation  == role.role_name %}selected{% endif %}>
+                                <option value="{{ role.role_id}}" {% if form.instance.role.id  == role.role_id %}selected{% endif %}>
                                     {{ role.role_name }}
                                 </option>
                             {% endfor %}
@@ -295,7 +298,7 @@
                             <input type="file" name="resumes" class="form-control-file" accept=".pdf,.doc,.docx" id="resumeInput">
                             <span id="resumeFileName" class="file-name"></span>
                             <i class="fas fa-plus-circle add-icon" title="Add another file"></i>
-                            <i class="fas fa-trash-alt delete-icon" title="Delete this file"></i>
+                            
                         </div>
                     </div>
                     {% if form.instance.resumes.all %}
@@ -326,8 +329,7 @@
                             <input type="file" name="certificates" class="form-control-file" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" id="certificateInput">
                             <span id="certificateFileName" class="file-name"></span>
                             <i class="fas fa-plus-circle add-icon" title="Add another file"></i>
-                            <i class="fas fa-trash-alt delete-icon" title="Delete this file"></i>
-                            <i class="fas fa-trash-alt delete-icon" title="Delete this file"></i>
+                            
                         </div>
                     </div>
                     {% if form.instance.certificates.all %}
@@ -353,7 +355,7 @@
                 </div>
 
                 <!-- Is Admin Checkbox (visible only if current user is staff or superuser) -->
-                {% if form.instance.user.is_superuser or form.instance.user.is_staff %}
+                
                 <div class="form-group form-check mt-3">
                     <input type="checkbox" class="form-check-input" id="is_admin" name="is_admin"
                     {% if form.instance.user %}
@@ -363,7 +365,7 @@
                     {% endif %}>
                     <label class="form-check-label" for="is_admin">Is Admin / Superuser</label>
                 </div>
-                {% endif %}
+                
 
                 <div class="d-flex justify-content-center mt-3">
                     <button type="submit" class="btn btn-success">

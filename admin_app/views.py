@@ -76,6 +76,7 @@ def add_employee(request):
                 messages.error(request, f"An error occurred while saving: {e}")
         else:
             # Print form errors in console for debugging
+            form = EmployeeEditForm(request=request)
             print("Form Errors:", form.errors)
             messages.error(request, "Please correct the errors below.")
     else:
@@ -409,6 +410,7 @@ class EmployeeUpdateView(UpdateView):
     def get_context_data(self, **kwargs):
         try:
             context = super().get_context_data(**kwargs)
+            context['employee_type'] = EmployeeType.objects.all()
             context['salutations'] = Salutation.objects.all()
             context['roles'] = Role.objects.all()
             context['departments'] = Department.objects.all()
@@ -420,8 +422,10 @@ class EmployeeUpdateView(UpdateView):
             context['states'] = state.objects.filter(country=employee.country) if employee.country else []
             context['selected_state'] = employee.state if employee.state else None
             context['home_post_office'] = employee.home_post_office
+            
             context['incentive'] = employee.incentive
             context['joining_bonus'] = employee.joining_bonus
+            
             return context
         except Exception as e:
             logger.error(f"Error in get_context_data: {str(e)}")
@@ -434,14 +438,13 @@ class EmployeeUpdateView(UpdateView):
         try:
             employee = form.save(commit=False)
             current_status = form.cleaned_data.get('employee_status')
-            new_employee_type = form.cleaned_data.get("employee_type")
-
+            new_employee_type =  form.cleaned_data.get("employee_type")
             if current_status == 'employed':
                 employee.resignation_date = None
             elif current_status == 'resigned' and not employee.resignation_date:
                 employee.resignation_date = timezone.now().date()
 
-            if new_employee_type and new_employee_type != employee.employee_type:
+            if new_employee_type and new_employee_type.code != employee.employee_type.code:
                 unique_number = employee.employee_id[-4:]
                 employee.employee_id = f"{new_employee_type}{unique_number}"
 
@@ -1067,8 +1070,24 @@ from .forms import Holiday_Form
 
 
 
+from datetime import datetime
+from django.shortcuts import render, redirect
+from django.contrib import messages
+from django.urls import reverse
+
 def add_holidays(request):
+    # Figure out initial/current filter values:
+    # 1) POST (user submitting form, which may error)
+    # 2) GET (came here via redirect after successful save)
+    # 3) Default (current year, blank country/type)
     current_year = datetime.now().year
+    get = request.GET
+    post = request.POST
+
+    # Handle persistence of filters:
+    filter_country = post.get('country') or get.get('country') or ''
+    filter_leave_type = post.get('leave_type') or get.get('leave_type') or ''
+    filter_year = post.get('year') or get.get('year') or str(current_year)
 
     if request.method == "POST":
         form = Holiday_Form(request.POST)
@@ -1080,8 +1099,9 @@ def add_holidays(request):
             selected_day = selected_date.strftime("%A")
             country = form.cleaned_data['country']  # Fetch the selected country
 
+            year_param = selected_year  # Use the year from the added holiday
+
             if leave_type == 'fixed':
-                # Check if a fixed holiday with the same date and country already exists
                 if Holiday.objects.filter(date=selected_date, country=country).exists():
                     messages.warning(request, "⚠️ The date you have entered is already added as a Fixed Holiday for this country.")
                 else:
@@ -1095,7 +1115,6 @@ def add_holidays(request):
                     messages.success(request, "✅ Fixed holiday added successfully!")
 
             elif leave_type == 'floating':
-                # Check if a floating holiday with the same date and country already exists
                 if FloatingHoliday.objects.filter(date=selected_date, country=country).exists():
                     messages.warning(request, "⚠️ The date you have entered is already added as a Floating Holiday for this country.")
                 else:
@@ -1106,25 +1125,44 @@ def add_holidays(request):
                         country=country
                     )
                     messages.success(request, "✅ Floating holiday added successfully!")
-
-            return redirect('add_holidays')
+            # Redirect and preserve filters (send to GET with filters)
+            return redirect(f"{reverse('add_holidays')}?country={country.id}&leave_type={leave_type}&year={year_param}")
 
     else:
-        form = Holiday_Form()
+        # Set initial data for form fields based on filter, so form fields stay sticky
+        initial = {}
+        if filter_country:
+            initial['country'] = filter_country
+        if filter_leave_type:
+            initial['leave_type'] = filter_leave_type
+        form = Holiday_Form(initial=initial)
 
-    # Fetch holidays for the current year (optionally you can filter by country, or show all)
-    fixed_holidays = Holiday.objects.filter(year=current_year)
-    floating_holidays = FloatingHoliday.objects.filter(year=current_year)
+    # Filter holidays for table by year, country, and type
+    filter_kwargs = {'year': filter_year}
+    if filter_country:
+        filter_kwargs['country__id'] = filter_country
+
+    # For displaying types, filter accordingly:
+    if filter_leave_type == 'fixed':
+        fixed_holidays = Holiday.objects.filter(**filter_kwargs)
+        floating_holidays = FloatingHoliday.objects.none()
+    elif filter_leave_type == 'floating':
+        fixed_holidays = Holiday.objects.none()
+        floating_holidays = FloatingHoliday.objects.filter(**filter_kwargs)
+    else:
+        fixed_holidays = Holiday.objects.filter(**filter_kwargs)
+        floating_holidays = FloatingHoliday.objects.filter(**filter_kwargs)
 
     context = {
         'form': form,
         'fixed_holidays': fixed_holidays,
         'floating_holidays': floating_holidays,
-        'current_year': current_year,
+        'current_year': filter_year,
+        'filter_country': filter_country,
+        'filter_leave_type': filter_leave_type,
+        'filter_year': filter_year,
     }
-
     return render(request, 'add_holidays.html', context)
-
 from django.http import JsonResponse
 from .models import Holiday, FloatingHoliday
 

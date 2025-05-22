@@ -26,9 +26,10 @@ class Country(models.Model):
 
 #
 class state(models.Model):
+    code=models.CharField(max_length=5,null=True)
     name=models.CharField(max_length=100)
     country = models.ForeignKey(Country, on_delete=models.CASCADE, related_name="states")
-
+    
     def __str__(self):
         return self.name
 
@@ -98,8 +99,8 @@ class Employees(models.Model):
     country = models.ForeignKey('Country', on_delete=models.CASCADE)
     state = models.ForeignKey('state', on_delete=models.CASCADE)
     address = models.CharField(max_length=150, blank=True,null=True,)
-    home_house = models.TextField()
-    home_post_office = models.TextField()
+    home_house = models.TextField(null=True)
+    home_post_office = models.TextField(null=True)
     home_city = models.TextField()
     pincode = models.CharField(max_length=10, blank=True,null=True,)
     role = models.ForeignKey('Role', on_delete=models.CASCADE, to_field="role_id", null=True, blank=True)
@@ -111,9 +112,9 @@ class Employees(models.Model):
     choices=STATUS_CHOICES,
     default='employed'
     )
-    emergency_contact_name = models.CharField(max_length=100,null=True)
-    emergency_contact_phone = models.CharField(max_length=15,null=True)
-    emergency_contact_email = models.EmailField(null=True)
+    emergency_contact_name = models.CharField(max_length=100,null=True,blank=True)
+    emergency_contact_phone = models.CharField(max_length=15,null=True,blank=True)
+    emergency_contact_email = models.EmailField(null=True,blank=True)
     emergency_contact_relation = models.CharField(max_length=100,null=True,blank=True)
     base_salary = models.DecimalField(max_digits=10, decimal_places=2)
     created_on = models.DateTimeField(auto_now_add=True, null=True)

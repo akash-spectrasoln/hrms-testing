@@ -1,10 +1,8 @@
 {% load static %}
 
-
-
-
 <!DOCTYPE html>
-<html lang="en"data-theme-mode="default" data-bs-theme="{% if request.user.is_authenticated and request.user.is_dark_mode %}dark{% else %}light{% endif %}">
+<html lang="en" data-theme-mode="default"
+      data-bs-theme="{% if request.user.is_authenticated and request.user.is_dark_mode %}dark{% else %}light{% endif %}">
 
 <head>
     <meta charset="utf-8" />
@@ -12,352 +10,147 @@
     <title>{% block title %}{% endblock title %}</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-
-
     {% block css %}
     {% block extra_css %}
 
-
     <style>
-
-        /* Custom styles for the col-3 section */
-        .col-3,.col-4,.col-6{
-
-
-          padding-top: 20px; /* Add top padding */
-           /* Set height to full viewport height */
-           height: auto;
-          overflow-y: auto; /* Enable vertical scrolling */
+        /* === Responsive main content for sidebar === */
+        .content-wrapper {
+            margin-left: 250px;
+            transition: margin-left 0.3s;
+        }
+        body[data-sidebar-size="sm"] .content-wrapper {
+            margin-left: 70px;
         }
 
-
-
-
-
-        table.table thead th {
-          font-weight: normal;
-          border: none;
-          }
-
-          .logo {
-        max-width: 60px; /* Adjust the max-width to your desired size */
-        max-height: 50px; /* Adjust the max-height to your desired size */
-        margin-right: 5px; /* Optional: Add some spacing between the logo and the text */
-                }
-                .active-button {
-            border: 1px solid green; /* Border style */
-            padding: 5px 10px; /* Padding for spacing */
-            display: inline-block; /* Display as inline-block to limit width to content */
-            border-radius: 5px;
-            color: aquamarine;/* Optional: Add rounded corners */
+        /* --- Your original styles --- */
+        .col-3, .col-4, .col-6 {
+            padding-top: 20px;
+            height: auto;
+            overflow-y: auto;
         }
-
-        .custom-dropdown {
-        width: 150px; /* Set the width of the dropdown */
-        padding: 5px; /* Add padding */
-        border: 1px solid #ced4da; /* Add border */
-        border-radius: 4px; /* Add border radius */
-        background-color: #fff; /* Set background color */
-        color: #495057; /* Set text color */
-    }
-
-    /* Style for dropdown options */
-    .custom-dropdown option {
-        padding: 5px; /* Add padding */
-    }
-    .fixed-bottom-custom {
-    position: fixed;
-    bottom: 20px; /* Adjust as needed */
-    left: 57%;
-
-    width:20%;
-    transform: translateX(-50%);
-    z-index: 1000; /* Ensure button stays above other content */
-    }
-
-
-.custom-control-input:checked ~ .custom-control-label::before {
-    background-color: #28a745; /* Color of the switch when switch is on */
-}
-
-.custom-control-input:checked ~ .custom-control-label::after {
-    background-color: #ffffff;
-}
-.collapse-row {
-            display: none;
-        }
-        .key-icon {
-            font-size: 0.9em;
-            color: #ffc107; /* Bootstrap warning color */
-        }
-        .custom-list {
-            list-style-type: none; /* Remove default list style */
-            padding-left: 0; /* Remove default padding */
-        }
-        .custom-list li::before {
-            content: "♦ "; /* Diamond symbol */
-            color: #4CAF50; /* Set the color of the diamond */
-        }
-        /* Increase specificity if needed */
-
-
-
-
-
-
-
-
-
-
-      </style>
+        table.table thead th { font-weight: normal; border: none; }
+        .logo { max-width: 60px; max-height: 50px; margin-right: 5px; }
+        .active-button { border: 1px solid green; padding: 5px 10px; display: inline-block; border-radius: 5px; color: aquamarine; }
+        .custom-dropdown { width: 150px; padding: 5px; border: 1px solid #ced4da; border-radius: 4px; background-color: #fff; color: #495057; }
+        .custom-dropdown option { padding: 5px; }
+        .fixed-bottom-custom { position: fixed; bottom: 20px; left: 57%; width:20%; transform: translateX(-50%); z-index: 1000; }
+        .custom-control-input:checked ~ .custom-control-label::before { background-color: #28a745; }
+        .custom-control-input:checked ~ .custom-control-label::after { background-color: #ffffff; }
+        .collapse-row { display: none; }
+        .key-icon { font-size: 0.9em; color: #ffc107; }
+        .custom-list { list-style-type: none; padding-left: 0; }
+        .custom-list li::before { content: "♦ "; color: #4CAF50; }
+        .form-control { border: 1px solid #a3a2a2 !important; border-radius: 0.25rem !important; box-shadow: none !important; }
+        .form-control[readonly] { background-color: transparent; }
+        .form-control:focus { border: 1px solid #0d6efd !important; outline: none !important; box-shadow: none !important; }
+        #searchInput::placeholder { color: #6c757d !important; }
+        .form-select { border: 1px solid #a3a2a2 !important; border-radius: 0.25rem !important; box-shadow: none !important; }
+        .form-select:focus { border: 1px solid #0d6efd !important; outline: none !important; box-shadow: none !important; }
+        table td { height: 20px !important; padding: 3px !important; overflow: hidden !important; text-overflow: ellipsis !important; white-space: nowrap !important; }
+        table th { padding:6px !important; }
+        [data-bs-theme="light"] #page-topbar { background-color: white !important; border-bottom: 1px solid var(--bs-border-color) !important;}
+        [data-bs-theme="light"] .header-item { color: rgb(94, 89, 89) !important; }
+        [data-bs-theme="light"] .navbar-brand-box { background-color: white !important; border-color: white !important; }
+        [data-bs-theme="light"] .header-item.border-end, [data-bs-theme="light"] .header-item.border-start { border-color: rgba(0, 0, 0, 0.129) !important; }
+        [data-bs-theme="light"] .header-profile-user  { border: 1px solid rgba(9, 9, 9, 0.11) !important; background-color: rgba(73, 76, 77, 0.196) !important;}
+        body[data-sidebar-size="sm"] { min-height: auto !important; }
+    </style>
     {% endblock extra_css %}
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" integrity="sha512-XXXXX" crossorigin="anonymous" />
-   <link href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
-   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.8.1/font/bootstrap-icons.min.css">
+    <link href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.8.1/font/bootstrap-icons.min.css">
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet"
-    integrity="sha384-KyZXEAg3QhqLMpG8r+Knujsl7/1L_dstPt3HV5HzF6Gvk/e3s4Wz6iJgD/+ub2oU" crossorigin="anonymous">
+        integrity="sha384-KyZXEAg3QhqLMpG8r+Knujsl7/1L_dstPt3HV5HzF6Gvk/e3s4Wz6iJgD/+ub2oU" crossorigin="anonymous">
     <link rel="stylesheet" href="{% static 'tool/style.css' %}">
-    <!-- preloader css -->
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.12.1/jquery-ui.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
-
     <link rel="stylesheet" href="{% static 'css/preloader.min.css'%}" type="text/css" />
-
-    <!-- Bootstrap Css -->
     <link href="{% static 'css/bootstrap.min.css'%}" id="bootstrap-style" rel="stylesheet" type="text/css" />
-    <!-- Icons Css -->
     <link href="{% static 'css/icons.min.css'%}" rel="stylesheet" type="text/css" />
-    <!-- App Css-->
     <link href="{% static 'css/app.min.css'%}" id="app-style" rel="stylesheet" type="text/css" />
-    <style>
-        .form-control {
-            /* background-color: transparent !important; */
-            border: 1px solid #a3a2a2 !important; /* Thin gray border */
-            border-radius: 0.25rem !important; /* Rounded corners */
-            box-shadow: none !important; /* Remove any default shadow */
-        }
-        .form-control[readonly] {
-    background-color: transparent; /* Match this with your page background color */
-
-}
-
-        .form-control:focus {
-            border: 1px solid #0d6efd !important; /* Thin blue border on focus */
-            outline: none !important; /* Remove the default outline */
-            box-shadow: none !important; /* Ensure no additional shadow is applied */
-        }
-
-        /* Style for placeholder text color for #searchInput */
-        #searchInput::placeholder {
-            color: #6c757d !important; /* Placeholder text color */
-        }
-
-        .form-select {
-            border: 1px solid #a3a2a2 !important; /* Match the border color of .form-control */
-            border-radius: 0.25rem !important; /* Match the border-radius of .form-control */
-            /* Match the background color of .form-control */
-            box-shadow: none !important; /* Remove any default shadow */
-        }
-
-        .form-select:focus {
-            border: 1px solid #0d6efd !important; /* Match the border color of .form-control on focus */
-            outline: none !important; /* Remove the default outline */
-            box-shadow: none !important; /* Ensure no additional shadow is applied */
-        }
-        table td{
-    height: 20px !important; /* Set height for cells */
-    padding: 3px !important; /* Adjust padding */
-    overflow: hidden !important; /* Hide overflowing content */
-    text-overflow: ellipsis !important; /* Show ellipsis for overflowing text */
-    white-space: nowrap !important; /* Prevent text wrapping */
-}
-table th{
-    padding:6px !important
-}
-[data-bs-theme="light"] #page-topbar {
-  background-color: white !important;
-  border-bottom: 1px solid var(--bs-border-color) !important;
-
-}
-[data-bs-theme="light"] .header-item {
-    color: rgb(94, 89, 89) !important; /* Greyish black */
-}
-[data-bs-theme="light"] .navbar-brand-box {
-    background-color: white !important;
-    border-color: white !important;
-}
-[data-bs-theme="light"] .header-item.border-end,
-[data-bs-theme="light"] .header-item.border-start {
-    border-color: rgba(0, 0, 0, 0.129) !important; /* Light mode borders */
-}
-[data-bs-theme="light"]  .header-profile-user  {
-    border: 1px solid rgba(9, 9, 9, 0.11) !important; /* Bluish-white border */
-    background-color: rgba(73, 76, 77, 0.196) !important; /* Ensure background is white */
-}
-body[data-sidebar-size=sm] {
-    min-height: auto !important; /* Removes the fixed minimum height */
-}
-/* Apply the center alignment to all th and td */
-/* table th {
-    text-align: center;
-    vertical-align: middle;
-} */
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    </style>
-
     {% endblock css %}
-<!--    -->
-<!--    below code i implemented to inherit the styles of sub or child templates-->
-    {% block styles %}
-    {% endblock %}
-    {% block scripts%}
-    {% endblock %}
-
+    {% block styles %}{% endblock %}
+    {% block scripts%}{% endblock %}
 </head>
 
-<body {% block extra_body %} data-topbar="dark"{% endblock extra_body %} data-sidebar="{% if request.user.is_authenticated and request.user.is_dark_mode %}dark{% else %}light{% endif %}">
+<body {% block extra_body %} data-topbar="dark"{% endblock extra_body %}
+      data-sidebar="{% if request.user.is_authenticated and request.user.is_dark_mode %}dark{% else %}light{% endif %}"
+      data-sidebar-size="{% if request.user.is_authenticated and request.user.sidebar_collapsed %}sm{% else %}lg{% endif %}">
     <!-- Begin page -->
     <div id="layout-wrapper">
-       {% block admin_header %}
-        {% include "admin_partials/admin_header.html" %}
+        {% block admin_header %}
+            {% include "admin_partials/admin_header.html" %}
         {% endblock admin_header %}
 
         {% block admin_left-sidebar %}
-        {% include 'admin_partials/admin_left-sidebar.html' %}
+            {% include 'admin_partials/admin_left-sidebar.html' %}
         {% endblock admin_left-sidebar %}
 
-
         {% block content %}
-        <!-- Toast Container inside block content -->
-
-        {% block footer %}
-        {% endblock footer %}
+            {% block footer %}
+            {% endblock footer %}
         {% endblock content %}
-
     </div>
     <!-- END layout-wrapper -->
-
-
-
-
 
     {% block javascript %}
     <script>   </script>
     <script src="{% static 'tool/main.js' %}"></script>
     <!-- JAVASCRIPT -->
-
-    <!-- jQuery (required for Bootstrap's JavaScript plugins) -->
     <script src="{% static 'libs/jquery/dist/jquery.min.js' %}"></script>
-
-    <!-- Bootstrap JavaScript (choose one source, either local or CDN) -->
     <script src="{% static 'libs/bootstrap/dist/js/bootstrap.bundle.min.js' %}"></script>
-    <!-- Alternatively, use the CDN:
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
-    -->
-
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <!-- Other Libraries -->
-
-
     <script src="{% static 'libs/metismenu/dist/metisMenu.min.js' %}"></script>
     <script src="{% static 'libs/simplebar/dist/simplebar.min.js' %}"></script>
     <script src="{% static 'libs/node-waves/dist/waves.min.js' %}"></script>
     <script src="{% static 'libs/feather-icons/dist/feather.min.js' %}"></script>
     <script src="{% static 'libs/pace-js/pace.min.js' %}"></script>
-
-    <!-- Custom Scripts -->
-    {% block extra_js %}
-    {% endblock extra_js %}
+    {% block extra_js %}{% endblock extra_js %}
     <script src="{% static 'js/app.js' %}"></script>
 
-
-    <!-- Inline Custom Script -->
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             var searchForm = document.querySelector('.app-search');
             var searchInput = document.getElementById('searchInput');
             var table = document.getElementById('searchableTable');
-            var tableRows = table.querySelectorAll('tbody tr'); // Target only the rows of the specified table
+            if (!searchForm || !searchInput || !table) return;
+            var tableRows = table.querySelectorAll('tbody tr');
             var loadingOverlay = document.getElementById('loadingOverlay');
 
             function filterRows() {
                 var searchQuery = searchInput.value.toLowerCase();
-
                 tableRows.forEach(function(row) {
                     var cells = row.querySelectorAll('td');
-                    var rowText = '';
                     var matches = false;
-
                     cells.forEach(function(cell) {
                         var isSearchable = cell.getAttribute('data-searchable') === 'true';
                         if (isSearchable && cell.textContent.toLowerCase().includes(searchQuery)) {
                             matches = true;
                         }
                     });
-
-                    if (matches) {
-                        row.style.display = 'table-row'; // Show the table row
-                    } else {
-                        row.style.display = 'none'; // Hide the table row
-                    }
+                    row.style.display = matches ? 'table-row' : 'none';
                 });
             }
 
-            // Add event listener for input to handle live search
             searchInput.addEventListener('input', function() {
                 filterRows();
             });
 
             searchForm.addEventListener('submit', function(event) {
-                event.preventDefault(); // Prevent the form from submitting normally
-
-                loadingOverlay.style.display = 'flex'; // Show loading spinner
-
-                // Perform search
+                event.preventDefault();
+                loadingOverlay.style.display = 'flex';
                 filterRows();
-
                 setTimeout(function() {
-                    loadingOverlay.style.display = 'none'; // Hide loading spinner after a delay
-                }, 300); // Adjust the delay as needed
+                    loadingOverlay.style.display = 'none';
+                }, 300);
             });
         });
     </script>
-
-
-{% endblock javascript %}
-
+    {% endblock javascript %}
 </body>
 
 </html>
