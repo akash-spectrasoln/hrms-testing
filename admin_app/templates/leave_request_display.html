@@ -59,7 +59,7 @@ body {
 
         <div class="card-body">
           <!-- Filter Section -->
-          <form class="row g-2 mb-3 align-items-end filter-section" method="GET" action="">
+          <form class="row g-2 mb-3 p-2 align-items-end filter-section" method="GET" action="">
             <div class="col-12 col-sm-6 col-md-3">
               <label for="countryFilter" class="form-label mb-1">Country</label>
               <select id="countryFilter" name="country" class="form-select">
@@ -100,7 +100,7 @@ body {
           </form>
 
           <!-- Leave Requests Table -->
-          <div class="table-responsive">
+          <div class="table-responsive p-2">
             <table class="table table-striped table-hover align-middle mb-0">
               <thead class="table-light ">
                 <tr>
@@ -149,7 +149,7 @@ body {
                           <button type="submit" class="btn btn-sm btn-danger">Reject</button>
                         </form>
                       {% endif %}
-                      {% if data.leave_request.status != "Deleted" %}
+                      {% if data.leave_request.status != "Deleted" and data.leave_request.status != "Rejected" %}
                         <form method="post" action="{% url 'delete_leave_request' data.leave_request.id %}">
                           {% csrf_token %}
                           <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Are you sure you want to delete this leave request?');">Delete</button>

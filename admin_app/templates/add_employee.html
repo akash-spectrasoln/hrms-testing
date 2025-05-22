@@ -172,7 +172,7 @@
                         <select name="country" id="country" class="form-control" required>
                             <option value="">Select Country</option>
                             {% for country in countries %}
-                            <option value="{{ country.id }}">{{ country.id }} - {{ country.country_name }}</option>
+                            <option value="{{ country.id }}">{{ country.code }} - {{ country.country_name }}</option>
                             {% endfor %}
                         </select>
                     </div>
@@ -181,7 +181,7 @@
                         <select name="state" id="state" class="form-control" required>
                             <option value="">Select State</option>
                             {% for state in states %}
-                            <option value="{{ state.id }}">{{ state.id }} - {{ state.name }}</option>
+                            <option value="{{ state.id }}">{{ state.code }} - {{ state.name }}</option>
                             {% endfor %}
                         </select>
                     </div>
@@ -257,7 +257,7 @@
                     <div class="file-input-wrapper">
                         <input type="file" name="resumes" class="form-control-file" accept=".pdf,.doc,.docx" multiple>
                         <i class="fas fa-plus-circle add-file ml-2" style="color: #28a745; cursor: pointer;"></i>
-                        <i class="fas fa-trash-alt delete-file ml-2" style="color: #dc3545; cursor: pointer;"></i>
+                        
                     </div>
                 </div>
                 {% if form.instance.resumes.all %}
@@ -283,7 +283,7 @@
                     <div class="file-input-wrapper">
                         <input type="file" name="certificates" class="form-control-file" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" multiple>
                         <i class="fas fa-plus-circle add-file ml-2" style="color: #28a745; cursor: pointer;"></i>
-                        <i class="fas fa-trash-alt delete-file ml-2" style="color: #dc3545; cursor: pointer;"></i>
+                        
                     </div>
                 </div>
                 {% if form.instance.certificates.all %}
@@ -383,7 +383,7 @@
                     success: function(response) {
                         if (Array.isArray(response)) {
                             response.forEach(state => {
-                                stateSelect.append(new Option(state.id + ' - ' + state.name, state.id));
+                                stateSelect.append(new Option(state.code + ' - ' + state.name, state.id));
                             });
                         }
                     },

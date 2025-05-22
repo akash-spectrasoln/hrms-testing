@@ -105,7 +105,7 @@ from .models import state  # Keep 'state' lowercase, as defined in your model
 def get_states(request):
     country_id = request.GET.get('country_id')  # Get country ID from the request
     if country_id:
-        states = state.objects.filter(country_id=country_id).values('id', 'name')  # Use 'state' lowercase
+        states = state.objects.filter(country_id=country_id).values('id','name','code')  # Use 'state' lowercase
         print(states)  # Debugging line
         return JsonResponse(list(states), safe=False)  # Return states as JSON
     return JsonResponse({'error': 'Country not selected'}, status=400)
@@ -569,7 +569,7 @@ class EmployeeExcelCreateView(View):
         required_fields = [
             'Employee Type',  'Salutation ID', 'First Name', 'Last Name',
             'Company Email', 'Personal Email', 'Mobile Phone',
-            'Valid From', 'Valid To', 'Country ID', 'State ID',
+            'Valid From', 'Valid To', 'Country Code', 'State Code',
             'Home House', 'Home Post Office', 'Home City',
             'Department ID',  'Base Salary'
         ]
@@ -629,9 +629,9 @@ class EmployeeExcelCreateView(View):
                     # FK LOOKUPS
                     try:
                         print(f"[DEBUG] Row {excel_row_num}: Fetching FKs")
-                        country = Country.objects.get(id=int(row['Country ID']))
+                        country = Country.objects.get(code=row['Country Code'])
                         print(f"   Country: {country}")
-                        state_obj = state.objects.get(id=int(row['State ID']))
+                        state_obj = state.objects.get(code=(row['State Code']),country_id=country.id)
                         print(f"   State: {state_obj}")
                         department = Department.objects.get(id=int(row['Department ID']))
                         print(f"   Department: {department}")
@@ -1127,7 +1127,7 @@ def add_holidays(request):
                     messages.success(request, "✅ Floating holiday added successfully!")
             # Redirect and preserve filters (send to GET with filters)
             return redirect(f"{reverse('add_holidays')}?country={country.id}&leave_type={leave_type}&year={year_param}")
-
+ 
     else:
         # Set initial data for form fields based on filter, so form fields stay sticky
         initial = {}

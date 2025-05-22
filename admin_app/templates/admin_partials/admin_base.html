@@ -29,6 +29,16 @@
             height: auto;
             overflow-y: auto;
         }
+        .vertical-menu {
+    width: 70px !important;
+    min-width: 70px !important;
+    max-width: 70px !important;
+    transition: width 0.3s;
+}
+.content-wrapper {
+    margin-left: 70px !important;
+    transition: margin-left 0.3s;
+}
         table.table thead th { font-weight: normal; border: none; }
         .logo { max-width: 60px; max-height: 50px; margin-right: 5px; }
         .active-button { border: 1px solid green; padding: 5px 10px; display: inline-block; border-radius: 5px; color: aquamarine; }
@@ -79,7 +89,7 @@
 
 <body {% block extra_body %} data-topbar="dark"{% endblock extra_body %}
       data-sidebar="{% if request.user.is_authenticated and request.user.is_dark_mode %}dark{% else %}light{% endif %}"
-      data-sidebar-size="{% if request.user.is_authenticated and request.user.sidebar_collapsed %}sm{% else %}lg{% endif %}">
+      data-sidebar-size="sm">
     <!-- Begin page -->
     <div id="layout-wrapper">
         {% block admin_header %}

@@ -18,7 +18,7 @@ class Role(models.Model):
 
 class Country(models.Model):
     country_name = models.CharField(max_length=100)
-
+    code = models.CharField(max_length=15,null=True)
 
     def __str__(self):
         return self.country_name

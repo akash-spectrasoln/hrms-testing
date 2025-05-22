@@ -181,7 +181,7 @@
                             <option value="" disabled selected>Select Country</option>
                             {% for country in countries %}
                             <option value="{{ country.id }}" {% if form.instance.country.id == country.id %}selected{% endif %}>
-                                {{ country.country_name }}
+                                {{country.code}}-{{ country.country_name }}
                             </option>
                             {% endfor %}
                         </select>
@@ -192,7 +192,7 @@
                             <option value="" disabled selected>Select State</option>
                             {% for state in states %}
                             <option value="{{ state.id }}" {% if form.instance.state.id == state.id %}selected{% endif %}>
-                                {{ state.name }}
+                                {{state.code}}-{{ state.name }}
                             </option>
                             {% endfor %}
                         </select>
