@@ -266,15 +266,123 @@ from django.shortcuts import render, get_object_or_404
 from .models import Employees
 
 
+from django.utils.timezone import now
+from datetime import date, timedelta
+@signin_required
 def employee_profile(request, employee_id):
     employee = get_object_or_404(Employees, pk=employee_id, is_deleted=False)
+    today = now().date()
 
-    # Check if this employee manages anyone
+    emp_country = employee.country if employee.country else None
+
+    # Financial year calculation
+    current_year = today.year
+    fin_year_start = date(current_year, 1, 1)
+    fin_year_end = date(current_year, 12, 31)
+
+    if emp_country:
+        reset_period = HolidayResetPeriod.objects.filter(country=emp_country).first()
+        if reset_period:
+            start_month = reset_period.start_month
+            start_day = reset_period.start_day
+            cand_start_date = date(current_year, start_month, start_day)
+            if today < cand_start_date:
+                fin_year_start = date(current_year - 1, start_month, start_day)
+            else:
+                fin_year_start = cand_start_date
+            try:
+                next_fin_year_start = fin_year_start.replace(year=fin_year_start.year + 1)
+            except ValueError:
+                next_fin_year_start = fin_year_start + timedelta(days=365)
+            fin_year_end = next_fin_year_start - timedelta(days=1)
+
+    # Experience calculation (defaults to 0)
+    experience_years = (today - employee.created_on.date()).days // 365 if employee.created_on else 0
+
+    # Get leave policies
+    policy = HolidayPolicy.objects.filter(
+        country=employee.country,
+        year=fin_year_start.year,
+        min_years_experience__lte=experience_years,
+    ).order_by('-min_years_experience').first()
+    floating_policy = FloatingHolidayPolicy.objects.filter(
+        country=employee.country,
+        year=fin_year_start.year
+    ).first()
+    print(floating_policy)
+
+    # Holidays (used for counting leave days)
+    holidays = set(Holiday.objects.filter(
+        country=employee.country,
+        date__range=(fin_year_start, fin_year_end)
+    ).values_list('date', flat=True))
+
+    # All the employee's leaves in this FY
+    leaves_qs = LeaveRequest.objects.filter(
+        employee_master=employee,
+        start_date__lte=fin_year_end,
+        end_date__gte=fin_year_start
+    )
+
+    def overlapping_leave_days(start_date, end_date, fy_start, fy_end, skip_holidays=None):
+        if not start_date or not end_date:
+            return 0
+        start = max(start_date, fy_start)
+        end = min(end_date, fy_end)
+        days = 0
+        d = start
+        while d <= end:
+            if d.weekday() < 5:  # Monday-Friday
+                if not skip_holidays or d not in skip_holidays:
+                    days += 1
+            d += timedelta(days=1)
+        return days if days > 0 else 0
+
+    # For each leave, subtract used/planned from the available quota (sum types if needed)
+    used_leaves = 0
+    planned_leaves = 0
+
+    for leave in leaves_qs:
+        # Determine total leaves for this type
+        leave_type_lower = leave.leave_type.lower()
+        if leave_type_lower == "ordinary":
+            total_leaves_type = policy.ordinary_holidays_count if policy else 0
+        elif leave_type_lower == "casual leave":
+            total_leaves_type = (
+                (policy.ordinary_holidays_count if policy else 0) +
+                (policy.extra_holidays if policy else 0)
+            )
+        elif leave_type_lower == "floating leave":
+            total_leaves_type = floating_policy.allowed_floating_holidays if floating_policy else 0
+        else:
+            total_leaves_type = 0
+
+        days = overlapping_leave_days(
+            leave.start_date, leave.end_date, fin_year_start, fin_year_end, holidays
+        )
+
+        if leave.status in ['Accepted', 'Approved'] and leave.end_date < today:
+            used_leaves += days
+        elif leave.status in ['Accepted', 'Approved'] and leave.end_date >= today:
+            planned_leaves += days
+
+    # Here you can sum the policies for a total quota, or decide on a per-type basis.
+    # For total (ordinary + casual + floating):
+    print(floating_policy.allowed_floating_holidays)
+    quota = (policy.ordinary_holidays_count if policy else 0) \
+            + (policy.extra_holidays if policy else 0) \
+            + (floating_policy.allowed_floating_holidays if floating_policy else 0)
+    print(quota)
+    print(used_leaves)
+    print(planned_leaves)
+    available_leaves = max(0, quota - used_leaves - planned_leaves)
+    print(available_leaves)
     is_manager = Employees.objects.filter(manager=employee, is_deleted=False).exists()
 
     return render(request, 'profile.html', {
         'employee': employee,
         'is_manager': is_manager,
+        'available_leaves': available_leaves,  # <--- ONLY this number!
     })
 
 
@@ -1366,8 +1474,8 @@ def holiday_list(request):
             pass  # If no employee record is found, keep is_manager as False
 
     # Filter holidays and floating holidays for the current year
-    holidays = Holiday.objects.filter(date__year=current_year,country=employee.country)
-    floating_holidays = FloatingHoliday.objects.filter(date__year=current_year,country=employee.country)
+    holidays = Holiday.objects.filter(date__year=current_year,country=employee.country).order_by('date')
+    floating_holidays = FloatingHoliday.objects.filter(date__year=current_year,country=employee.country).order_by('date')
 
     # Check if the logged-in user is a manager
     

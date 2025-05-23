@@ -46,7 +46,7 @@
               </tr>
               <tr>
                 <th><i class="bi bi-person-lines-fill"></i> Employee Type</th>
-                <td>{{ employee.get_employee_type_display }}</td>
+                <td>{{ employee.employee_type.name }}</td>
               </tr>
               <tr>
                 <th><i class="bi bi-envelope-at"></i> Company Email</th>
@@ -80,7 +80,7 @@
               
               <tr>
                 <th><i class="bi bi-calendar-check"></i> Leaves Remaining</th>
-                <td>{{ employee.available_leaves }}</td>
+                <td>{{ available_leaves }}</td>
               </tr>
             </tbody>
           </table>

@@ -1005,14 +1005,14 @@ def accept_leave_request(request, leave_request_id):
         employee_email = employee.user.email
         subject = "Leave Request Approved"
         message = (
-            f"Dear {employee.user.first_name},\n\n"
+            f"Dear {employee.first_name},\n\n"
             f"Your leave request from {leave_request.start_date} to {leave_request.end_date} has been approved.\n"
             f"Status: Approved\n"
             f"Enjoy your leave!\n\n"
             f"Best Regards,\nYour Leave Management System"
         )
         send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [employee_email])
-        messages.success(request, "The leave request has been accepted.")
+        messages.success(request, "The leave request has been approved.")
 
         return redirect('leave_request_display')
 
@@ -1032,7 +1032,7 @@ def reject_leave_request(request, leave_request_id):
         # Email content
         subject = "Leave Request Rejected"
         message = (
-            f"Dear {leave_request.employee_master.user.first_name},\n\n"
+            f"Dear {leave_request.employee_master.first_name},\n\n"
             f"Your leave request from {leave_request.start_date} to {leave_request.end_date} has been rejected by the admin.\n"
             f"Status: Rejected\n"
             f"If you have any questions, please contact HR.\n\n"
