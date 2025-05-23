@@ -1150,13 +1150,16 @@ def my_leave_history(request):
     floating_policy = None
     holidays = []
     floating_holidays = []
-
+    print(experience_years)
+    print(fin_year_start.year)
+    print(employee.country)
     if employee:
         policy = HolidayPolicy.objects.filter(
             country=employee.country,
             year=fin_year_start.year,  # use adjusted financial year
             min_years_experience__lte=experience_years,
         ).order_by('-min_years_experience').first()
+        print(policy)
         floating_policy = FloatingHolidayPolicy.objects.filter(
             country=employee.country,
             year=fin_year_start.year
@@ -1245,7 +1248,7 @@ def my_leave_history(request):
             'pending': pending_leaves,
             'available': max(0, total_leaves - used_leaves - planned_leaves),
         })
-
+    print(total_leaves)
     total_used_leaves = sum(item['used'] for item in leave_summary_data)
 
     planned_leave_requests = LeaveRequest.objects.filter(
@@ -1354,12 +1357,6 @@ from datetime import datetime
 
 def holiday_list(request):
     current_year = date.today().year  # Get the current year
-
-    # Filter holidays and floating holidays for the current year
-    holidays = Holiday.objects.filter(date__year=current_year)
-    floating_holidays = FloatingHoliday.objects.filter(date__year=current_year)
-
-    # Check if the logged-in user is a manager
     is_manager = False  # Default value
     if request.user.is_authenticated:
         try:
@@ -1368,6 +1365,12 @@ def holiday_list(request):
         except Employees.DoesNotExist:
             pass  # If no employee record is found, keep is_manager as False
 
+    # Filter holidays and floating holidays for the current year
+    holidays = Holiday.objects.filter(date__year=current_year,country=employee.country)
+    floating_holidays = FloatingHoliday.objects.filter(date__year=current_year,country=employee.country)
+
+    # Check if the logged-in user is a manager
+    
     current_year = now().year  # Get current year
     total_used_leaves = employee.used_leaves  # Fetch from the Employees model
 
