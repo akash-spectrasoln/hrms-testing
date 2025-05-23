@@ -32,7 +32,7 @@ def signin_required(fn):
     def wrapper(request, *args, **kwargs):
         # Check if the user is authenticated
         if not request.user.is_authenticated:
-            return redirect("signin")
+            return redirect("login")
         
         # Check if the session has timed out due to inactivity
         current_time = time.time()
@@ -752,7 +752,7 @@ def leave_days_agg_request(leave_qs, fy_start, fy_end, holidays=None):
 @signin_required
 def request_leave(request):
     print("hi")
-    approval_path = reverse('manager_leave_requests')
+    approval_path = reverse('login')
     approval_url = request.build_absolute_uri(approval_path)
 
     # Helper to wrap Employee fetch
@@ -925,11 +925,14 @@ def request_leave(request):
             if manager and getattr(manager, 'company_email', None):
                 send_mail(
                     subject="Leave Approval Required",
-                    message=(
-                        f"Dear {manager.first_name},\n\nEmployee {employee.first_name} {employee.last_name} "
-                        f"has requested leave ({leave_request.leave_type}) from {leave_request.start_date} "
-                        f"to {leave_request.end_date}. Please review the request in the HR system.\n\nBest regards,\nHR Team"
-                    ),
+                    message = (
+                                f"Dear {manager.first_name},\n\n"
+                                f"Employee {employee.first_name} {employee.last_name} "
+                                f"has requested leave ({leave_request.leave_type}) from {leave_request.start_date} "
+                                f"to {leave_request.end_date}. Please review the request in the HR system.\n\n"
+                                f"Login here: {approval_url}\n\n"
+                                f"Best regards,\nHR Team"
+                            ),
                     from_email="lms@spectrasoln.com",
                     recipient_list=[manager.company_email],
                     fail_silently=False,
