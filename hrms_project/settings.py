@@ -174,7 +174,7 @@ AUTHENTICATION_BACKENDS = [
     'django.contrib.auth.backends.ModelBackend',  # Default backend (you can keep it as fallback)
 ]
 
-
+DEFAULT_FROM_EMAIL='lms@spectrasoln.com'
 
 
 # settings.py

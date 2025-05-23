@@ -62,6 +62,7 @@ from django.contrib.auth.models import User
 from django.db import models
 from django.contrib.auth.models import User
 from datetime import date
+from admin_app.utils import encrypt_employee_field,decrypt_employee_field
 class EmployeeType(models.Model):
     code = models.CharField(max_length=3, unique=True)
     name = models.CharField(max_length=100)
@@ -132,7 +133,50 @@ class Employees(models.Model):
     incentive = models.DecimalField(max_digits=10, decimal_places=2, default=0.0,null=True)
     joining_bonus=models.DecimalField(max_digits=10, decimal_places=2, default=0.0,null=True)
     
+    # @property
+    # def first_name(self):
+    #     return decrypt_employee_field(self.first_name_e, self.employee_id, self.created_on or date.today())
 
+    # @first_name.setter
+    # def first_name(self, value):
+    #     co = self.created_on or date.today()
+    #     self.first_name_e = encrypt_employee_field(value, self.employee_id, co)
+
+    # @property
+    # def last_name(self):
+    #     return decrypt_employee_field(self.last_name_e, self.employee_id, self.created_on or date.today())
+
+    # @last_name.setter
+    # def last_name(self, value):
+    #     co = self.created_on or date.today()
+    #     self.last_name_e = encrypt_employee_field(value, self.employee_id, co)
+
+    # @property
+    # def date_of_birth(self):
+    #     return decrypt_employee_field(self.date_of_birth_e, self.employee_id, self.created_on or date.today())
+
+    # @date_of_birth.setter
+    # def date_of_birth(self, value):
+    #     co = self.created_on or date.today()
+    #     self.date_of_birth_e = encrypt_employee_field(str(value), self.employee_id, co)
+
+    # @property
+    # def personal_email(self):
+    #     return decrypt_employee_field(self.personal_email_e, self.employee_id, self.created_on or date.today())
+
+    # @personal_email.setter
+    # def personal_email(self, value):
+    #     co = self.created_on or date.today()
+    #     self.personal_email_e = encrypt_employee_field(value, self.employee_id, co)
+
+    # @property
+    # def mobile_phone(self):
+    #     return decrypt_employee_field(self.mobile_phone_e, self.employee_id, self.created_on or date.today())
+
+    # @mobile_phone.setter
+    # def mobile_phone(self, value):
+    #     co = self.created_on or date.today()
+    #     self.mobile_phone_e = encrypt_employee_field(value, self.employee_id, co)
     def available_leaves(self):
         return self.total_leaves - self.used_leaves
 
