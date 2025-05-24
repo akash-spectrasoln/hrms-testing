@@ -570,12 +570,13 @@ class EmployeeExcelCreateView(View):
             'Employee Type',  'Salutation ID', 'First Name', 'Last Name',
             'Company Email', 'Personal Email', 'Mobile Phone',
             'Valid From', 'Valid To', 'Country Code', 'State Code',
-            'Home House', 'Home Post Office', 'Home City',
+            'Home City','State Code','Date Of Birth',
             'Department ID',  'Base Salary'
         ]
 
         try:
             df = pd.read_excel(excel_file)
+            df = df.where(pd.notnull(df), None)  # Now, all NaNs are None
             df.columns = [c.strip() for c in df.columns]
             print("[DEBUG] Excel columns:", list(df.columns))
 
@@ -639,9 +640,11 @@ class EmployeeExcelCreateView(View):
                         print(f"   Salutation: {salutation}")
                         employee_type_obj=EmployeeType.objects.get(id=int(row['Employee Type']))
                         role_obj = None
-                        if 'Role ID' in row and not pd.isnull(row['Role ID']) and row['Role ID'] != '':
-                            role_obj = Role.objects.get(role_id=row['Role ID'])
-                            print(f"   Role: {role_obj}")
+                        role_obj = Role.objects.get(role_id=int(row['Role ID']))
+                        manager=None
+                        
+                        print(row.get('Manager', ''))
+                        manager_id = Employees.objects.get(employee_id=row['Manager']) if row.get('Manager') else None   # remove whitespace
                     except Exception as e:
                         debug_info = traceback.format_exc()
                         print(f"[DEBUG] Row {excel_row_num}: Foreign key error:\n{debug_info}")
@@ -688,16 +691,17 @@ class EmployeeExcelCreateView(View):
                                 pincode=str(parse(row['Pincode'])) if 'Pincode' in row else '',
                                 department=department,
                                 role=role_obj,
-                                
+                                manager=manager,
                                 
                                 emergency_contact_name=parse(row['Emergency Contact Name']) if 'Emergency Contact Name' in row else None,
                                 emergency_contact_phone=str(parse(row['Emergency Contact Phone'])) if 'Emergency Contact Phone' in row else '',
-                                emergency_contact_email=parse(row['Emergency Contact Email']) if 'Emergency Contact Email' in row else None,
+                                
                                 emergency_contact_relation=parse(row['Emergency Contact Relation']) if 'Emergency Contact Relation' in row else None,
                                 base_salary=parse_decimal(row['Base Salary']),
-                                date_of_birth=parse_date_field(row['Date of Birth']) if 'Date of Birth' in row else None,
+                                date_of_birth=parse_date_field(row['Date Of Birth']) if 'Date Of Birth' in row else None,
                                 resignation_date=parse_date_field(row['Resignation Date']) if 'Resignation Date' in row else None,
-                                joining_bonus=parse_decimal(row['Joining Bonus']) if 'Joining Bonus' in row else 0.0
+                                joining_bonus=parse_decimal(row['Joining Bonus']) if 'Joining Bonus' in row else 0.0,
+                                incentive=parse_decimal(row['Incentive']) if 'Incentive' in row else 0.0
 
                             )
                             employee.save()
