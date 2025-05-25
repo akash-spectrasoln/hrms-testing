@@ -59,7 +59,9 @@ def add_employee(request):
                 if employee.user:
                     user_obj = employee.user
                     user_obj.is_superuser = is_admin  # Set admin privileges as per checkbox state
-                    user_obj.is_staff = is_admin      # Typically set is_staff alongside is_superuser
+                    user_obj.is_staff = is_admin  
+                    user_obj.first_name = employee.first_name 
+                    user_obj.last_name = employee.last_name  # Typically set is_staff alongside is_superuser
                     user_obj.save()
 
                 # Handle multiple resumes
@@ -483,6 +485,8 @@ class EmployeeUpdateView(UpdateView):
                 user_obj = employee.user
                 user_obj.is_superuser = is_admin
                 user_obj.is_staff = is_admin
+                user_obj.first_name=employee.first_name
+                user_obj.last_name=employee.last_name
                 user_obj.save()
             # ------------------------------------------
 
@@ -705,6 +709,13 @@ class EmployeeExcelCreateView(View):
 
                             )
                             employee.save()
+
+                            if employee.user:
+                                user_obj = employee.user
+                                
+                                user_obj.first_name = employee.first_name 
+                                user_obj.last_name = employee.last_name  # Typically set is_staff alongside is_superuser
+                                user_obj.save()
                         print(f"[DEBUG] Row {excel_row_num}: Employee created: {employee}")
 
                         created_employees.append({
