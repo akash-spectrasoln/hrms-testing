@@ -649,7 +649,7 @@ class EmployeeExcelCreateView(View):
                         manager=None
                         
                         print(row.get('Manager', ''))
-                        manager_id = Employees.objects.get(employee_id=row['Manager']) if row.get('Manager') else None   # remove whitespace
+                        manager = Employees.objects.get(employee_id=row['Manager']) if row.get('Manager') else None   # remove whitespace
                     except Exception as e:
                         debug_info = traceback.format_exc()
                         print(f"[DEBUG] Row {excel_row_num}: Foreign key error:\n{debug_info}")
@@ -707,7 +707,7 @@ class EmployeeExcelCreateView(View):
                                 resignation_date=parse_date_field(row['Resignation Date']) if 'Resignation Date' in row else None,
                                 joining_bonus=parse_decimal(row['Joining Bonus']) if 'Joining Bonus' in row else 0.0,
                                 incentive=parse_decimal(row['Incentive']) if 'Incentive' in row else 0.0,
-                                pan_card = parse(row['pan_card']) if 'pan_card' in row else '',
+                                pan_card = parse(row['PAN Card']) if 'PAN Card' in row else '',
                                 aadhaar = parse(row['Aadhar']) if 'Aadhar' in row else '',
                                 bank_name = parse(row['Bank Name']) if 'Bank Name' in row else '',
                                 bank_branch = parse(row['Bank Branch']) if 'Bank Branch' in row else '',
