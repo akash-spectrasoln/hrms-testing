@@ -132,7 +132,47 @@ class Employees(models.Model):
     resignation_date = models.DateField(null=True, blank=True)
     incentive = models.DecimalField(max_digits=10, decimal_places=2, default=0.0,null=True)
     joining_bonus=models.DecimalField(max_digits=10, decimal_places=2, default=0.0,null=True)
-    
+    pan_card = models.CharField(
+        max_length=20, 
+        null=True, 
+        blank=True, 
+        verbose_name="PAN Card Number"
+    )
+    aadhaar = models.CharField(
+        max_length=20, 
+        null=True, 
+        blank=True, 
+        verbose_name="Aadhaar Number"
+    )
+    bank_name = models.CharField(
+        max_length=100, 
+        null=True, 
+        blank=True, 
+        verbose_name="Bank Name"
+    )
+    bank_branch = models.CharField(
+        max_length=100, 
+        null=True, 
+        blank=True, 
+        verbose_name="Bank Branch"
+    )
+    bank_branch_address = models.TextField(
+        null=True, 
+        blank=True, 
+        verbose_name="Bank Branch Address"
+    )
+    bank_account = models.CharField(
+        max_length=30, 
+        null=True, 
+        blank=True, 
+        verbose_name="Bank Account Number"
+    )
+    ifsc_code = models.CharField(
+        max_length=15, 
+        null=True, 
+        blank=True, 
+        verbose_name="IFSC Code"
+    )
     # @property
     # def first_name(self):
     #     return decrypt_employee_field(self.first_name_e, self.employee_id, self.created_on or date.today())

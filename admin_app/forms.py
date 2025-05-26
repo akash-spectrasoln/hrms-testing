@@ -79,6 +79,44 @@ class EmployeeEditForm(forms.ModelForm):
     )
     emergency_contact_phone=forms.CharField(required=False)
     emergency_contact_name=forms.CharField(required=False)
+    pan_card = forms.CharField(
+        required=False, 
+        max_length=20,
+        label="PAN Card"
+    )
+    aadhaar = forms.CharField(
+        required=False,
+        max_length=20,
+        label="Aadhaar"
+    )
+    bank_name = forms.CharField(
+        required=True,
+        max_length=100,
+        label="Bank Name"
+    )
+    bank_branch = forms.CharField(
+        required=True,
+        max_length=100,
+        label="Bank Branch"
+    )
+    bank_branch_address = forms.CharField(
+        required=True,
+        widget=forms.Textarea(attrs={'rows': 2}),
+        label="Bank Branch Address"
+    )
+    bank_account = forms.CharField(
+        required=True,
+        max_length=30,
+        label="Bank Account"
+    )
+    ifsc_code = forms.CharField(
+        required=True,
+        max_length=15,
+        label="IFSC Code"
+    )
+
+    # ... rest of fields and widgets remain as before ...
+
     class Meta:
         model = Employees
         fields = [
@@ -89,8 +127,11 @@ class EmployeeEditForm(forms.ModelForm):
              'emergency_contact_relation',
             'base_salary', 'employee_type',
             'resignation_date', 'home_house', 'resumes', 'certificates', 'incentive', 'joining_bonus',
-            'date_of_birth'
+            'date_of_birth',
+            # ADD THE NEW FIELDS BELOW
+            'pan_card', 'aadhaar', 'bank_name', 'bank_branch', 'bank_branch_address', 'bank_account', 'ifsc_code'
         ]
+
 
         widgets = {
             'valid_from': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),

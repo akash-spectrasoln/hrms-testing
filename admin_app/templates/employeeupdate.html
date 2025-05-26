@@ -292,7 +292,47 @@
                       </div>
                 </div>
                 <!-- Joining Bonus -->
-                
+                <div class="section-heading">Identification & Bank Details</div>
+                <div class="form-row">
+                    <div class="form-group col-md-4">
+                        <label for="pan_card">PAN Card</label>
+                        <input type="text" name="pan_card" maxlength="20" class="form-control" 
+                            value="{{ form.instance.pan_card|default_if_none:'' }}">
+                    </div>
+                    <div class="form-group col-md-4">
+                        <label for="aadhaar">Aadhaar</label>
+                        <input type="text" name="aadhaar" maxlength="20" class="form-control" 
+                            value="{{ form.instance.aadhaar|default_if_none:'' }}">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group col-md-4">
+                        <label for="bank_name" class="required">Bank Name</label>
+                        <input type="text" name="bank_name" maxlength="100" class="form-control" 
+                            value="{{ form.instance.bank_name|default_if_none:'' }}" required>
+                    </div>
+                    <div class="form-group col-md-4">
+                        <label for="bank_branch" class="required">Bank Branch</label>
+                        <input type="text" name="bank_branch" maxlength="100" class="form-control"
+                            value="{{ form.instance.bank_branch|default_if_none:'' }}" required>
+                    </div>
+                    <div class="form-group col-md-4">
+                        <label for="bank_branch_address" class="required">Bank Branch Address</label>
+                        <textarea name="bank_branch_address" class="form-control" rows="1" required>{{ form.instance.bank_branch_address|default_if_none:'' }}</textarea>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group col-md-4">
+                        <label for="bank_account" class="required">Bank Account</label>
+                        <input type="text" name="bank_account" maxlength="30" class="form-control"
+                            value="{{ form.instance.bank_account|default_if_none:'' }}" required>
+                    </div>
+                    <div class="form-group col-md-4">
+                        <label for="ifsc_code" class="required">IFSC Code</label>
+                        <input type="text" name="ifsc_code" maxlength="15" class="form-control"
+                            value="{{ form.instance.ifsc_code|default_if_none:'' }}" required>
+                    </div>
+                </div>
                 
                 <!-- Documents Section -->
                 <div class="form-group">
@@ -524,6 +564,28 @@ document.addEventListener('DOMContentLoaded', function () {
     employeeStatusEl.addEventListener('change', toggleResignationDate);
     toggleResignationDate();
 });
-</script>
 
+
+</script>
+<script>
+    function togglePanAadhaarFields() {
+        var countrySelect = document.getElementById("country");
+        var selectedOption = countrySelect.options[countrySelect.selectedIndex];
+        var countryCode = selectedOption.getAttribute("data-code");
+        var panAadhaarDiv = document.getElementById("id-pan-aadhaar-fields");
+        if (countryCode === "IN") {
+            panAadhaarDiv.style.display = "flex"; // show fields if India
+        } else {
+            panAadhaarDiv.style.display = "none"; // hide otherwise
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        var countrySelect = document.getElementById("country");
+        if (countrySelect) {
+            countrySelect.addEventListener("change", togglePanAadhaarFields);
+            togglePanAadhaarFields(); // in case the form loads with India selected
+        }
+    });
+</script>
 {% endblock content %}

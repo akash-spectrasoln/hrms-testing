@@ -172,7 +172,7 @@
                         <select name="country" id="country" class="form-control" required>
                             <option value="">Select Country</option>
                             {% for country in countries %}
-                            <option value="{{ country.id }}">{{ country.code }} - {{ country.country_name }}</option>
+                            <option value="{{ country.id }}" data-code="{{ country.code }}">{{ country.code }} - {{ country.country_name }}</option>
                             {% endfor %}
                         </select>
                     </div>
@@ -247,6 +247,48 @@
                     <div class="form-group col-md-4">
                         <label for="joining_bonus" class="">Joining Bonus</label>
                         <input type="number" step="0.01" name="incentive" class="form-control" >
+                    </div>
+                </div>
+                <!-- Identification and Bank Details -->
+                <div class="section-heading">Identification & Bank Details</div>
+                <div class="form-row">
+                    <div class="form-group col-md-4">
+                        <label for="pan_card">PAN Card</label>
+                        <input type="text" name="pan_card" maxlength="20" class="form-control" 
+                            value="{{ form.instance.pan_card|default_if_none:'' }}">
+                    </div>
+                    <div class="form-group col-md-4">
+                        <label for="aadhaar">Aadhaar</label>
+                        <input type="text" name="aadhaar" maxlength="20" class="form-control" 
+                            value="{{ form.instance.aadhaar|default_if_none:'' }}">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group col-md-4">
+                        <label for="bank_name" class="required">Bank Name</label>
+                        <input type="text" name="bank_name" maxlength="100" class="form-control" 
+                            value="{{ form.instance.bank_name|default_if_none:'' }}" required>
+                    </div>
+                    <div class="form-group col-md-4">
+                        <label for="bank_branch" class="required">Bank Branch</label>
+                        <input type="text" name="bank_branch" maxlength="100" class="form-control"
+                            value="{{ form.instance.bank_branch|default_if_none:'' }}" required>
+                    </div>
+                    <div class="form-group col-md-4">
+                        <label for="bank_branch_address" class="required">Bank Branch Address</label>
+                        <textarea name="bank_branch_address" class="form-control" rows="1" required>{{ form.instance.bank_branch_address|default_if_none:'' }}</textarea>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group col-md-4">
+                        <label for="bank_account" class="required">Bank Account</label>
+                        <input type="text" name="bank_account" maxlength="30" class="form-control"
+                            value="{{ form.instance.bank_account|default_if_none:'' }}" required>
+                    </div>
+                    <div class="form-group col-md-4">
+                        <label for="ifsc_code" class="required">IFSC Code</label>
+                        <input type="text" name="ifsc_code" maxlength="15" class="form-control"
+                            value="{{ form.instance.ifsc_code|default_if_none:'' }}" required>
                     </div>
                 </div>
                  <!-- Documents Section -->

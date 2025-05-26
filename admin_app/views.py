@@ -78,7 +78,7 @@ def add_employee(request):
                 messages.error(request, f"An error occurred while saving: {e}")
         else:
             # Print form errors in console for debugging
-            form = EmployeeEditForm(request=request)
+            
             print("Form Errors:", form.errors)
             messages.error(request, "Please correct the errors below.")
     else:
@@ -230,7 +230,7 @@ from .models import Employees, Country  # Adjust as needed
 from datetime import date
 
 def list_employees(request):
-    queryset = Employees.objects.filter(is_deleted=False)
+    queryset = Employees.objects.filter(is_deleted=False).order_by('-modified_on')
     country_list = Country.objects.all().order_by('country_name')
 
     # Get filter parameters
@@ -242,8 +242,8 @@ def list_employees(request):
     # Default to India's id if no country selected
     if not country_id:
         try:
-            india = Country.objects.filter(country_name__iexact="India").first()
-            country_id = india.id if india else ''
+            country = Country.objects.filter(id=int(country_id)).first()
+            country_id = country.id if country else ''
         except Country.DoesNotExist:
             country_id = ''
 
@@ -575,7 +575,8 @@ class EmployeeExcelCreateView(View):
             'Company Email', 'Personal Email', 'Mobile Phone',
             'Valid From', 'Valid To', 'Country Code', 'State Code',
             'Home City','State Code','Date Of Birth',
-            'Department ID',  'Base Salary'
+            'Department ID',  'Base Salary',
+            'Bank Name', 'Bank Branch', 'Bank Branch Address', 'Bank Account', 'IFSC Code'
         ]
 
         try:
@@ -705,7 +706,14 @@ class EmployeeExcelCreateView(View):
                                 date_of_birth=parse_date_field(row['Date Of Birth']) if 'Date Of Birth' in row else None,
                                 resignation_date=parse_date_field(row['Resignation Date']) if 'Resignation Date' in row else None,
                                 joining_bonus=parse_decimal(row['Joining Bonus']) if 'Joining Bonus' in row else 0.0,
-                                incentive=parse_decimal(row['Incentive']) if 'Incentive' in row else 0.0
+                                incentive=parse_decimal(row['Incentive']) if 'Incentive' in row else 0.0,
+                                pan_card = parse(row['pan_card']) if 'pan_card' in row else '',
+                                aadhaar = parse(row['Aadhar']) if 'Aadhar' in row else '',
+                                bank_name = parse(row['Bank Name']) if 'Bank Name' in row else '',
+                                bank_branch = parse(row['Bank Branch']) if 'Bank Branch' in row else '',
+                                bank_branch_address = parse(row['Bank Branch Address']) if 'Bank Branch Address' in row else '',
+                                bank_account = parse(row['Bank Account']) if 'Bank Account' in row else '',
+                                ifsc_code = parse(row['IFSC Code']) if 'IFSC Code' in row else '',
 
                             )
                             employee.save()
