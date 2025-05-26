@@ -238,14 +238,14 @@ def list_employees(request):
     name = request.GET.get('name', '').strip()
     status = request.GET.get('employee_status', 'employed')
     country_id = request.GET.get('country_id', '').strip()
-
+    print(country_id)
     # Default to India's id if no country selected
+    # Default to India's id if no country is selected
     if not country_id:
-        try:
-            country = Country.objects.filter(id=int(country_id)).first()
-            country_id = country.id if country else ''
-        except Country.DoesNotExist:
-            country_id = ''
+        india = Country.objects.filter(country_name__iexact='India').first()
+        country_id = str(india.id) if india else ''
+    elif not country_id.isdigit():
+        country_id = ''
 
     # Status filter
     if status != 'all':
