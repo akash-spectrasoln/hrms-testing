@@ -1618,7 +1618,7 @@ def admin_login(request):
 
         #  Verify reCAPTCHA with Google
         data = {
-            'secret': settings.RECAPTCHA_SECRET_KEY,
+            'secret': settings.RECAPTCHA_PRIVATE_KEY,
             'response': recaptcha_response
         }
         r = requests.post('https://www.google.com/recaptcha/api/siteverify', data=data)
