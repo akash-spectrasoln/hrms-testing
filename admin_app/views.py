@@ -2,13 +2,64 @@
 from django.shortcuts import render
 from django.http import HttpResponse
 from.models import *
+from django.shortcuts import render
 
+# Create your views here.
+
+
+# views.py
+
+
+# views.py
+# employee_app/views.py
+from django.shortcuts import render, redirect
+from django.contrib.auth import authenticate, login
+from django.contrib import messages
+
+from django.shortcuts import render, redirect
+from django.contrib.auth import authenticate, login
+from django.conf import settings
+from django.utils import timezone
+from django.forms import formset_factory
+from django.db.models import Max,Min
+from django.utils.decorators import method_decorator
+from django.core.exceptions import ObjectDoesNotExist
+from functools import wraps
+from django.utils import timezone
+import datetime
+from django.db import IntegrityError
+import time
 #
 # from django.shortcuts import render
 from django.http import HttpResponse
 from .models import Role, state, Country ,Employees,Department
 from datetime import datetime,date
+import time
+TIMEOUT_DURATION = 60 * 60  # 60 minutes
 
+def signin_required(fn):
+    @wraps(fn)
+    def wrapper(request, *args, **kwargs):
+        # Check if the user is authenticated
+        if not request.user.is_authenticated:
+            return redirect("login")
+        
+        # Check if the session has timed out due to inactivity
+        current_time = time.time()
+        last_activity = request.session.get('last_activity', current_time)
+
+        if current_time - last_activity > TIMEOUT_DURATION:
+            # If the session expired due to inactivity, log the user out
+            logout(request)
+            return redirect("login")  # Redirect to sign-in page
+
+        # Update the session's last activity timestamp
+        request.session['last_activity'] = current_time
+
+        # Proceed with the original view function
+        return fn(request, *args, **kwargs)
+
+    return wrapper
 
 
 #
