@@ -1,4 +1,5 @@
 {% extends 'admin_partials/admin_base.html' %}
+{% block body_class %}template-body-basic{% endblock %}
 {% load static %}
 {% load custom_filters %}
 {% block styles %}
@@ -6,56 +7,66 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
 <style>
-    body {
-        font-family: 'Inter', sans-serif;
-        background-color: #f9fafb;
-        color: #1f2937;
-        padding-top: 60px;
+body, label, input, select {
+        font-size: 0.75rem;
     }
-    .container {
-        max-width: 1200px;
-        margin: 40px auto;
-        padding: 20px;
-    }
-    .card-header {
-        background: linear-gradient(135deg, #6a85b6, #bac8e0);
-        text-align: center;
-        color: white;
-    }
-    .section-heading {
-        font-size: 1.5rem;
-        margin-top: 20px;
-        margin-bottom: 10px;
-        border-bottom: 2px solid #6a85b6;
-        padding-bottom: 5px;
-    }
-    .is-invalid {
-        border-color: #dc3545;
-    }
-    .required::after {
-        content: ' *';
-        color: #dc3545;
-    }
-    .file-input-wrapper {
+.card-header {
+    padding: 4px 12px;
+}
+.card-body {
+    padding: 8px 12px;
+}
+
+
+.form-group {
+        margin-bottom: 1px;
+}
+
+.form-control,
+.form-control-file,
+.custom-col .form-control {
+        height: 30px;
+        font-size: 0.75rem;
+}
+
+.section {
+        border: 1px solid #000000;
+        background-color: #f9f9f9;
+        padding: 4px;
+}
+
+.submit-btn {
         display: flex;
-        align-items: center;
-        margin-top: 5px;
+        justify-content: center;
+        margin-top: 15px;
+}
+
+
+.form-label-fixed {
+        display: inline-block;
+        min-height: 1.4em;
+        font-size: 0.75rem;
+        font-weight: 300;
+        color: #212529;
     }
-    .file-input-wrapper .delete-icon {
-        margin-left: 10px;
-        color: #dc3545;
-        cursor: pointer;
-    }
-    .file-input-wrapper .add-icon {
-        margin-left: 10px;
-        color: #28a745;
-        cursor: pointer;
-    }
+
+.form-check-input {
+        width: 16px;
+        height: 16px;
+}
+
+label {
+        margin-bottom: 2px;
+        display: inline-block;
+        font-weight: 500;
+}
+
 </style>
 {% endblock styles %}
 
 {% block content %}
-<div class="container">
+
+<div class="container" >
     <div class="card">
         <div class="card-header text-center">
             <div class="card-title"><h4>Edit Employee</h4></div>
@@ -63,30 +74,27 @@
         <div class="card-body">
             <form method="post" enctype="multipart/form-data" id="employeeForm">
                 {% csrf_token %}
-                
-                <!-- Basic Information Section -->
-                <div class="form-row">
-                    <div class="form-group col-md-4">
-                        <label for="employee_type" class="required">Employee Type</label>
-                        <!-- The visible, disabled select -->
-                        <select id="employee_type" name="employee_type_display" class="form-control" disabled required>
-                            <option value="" disabled {% if not form.instance.employee_type %}selected{% endif %}>Select Employee Type</option>
-                            {% for etype in employee_type %}
-                                <option value="{{ etype.id }}"
-                                    {% if form.instance.employee_type and form.instance.employee_type.id == etype.id %}selected{% endif %}>
-                                    {{ etype.name }}
-                                </option>
-                            {% endfor %}
-                        </select>
-                        <!-- Hidden input to actually submit the value -->
-                        <input type="hidden" name="employee_type"
-                               value="{% if form.instance.employee_type %}{{ form.instance.employee_type.id }}{% endif %}">
-                    </div>
+                <div class="section">
+                    <div class="form-row">
                     <div class="form-group col-md-4">
                         <label for="employee_id" class="required">Employee ID</label>
                         <input type="text" id="employee_id" name="employee_id" class="form-control" value="{{ form.instance.employee_id }}" readonly required>
                     </div>
                     <div class="form-group col-md-4">
+                        <label for="valid_from" class="required">Valid From</label>
+                        <input type="date" name="valid_from" class="form-control" value="{{ form.instance.valid_from|date:'Y-m-d' }}" required>
+                    </div>
+                    <div class="form-group col-md-4">
+                        <label for="valid_to" class="required">Valid To</label>
+                        <input type="date" name="valid_to" class="form-control" value="{{ form.instance.valid_to|date:'Y-m-d' }}" required>
+                    </div>
+                    </div>
+                </div>
+                <!-- Basic Information Section -->
+
+                <div class="section">
+                    <div class="form-row">
+                    <div class="form-group col-md-1">
                         <label for="salutation" class="required">Salutation</label>
                         <select name="salutation" class="form-control" required>
                             <option value="" disabled>Select</option>
@@ -97,57 +105,73 @@
                             {% endfor %}
                         </select>
                     </div>
-                </div>
-                <div class="form-row">
-                    <div class="form-group col-md-4">
+                    <div class="form-group col-md-3">
                         <label for="first_name" class="required">First Name</label>
                         <input type="text" name="first_name" class="form-control" value="{{ form.instance.first_name }}" required>
                     </div>
-                    <div class="form-group col-md-4">
+                    <div class="form-group col-md-3">
                         <label for="middle_name">Middle Name</label>
                         <input type="text" name="middle_name" class="form-control" value="{{ form.instance.middle_name }}">
                     </div>
-                    <div class="form-group col-md-4">
+                    <div class="form-group col-md-3">
                         <label for="last_name" class="required">Last Name</label>
                         <input type="text" name="last_name" class="form-control" value="{{ form.instance.last_name }}" required>
                     </div>
-                </div>
-                
-                <!-- Validity Period Section -->
-                <div class="form-row">
-                    <div class="form-group col-md-4">
+                    <div class="form-group col-md-2">
                         <label for="date_of_birth" class="required">Date of Birth</label>
                         <input type="date" name="date_of_birth" class="form-control" value="{{ form.instance.date_of_birth |date:'Y-m-d'}}" required>
                     </div>
+                </div> <!--  Row 1 Ends -->
+                 <div class="form-row">
                     <div class="form-group col-md-4">
-                        <label for="valid_from" class="required">Valid From</label>
-                        <input type="date" name="valid_from" class="form-control" value="{{ form.instance.valid_from|date:'Y-m-d' }}" required>
+                        <label for="country" class="required">Country</label>
+                        <select name="country" id="country" class="form-control" required>
+                            <option value="" disabled selected>Select Country</option>
+                            {% for country in countries %}
+                            <option value="{{ country.id }}" {% if form.instance.country.id == country.id %}selected{% endif %}>
+                                {{ country.country_name }}
+                            </option>
+                            {% endfor %}
+                        </select>
                     </div>
                     <div class="form-group col-md-4">
-                        <label for="valid_to" class="required">Valid To</label>
-                        <input type="date" name="valid_to" class="form-control" value="{{ form.instance.valid_to|date:'Y-m-d' }}" required>
+                        <label for="state" class="required">State</label>
+                        <select name="state" id="state" class="form-control" required>
+                            <option value="" disabled selected>Select State</option>
+                            {% for state in states %}
+                            <option value="{{ state.id }}" {% if form.instance.state.id == state.id %}selected{% endif %}>
+                                {{ state.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group col-md-4">
+                        <label for="home_city" class="required">City</label>
+                        <input type="text" name="home_city" class="form-control"value="{{ form.instance.home_city }}" required>
                     </div>
                 </div>
-
-                <!-- Contact Information Section -->
                 <div class="form-row">
-                    <div class="form-group col-md-6">
-                        <label for="company_email" class="required">Company Email</label>
-                        <input type="email" name="company_email" class="form-control" value="{{ form.instance.company_email }}" required>
+                    <div class="form-group col-md-4">
+                        <label for="home_house" >Home/Street</label>
+                        <input type="text" name="home_house"  class="form-control" value="{{ form.instance.home_house }}">
                     </div>
-                    <div class="form-group col-md-6">
+                    <div class="form-group col-md-4">
+                        <label for="home_post_office" >Post Office</label>
+                        <input type="text" name="home_post_office" class="form-control" value="{{ form.instance.home_post_office }}" >
+                    </div>
+                    <div class="form-group col-md-4">
+                        <label for="pincode" >Pincode</label>
+                        <input type="text" name="pincode" class="form-control" value="{{ form.instance.pincode }}" >
+                    </div>
+                </div>
+                  <div class="form-row">
+                    <div class="form-group col-md-4">
                         <label for="personal_email" class="required">Personal Email</label>
                         <input type="email" name="personal_email" class="form-control" value="{{ form.instance.personal_email }}" required>
                     </div>
-                </div>
-                <div class="form-row">
                     <div class="form-group col-md-4">
                         <label for="mobile_phone" class="required">Personal Phone</label>
                         <input type="tel" name="mobile_phone" class="form-control" value="{{ form.instance.mobile_phone }}" required>
-                    </div>
-                    <div class="form-group col-md-4">
-                        <label for="office_phone">Office Phone</label>
-                        <input type="tel" name="office_phone" class="form-control" value="{{ form.instance.office_phone }}">
                     </div>
                     <div class="form-group col-md-4">
                         <label for="home_phone">Home Phone</label>
@@ -155,16 +179,15 @@
                     </div>
                 </div>
                 <div class="form-row">
-                    <div class="form-group col-md-6">
+                    <div class="form-group col-md-4">
                         <label for="emergency_contact_name" >Emergency Contact Name</label>
                         <input type="text" name="emergency_contact_name" class="form-control" value="{{ form.instance.emergency_contact_name }}" >
                     </div>
-                    <div class="form-group col-md-6">
+                    <div class="form-group col-md-4">
                         <label for="emergency_contact_phone" >Emergency Contact Phone</label>
                         <input type="tel" name="emergency_contact_phone" class="form-control" value="{{ form.instance.emergency_contact_phone }}" >
                     </div>
-                </div>
-                <div class="form-group">
+                    <div class="form-group col-md-4">
                     <label for="emergency_contact_relation" >Emergency Contact Relationship</label>
                     <select name="emergency_contact_relation" class="form-control" >
                         <option value="" disabled selected>Choose Relation</option>
@@ -176,124 +199,128 @@
                         <option value="Wife" {% if form.instance.emergency_contact_relation == 'Wife' %}selected{% endif %}>Wife</option>
                     </select>
                 </div>
-
-                <!-- Address Information Section -->
-                <div class="form-row">
-                    <div class="form-group col-md-6">
-                        <label for="country" class="required">Country</label>
-                        <select name="country" id="country" class="form-control" required>
-                            <option value="" disabled selected>Select Country</option>
-                            {% for country in countries %}
-                            <option value="{{ country.id }}" {% if form.instance.country.id == country.id %}selected{% endif %}>
-                                {{ country.country_name }}
-                            </option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <div class="form-group col-md-6">
-                        <label for="state" class="required">State</label>
-                        <select name="state" id="state" class="form-control" required>
-                            <option value="" disabled selected>Select State</option>
-                            {% for state in states %}
-                            <option value="{{ state.id }}" {% if form.instance.state.id == state.id %}selected{% endif %}>
-                                {{ state.name }}
-                            </option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                </div>
-                <div class="form-row">
-                    <div class="form-group col-md-4">
-                        <label for="home_house" >Home</label>
-                        <input type="text" name="home_house"  class="form-control" value="{{ form.instance.home_house }}">
-                    </div>
-                    <div class="form-group col-md-4">
-                        <label for="home_city" class="required">City</label>
-                        <input type="text" name="home_city" class="form-control"value="{{ form.instance.home_city }}" required>
-                    </div>
-                    <div class="form-group col-md-4">
-                        <label for="pincode" >Pincode</label>
-                        <input type="text" name="pincode" class="form-control" value="{{ form.instance.pincode }}" >
-                    </div>
                 </div>
                 
+              </div>    <!--  Section Ends -->
+<div class="section">
 
-                <!-- Employment Details Section -->
-                <div class="form-row">
-                    <div class="form-group col-md-4">
-                        <label for="home_post_office" >Post Office</label>
-                        <input type="text" name="home_post_office" class="form-control" value="{{ form.instance.home_post_office }}" >
-                    </div>
-                    <div class="form-group col-md-4">
-                        <label for="department" class="required">Department</label>
-                        <select name="department" class="form-control" required>
-                            <option value="" disabled>Select Department</option>
-                            {% for department in departments %}
-                            <option value="{{ department.id }}" {% if form.instance.department and form.instance.department.id == department.id %}selected{% endif %}>
-                                {{ department.dep_name }}
-                            </option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <div class="form-group col-md-4">
-                        <label for="designation" class="required">Designation</label>
-                        <select name="role" class="form-control" required>
-                            <option value="" disabled>Select Designation</option>
-                            {% for role in roles %}
-                                <option value="{{ role.role_id}}" {% if form.instance.role.role_id  == role.role_id %}selected{% endif %}>
-                                    {{ role.role_name }}
-                                </option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                </div>
-                <div class="form-row">
-                    <div class="form-group col-md-4">
-                        <label for="employee_status" class="required">Employee Status</label>
-                        <select name="employee_status" class="form-control" required>
-                            <option value="" disabled selected>Choose Status</option>
-                            <option value="employed" {% if form.instance.employee_status == 'employed' %}selected{% endif %}>Employed</option>
-                            <option value="resigned" {% if form.instance.employee_status == 'resigned' %}selected{% endif %}>Resigned</option>
-                            <option value="Intern to employee" {% if form.instance.employee_status == 'Intern to employee' %}selected{% endif %}>Intern To Employee</option>
-                        </select>
+  <!-- Row 1: 4 fields -->
+ <div class="form-row" id="employmentRow">
+        <div class="form-group col-md-4" data-field="department">
+            <label class="required">Department</label>
+            <select name="department" class="form-control" required>
+            <option value="" disabled>Select Department</option>
+                {% for department in departments %}
+                <option value="{{ department.id }}" {% if form.instance.department and form.instance.department.id == department.id %}selected{% endif %}>{{ department.dep_name }}</option>
+                 {% endfor %}
+            </select>
+        </div>
 
+        <div class="form-group col-md-4" data-field="designation">
+            <label class="required">Designation</label>
+            <select name="role" class="form-control" required>
+                <option value="" disabled>Select Designation</option>
+                {% for role in roles %}
+                <option value="{{ role.role_id }}" {% if form.instance.role.role_id == role.role_id %}selected{% endif %}>{{ role.role_name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="form-group col-md-4" data-field="status">
+            <label class="required">Employee Status</label>
+            <select name="employee_status" id="employee_status" class="form-control" required>
+            <option value="" disabled selected>Choose Status</option>
+            <option value="employed" {% if form.instance.employee_status == 'employed' %}selected{% endif %}>Employed</option>
+            <option value="resigned" {% if form.instance.employee_status == 'resigned' %}selected{% endif %}>Resigned</option>
+            <option value="Intern to employee" {% if form.instance.employee_status == 'Intern to employee' %}selected{% endif %}>Intern To Employee</option>
+            </select>
+        </div>
+
+        <div class="form-group col-md-3" id="resignation_date_row" style="display: none;" data-field="resignation">
+            <label class="required">Resignation Date</label>
+            <input type="date" name="resignation_date" id="resignation_date" class="form-control" value="{{ form.instance.resignation_date|date:'Y-m-d' }}">
+        </div>
+</div>
+
+
+  <!-- Row 2: 3 fields + Resignation Date (if visible) -->
+  <div class="form-row" id="row2">
+    <div class="form-group col-md-4"> <!-- Company Email -->
+      <label class="required">Company Email</label>
+      <input type="email" name="company_email" class="form-control" value="{{ form.instance.company_email }}" required>
+    </div>
+    <div class="form-group col-md-4">
+        <label>PM Email</label>
+        <input type="email" name="pm_email" class="form-control" value="{{ form.instance.pm_email }}" >
+    </div>
+
+    <div class="form-group col-md-4"> <!-- Office Phone -->
+      <label>Office Phone</label>
+      <input type="tel" name="office_phone" class="form-control" value="{{ form.instance.office_phone }}">
+    </div>
+
+   
+  </div>
+
+  <!-- Row 3: 3 fields -->
+  <div class="form-row">
+    <div class="form-group col-md-3"> <!-- Manager -->
+      <label>Manager</label>
+      <select name="manager" class="form-control">
+        <option value="">None</option>
+        {% for employee in employees %}
+          <option value="{{ employee.id }}" {% if form.instance.manager and form.instance.manager.id == employee.id %}selected{% endif %}>
+            {{ employee.first_name }} {{ employee.last_name }} ({{ employee.employee_id }})
+          </option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="form-group col-md-3"> <!-- Salary -->
+      <label class="required">Salary</label>
+      <input type="text" name="base_salary" class="form-control" value="{{ form.instance.base_salary|default_if_none:'' }}" required>
+    </div>
+
+    <div class="form-group col-md-3"> <!-- Incentive -->
+      <label>Incentive</label>
+      <input type="text" name="incentive" class="form-control" value="{{ form.instance.incentive|default_if_none:'0.0' }}">
+    </div>
+
+    <div class="form-group col-md-3"> <!-- Joining Bonus -->
+      <label>Joining Bonus</label>
+      <input type="text" name="joining_bonus" id="joining_bonus" class="form-control" value="{{ joining_bonus|default_if_none:'' }}">
+    </div>
+  </div>
+</div>
+<div class="section">
+                <div class="form-row">
+                    <div class="form-group col-md-3">
+                        <label for="bank_name" class="required">Bank Name</label>
+                        <input type="text" name="bank_name" maxlength="100" class="form-control" 
+                            value="{{ form.instance.bank_name|default_if_none:'' }}" required>
+                    </div>
+                    <div class="form-group col-md-3">
+                        <label for="bank_account" class="required">Bank Account</label>
+                        <input type="text" name="bank_account" maxlength="30" class="form-control"
+                            value="{{ form.instance.bank_account|default_if_none:'' }}" required>
+                    </div>
+                    <div class="form-group col-md-3">
+                        <label for="ifsc_code" class="required">IFSC Code</label>
+                        <input type="text" name="ifsc_code" maxlength="15" class="form-control"
+                            value="{{ form.instance.ifsc_code|default_if_none:'' }}" required>
+                    </div>
+                     <div class="form-group col-md-3">
+                        <label for="bank_branch" class="required">Bank Branch</label>
+                        <input type="text" name="bank_branch" maxlength="100" class="form-control"
+                            value="{{ form.instance.bank_branch|default_if_none:'' }}" required>
                     </div>
                     
-                    <!-- Resignation Date container - hidden/shown with JS -->
-                    <div class="form-group col-md-4" id="resignation_date_row" style="display:none;">
-                      <label for="resignation_date" class="required">Resignation Date</label>
-                      <input type="date" name="resignation_date" id="resignation_date" class="form-control" value="{{ form.instance.resignation_date|date:'Y-m-d' }}">
-                    </div>
-
-                    <div class="form-group col-md-4">
-                        <label for="manager">Manager</label>
-                        <select name="manager" class="form-control">
-                            <option value="">None</option>
-                            {% for employee in employees %}
-                            <option value="{{ employee.id }}" {% if form.instance.manager and form.instance.manager.id == employee.id %}selected{% endif %}>
-                                {{ employee.first_name }} {{ employee.last_name }} ({{ employee.employee_id }})
-                            </option>
-                            {% endfor %}
-                        </select>
-                    </div>
                 </div>
                 <div class="form-row">
                     <div class="form-group col-md-4">
-                        <label for="base_salary" class="required">Salary</label>
-                        <input type="text" name="base_salary" class="form-control" value="{{ form.instance.base_salary|default_if_none:'' }}" required>
+                        <label for="bank_branch_address" class="required">Bank Branch Address</label>
+                        <textarea name="bank_branch_address" class="form-control" rows="1" required>{{ form.instance.bank_branch_address|default_if_none:'' }}</textarea>
                     </div>
-                    <div class="form-group col-md-4">
-                        <label for="incentive">Incentive</label>
-                        <input type="text" name="incentive" class="form-control" value="{{ form.instance.incentive|default_if_none:'0.0' }}">
-                    </div>
-                    <div class="form-group col-md-4">
-                        <label for="joining_bonus">Joining Bonus</label>
-                        <input type="text" name="joining_bonus" id="joining_bonus" class="form-control" value="{{ joining_bonus|default_if_none:'' }}">
-                      </div>
-                </div>
-                <!-- Joining Bonus -->
-                <div class="section-heading">Identification & Bank Details</div>
-                <div class="form-row">
                     <div class="form-group col-md-4">
                         <label for="pan_card">PAN Card</label>
                         <input type="text" name="pan_card" maxlength="20" class="form-control" 
@@ -304,38 +331,23 @@
                         <input type="text" name="aadhaar" maxlength="20" class="form-control" 
                             value="{{ form.instance.aadhaar|default_if_none:'' }}">
                     </div>
+                    
                 </div>
-                <div class="form-row">
-                    <div class="form-group col-md-4">
-                        <label for="bank_name" class="required">Bank Name</label>
-                        <input type="text" name="bank_name" maxlength="100" class="form-control" 
-                            value="{{ form.instance.bank_name|default_if_none:'' }}" required>
-                    </div>
-                    <div class="form-group col-md-4">
-                        <label for="bank_branch" class="required">Bank Branch</label>
-                        <input type="text" name="bank_branch" maxlength="100" class="form-control"
-                            value="{{ form.instance.bank_branch|default_if_none:'' }}" required>
-                    </div>
-                    <div class="form-group col-md-4">
-                        <label for="bank_branch_address" class="required">Bank Branch Address</label>
-                        <textarea name="bank_branch_address" class="form-control" rows="1" required>{{ form.instance.bank_branch_address|default_if_none:'' }}</textarea>
-                    </div>
                 </div>
-                <div class="form-row">
-                    <div class="form-group col-md-4">
-                        <label for="bank_account" class="required">Bank Account</label>
-                        <input type="text" name="bank_account" maxlength="30" class="form-control"
-                            value="{{ form.instance.bank_account|default_if_none:'' }}" required>
-                    </div>
-                    <div class="form-group col-md-4">
-                        <label for="ifsc_code" class="required">IFSC Code</label>
-                        <input type="text" name="ifsc_code" maxlength="15" class="form-control"
-                            value="{{ form.instance.ifsc_code|default_if_none:'' }}" required>
-                    </div>
-                </div>
+
+
+                <!-- Contact Information Section -->
+
+                <!-- Address Information Section -->
+               
                 
-                <!-- Documents Section -->
-                <div class="form-group">
+
+                <!-- Employment Details Section -->
+                
+                <!-- Joining Bonus -->
+                <div class="section">
+
+                    <div class="form-group">
                     <label for="resumes">Resumes</label>
                     <div class="file-input-container" id="resumeContainer">
                         <div class="file-input-wrapper">
@@ -397,9 +409,6 @@
                     </div>
                     {% endif %}
                 </div>
-
-                <!-- Is Admin Checkbox (visible only if current user is staff or superuser) -->
-                
                 <div class="form-group form-check mt-3">
                     <input type="checkbox" class="form-check-input" id="is_admin" name="is_admin"
                     {% if form.instance.user %}
@@ -409,6 +418,15 @@
                     {% endif %}>
                     <label class="form-check-label" for="is_admin">Is Admin / Superuser</label>
                 </div>
+
+                </div>
+                
+                <!-- Documents Section -->
+                
+
+                <!-- Is Admin Checkbox (visible only if current user is staff or superuser) -->
+                
+                
                 
 
                 <div class="d-flex justify-content-center mt-3">
@@ -545,13 +563,19 @@
 <!-- Script to toggle resignation date field -->
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-    const employeeStatusEl = document.querySelector('select[name="employee_status"]');
+    const statusEl = document.getElementById('employee_status');
     const resignationRow = document.getElementById('resignation_date_row');
     const resignationInput = document.getElementById('resignation_date');
-    const form = document.getElementById('employeeForm');
 
-    function toggleResignationDate() {
-        if (employeeStatusEl.value === 'resigned') {
+    const department = document.querySelector('[data-field="department"]');
+    const designation = document.querySelector('[data-field="designation"]');
+    const status = document.querySelector('[data-field="status"]');
+
+    function updateRowLayout() {
+        const showResignation = statusEl.value === 'resigned';
+
+        // Toggle visibility + required for resignation field
+        if (showResignation) {
             resignationRow.style.display = 'block';
             resignationInput.setAttribute('required', 'required');
         } else {
@@ -559,33 +583,23 @@ document.addEventListener('DOMContentLoaded', function () {
             resignationInput.removeAttribute('required');
             resignationInput.value = '';
         }
+
+        // Adjust classes: 3 columns if hidden, 4 columns if shown
+        [department, designation, status].forEach(el => {
+            el.classList.remove('col-md-4', 'col-md-3');
+            el.classList.add(showResignation ? 'col-md-3' : 'col-md-4');
+        });
+
+        resignationRow.classList.remove('col-md-4', 'col-md-3');
+        if (showResignation) {
+            resignationRow.classList.add('col-md-3');
+        }
     }
 
-    employeeStatusEl.addEventListener('change', toggleResignationDate);
-    toggleResignationDate();
+    // Initialize and bind event
+    statusEl.addEventListener('change', updateRowLayout);
+    updateRowLayout(); // Trigger once on load
 });
-
-
 </script>
-<script>
-    function togglePanAadhaarFields() {
-        var countrySelect = document.getElementById("country");
-        var selectedOption = countrySelect.options[countrySelect.selectedIndex];
-        var countryCode = selectedOption.getAttribute("data-code");
-        var panAadhaarDiv = document.getElementById("id-pan-aadhaar-fields");
-        if (countryCode === "IN") {
-            panAadhaarDiv.style.display = "flex"; // show fields if India
-        } else {
-            panAadhaarDiv.style.display = "none"; // hide otherwise
-        }
-    }
 
-    document.addEventListener('DOMContentLoaded', function() {
-        var countrySelect = document.getElementById("country");
-        if (countrySelect) {
-            countrySelect.addEventListener("change", togglePanAadhaarFields);
-            togglePanAadhaarFields(); // in case the form loads with India selected
-        }
-    });
-</script>
 {% endblock content %}

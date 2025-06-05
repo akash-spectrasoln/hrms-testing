@@ -1,16 +1,16 @@
 {% extends 'admin_partials/admin_base.html' %}
-
+<!-- {% block body_class %}template-body-basic{% endblock %} -->
 {% block styles %}
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
 <style>
-    body {
+    /* body {
         font-family: 'Inter', sans-serif;
         background-color: #f9fafb;
         color: #1f2937;
         padding-top: 60px;
-    }
+    } */
     .container {
         max-width: 1000px;
         margin: 40px auto;
@@ -25,11 +25,11 @@
         box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
         margin-bottom: 20px;
     }
-    .card-header {
+    /* .card-header {
         background: linear-gradient(135deg, #6a85b6, #bac8e0);
         text-align: center;
         color: white;
-    }
+    } */
     .section-heading {
         font-size: 1.5rem;
         margin-top: 20px;
@@ -63,7 +63,7 @@
 {% block content %}
 <div class="container">
     <div class="card">
-        <div class="card-header text-center">
+        <div class="card-header text-center text-white">
             <div class="card-title mt-2"><h4>Upload Employees via Excel</h4></div>
         </div>
         <div class="card-body">
@@ -86,7 +86,7 @@
         </div>
     </div>
     <div class="card">
-        <div class="card-header text-center">
+        <div class="card-header text-center text-white">
             <div class="card-title mt-2"><h4>Uploaded Employees</h4></div>
         </div>
         <div class="card-body">

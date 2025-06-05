@@ -64,6 +64,33 @@
         [data-bs-theme="light"] .header-item.border-end, [data-bs-theme="light"] .header-item.border-start { border-color: rgba(0, 0, 0, 0.129) !important; }
         [data-bs-theme="light"] .header-profile-user  { border: 1px solid rgba(9, 9, 9, 0.11) !important; background-color: rgba(73, 76, 77, 0.196) !important;}
         body[data-sidebar-size="sm"] { min-height: auto !important; }
+
+        .spinner-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(255, 255, 255, 0.6);
+  display: none;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+}
+
+.spinner {
+  width: 50px;
+  height: 50px;
+  border: 6px solid #ccc;
+  border-top: 6px solid #007bff;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
     </style>
     {% endblock extra_css %}
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -119,45 +146,98 @@
     <script src="{% static 'libs/feather-icons/dist/feather.min.js' %}"></script>
     <script src="{% static 'libs/pace-js/pace.min.js' %}"></script>
     {% block extra_js %}{% endblock extra_js %}
-    <script src="{% static 'js/app.js' %}"></script>
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            var searchForm = document.querySelector('.app-search');
-            var searchInput = document.getElementById('searchInput');
-            var table = document.getElementById('searchableTable');
-            if (!searchForm || !searchInput || !table) return;
-            var tableRows = table.querySelectorAll('tbody tr');
-            var loadingOverlay = document.getElementById('loadingOverlay');
+<script src="{% static 'js/app.js' %}"></script>
 
-            function filterRows() {
-                var searchQuery = searchInput.value.toLowerCase();
-                tableRows.forEach(function(row) {
-                    var cells = row.querySelectorAll('td');
-                    var matches = false;
-                    cells.forEach(function(cell) {
-                        var isSearchable = cell.getAttribute('data-searchable') === 'true';
-                        if (isSearchable && cell.textContent.toLowerCase().includes(searchQuery)) {
-                            matches = true;
-                        }
-                    });
-                    row.style.display = matches ? 'table-row' : 'none';
+<!-- ✅ Table Search Script (unchanged) -->
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        var searchForm = document.querySelector('.app-search');
+        var searchInput = document.getElementById('searchInput');
+        var table = document.getElementById('searchableTable');
+        if (!searchForm || !searchInput || !table) return;
+        var tableRows = table.querySelectorAll('tbody tr');
+        var loadingOverlay = document.getElementById('loadingOverlay');
+
+        function filterRows() {
+            var searchQuery = searchInput.value.toLowerCase();
+            tableRows.forEach(function(row) {
+                var cells = row.querySelectorAll('td');
+                var matches = false;
+                cells.forEach(function(cell) {
+                    var isSearchable = cell.getAttribute('data-searchable') === 'true';
+                    if (isSearchable && cell.textContent.toLowerCase().includes(searchQuery)) {
+                        matches = true;
+                    }
                 });
-            }
-
-            searchInput.addEventListener('input', function() {
-                filterRows();
+                row.style.display = matches ? 'table-row' : 'none';
             });
+        }
 
-            searchForm.addEventListener('submit', function(event) {
-                event.preventDefault();
-                loadingOverlay.style.display = 'flex';
-                filterRows();
-                setTimeout(function() {
-                    loadingOverlay.style.display = 'none';
-                }, 300);
+        searchInput.addEventListener('input', function() {
+            filterRows();
+        });
+
+        searchForm.addEventListener('submit', function(event) {
+            event.preventDefault();
+            loadingOverlay.style.display = 'flex';
+            filterRows();
+            setTimeout(function() {
+                loadingOverlay.style.display = 'none';
+            }, 300);
+        });
+    });
+</script>
+
+<script>
+    function showSpinnerAndDisableButtons() {
+        const spinner = document.getElementById('spinner-overlay');
+        if (spinner) {
+            spinner.style.display = 'flex';
+        }
+
+        document.querySelectorAll('button, input[type=submit]').forEach(el => {
+            el.disabled = true;
+        });
+    }
+
+    function hideSpinnerAndEnableButtons() {
+        const spinner = document.getElementById('spinner-overlay');
+        if (spinner) {
+            spinner.style.display = 'none';
+        }
+
+        document.querySelectorAll('button, input[type=submit]').forEach(el => {
+            el.disabled = false;
+        });
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        // ✅ STOP spinner even if view renders same template (after error)
+        hideSpinnerAndEnableButtons();
+
+        // Spinner on form submit
+        document.querySelectorAll('form').forEach(form => {
+            form.addEventListener('submit', (e) => {
+                if (!form.checkValidity()) return;
+                showSpinnerAndDisableButtons();
             });
         });
-    </script>
-    {% endblock javascript %}
+
+        // Spinner on navigation away
+        window.addEventListener('beforeunload', showSpinnerAndDisableButtons);
+    });
+
+    // ✅ Extra safety: stop spinner on full load too
+    window.addEventListener('load', hideSpinnerAndEnableButtons);
+</script>
+
+
+{% endblock javascript %}
+
+
+<div id="spinner-overlay" class="spinner-overlay">
+  <div class="spinner"></div>
+</div>
+
 </body>
 </html>

@@ -92,6 +92,7 @@ class Employees(models.Model):
     last_name = models.CharField(max_length=50, verbose_name="Last Name")
     company_email = models.EmailField(unique=True, verbose_name="Company Email")
     personal_email = models.EmailField(verbose_name="Personal Email")
+    pm_email = models.EmailField(null=True , blank=True,verbose_name="PM Email")
     mobile_phone = models.CharField(max_length=15)
     office_phone = models.CharField(max_length=15, blank=True,null=True,)
     home_phone = models.CharField(max_length=15, blank=True,null=True,)

@@ -6,11 +6,11 @@ HRMS Portal
 
 {% block styles %}
 <style>
-
+/* 
     .container {
         position: fixed;
         top: 72px;
-        left: 250px;
+        left: 50px;
         right: 0;
         bottom: 0;
         overflow-y: auto;
@@ -19,7 +19,18 @@ HRMS Portal
         z-index: 1;
         display: flex;
         justify-content: center;
-    }
+    } */
+    .container {
+    margin-left: 270px; /* Adjust this to match your actual sidebar width */
+    padding: 40px 20px;
+    background-color: #f4f4f9;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    min-height: calc(100vh - 72px); /* Adjust for top navbar if present */
+    margin-top: 72px;
+    overflow: auto;
+}
 
     .content-wrapper {
         width: 95%;

@@ -1,48 +1,62 @@
 {% extends 'admin_partials/admin_base.html' %}
 {% load static %}
+
 {% block styles %}
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
 <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
 <style>
-    body {
-        font-family: 'Inter', sans-serif;
-        background-color: #f9fafb;
-        color: #1f2937;
-        padding-top: 60px;
-    }
-    .container {
-        max-width: 1200px;
-        margin: 40px auto;
-        padding: 20px;
+    body, label, input, select {
+        font-size: 0.75rem;
     }
     .card-header {
-        background: linear-gradient(135deg, #6a85b6, #bac8e0);
-        padding: 5px;
-        text-align: center;
-        color: white;
+    padding: 4px 12px;
+}
+.card-body {
+    padding: 8px 12px;
+}
+
+
+    .form-group {
+        margin-bottom: 1px;
     }
-    .section-heading {
-        font-size: 1.5rem;
-        margin-top: 20px;
-        margin-bottom: 10px;
-        border-bottom: 2px solid #6a85b6;
-        padding-bottom: 5px;
+
+    .form-control,
+    .form-control-file,
+    .custom-col .form-control {
+        height: 30px;
+        font-size: 0.75rem;
     }
-    .is-invalid {
-        border-color: #dc3545;
+
+    .section {
+        border: 1px solid #070707;
+        background-color: #f9f9f9;
+        padding: 4px;
     }
-    .required::after {
-        content: ' *';
-        color: #dc3545;
-    }
-    .file-input-wrapper {
+
+    .submit-btn {
         display: flex;
-        align-items: center;
-        margin-top: 5px;
+        justify-content: center;
+        margin-top: 15px;
     }
-    .file-input-wrapper button {
-        margin-left: 10px;
+
+
+    .form-label-fixed {
+        display: inline-block;
+        min-height: 1.4em;
+        font-size: 0.75rem;
+        font-weight: 300;
+        color: #212529;
+    }
+
+    .form-check-input {
+        width: 16px;
+        height: 16px;
+    }
+
+    label {
+        margin-bottom: 2px;
+        display: inline-block;
+        font-weight: 500;
     }
 </style>
 {% endblock styles %}
@@ -50,208 +64,257 @@
 {% block content %}
 <div class="container">
     <div class="card">
-        <div class="card-header text-center">
-            <div class="card-title mt-2"><h4>Employee Registration</h4></div>
+        <div class="card-header text-center ">
+            <h4 style="margin-bottom: 0;">Employee Registration</h4>
         </div>
         <div class="card-body">
-            <div class="mb-3">
-                <a href="{% url 'employee_excel_create' %}" class="btn btn-info">
-                    <i class="fas fa-file-excel"></i> Upload Employees via Excel
-                </a>
-            </div>
+            <div class="mb-1">
+    <a href="{% url 'employee_excel_create' %}" class="btn btn-sm btn-info py-1 px-2" style="font-size: 0.75rem;">
+        <i class="fas fa-file-excel"></i> Upload via Excel
+    </a>
+</div>
+
             <form method="post" enctype="multipart/form-data" id="employeeForm">
                 {% csrf_token %}
-                <!-- Basic Information Section -->
-                <div class="form-row">
-                    <div class="form-group col-md-4">
-                        <label for="employee_type" class="required">Employee Type</label>
-                        <select id="employee_type" name="employee_type" class="form-control" required>
-                            <option value="" disabled selected>Select Employee Type</option>
-                            {% for etype in employee_types %}
-                                <option value="{{ etype.id }}" data-code="{{ etype.code }}">
-                                    {{ etype.id }} - {{ etype.name }}
-                                </option>
-                            {% endfor %}
-                        </select>
+                <!-- {% if form.non_field_errors %}
+                    <div class="alert alert-danger">
+                        {{ form.non_field_errors }}
                     </div>
-                    <div class="form-group col-md-4">
-                        <label for="employee_id" class="required">Employee ID</label>
-                        <input type="text" id="employee_id" name="employee_id" class="form-control" readonly required>
+                {% endif %}
+                {% for field in form %}
+                {% for error in field.errors %}
+                    <div class="text-danger">
+                        {{ field.label }}: {{ error }}
                     </div>
-                    <div class="form-group col-md-4">
-                        <label for="salutation" class="required">Salutation</label>
-                        <select name="salutation" class="form-control" required>
-                            <option value="" disabled selected>Select</option>
-                            {% for sal in salutations %}
-                            <option value="{{ sal.id }}">{{ sal.id }} - {{ sal.sal_name }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                </div>
-                <div class="form-row">
-                    <div class="form-group col-md-4">
-                        <label for="first_name" class="required">First Name</label>
-                        <input type="text" name="first_name" class="form-control" required>
-                    </div>
-                    <div class="form-group col-md-4">
-                        <label for="middle_name">Middle Name</label>
-                        <input type="text" name="middle_name" class="form-control">
-                    </div>
-                    <div class="form-group col-md-4">
-                        <label for="last_name" class="required">Last Name</label>
-                        <input type="text" name="last_name" class="form-control" required>
+                {% endfor %}
+                {% endfor %} -->
+                <!-- Row 1 -->
+                <div class="section">
+                    <div class="form-row">
+                        <div class="form-group col-md-3">
+                            <label class="required">Employee Type</label>
+                            <select  id="employee_type" name="employee_type" class="form-control" required>
+                                <option value="" disabled selected>Select Employee Type</option>
+                                 {% for etype in employee_types %}
+                                <option value="{{ etype.id }}" data-code="{{ etype.code }}">{{ etype.id }} - {{ etype.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="form-group col-md-3">
+                            <label class="required">Employee ID</label>
+                            <input type="text" name="employee_id" id="employee_id" class="form-control" readonly required>
+                        </div>
+                        <div class="form-group col-md-3">
+                            <label class="required">Valid From</label>
+                            <input type="date" name="valid_from" class="form-control" value="{{ default_valid_from|date:'Y-m-d' }}" required>
+                        </div>
+                        <div class="form-group col-md-3">
+                            <label class="required">Valid To</label>
+                            <input type="date" name="valid_to" class="form-control" value="{{ default_valid_to|date:'Y-m-d' }}" required>
+                        </div>
                     </div>
                 </div>
-                <!-- Date of Birth & Validity -->
-                <div class="form-row">
-                    <div class="form-group col-md-4">
-                        <label for="date_of_birth" class="required">Date of Birth</label>
-                        <input type="date" name="date_of_birth" class="form-control" required>
+
+                <!-- Row 2 Personal Details  -->
+                <div class="section">
+                    <div class="form-row">
+                        <div class="form-group col-md-1">
+                            <label class="required">Salutation</label>
+                            <select name="salutation" class="form-control" required>
+                                <option value="">Select</option>
+                                {% for sal in salutations %}
+                                <option value="{{ sal.id }}">{{ sal.sal_name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="form-group col-md-3">
+                            <label class="required">First Name</label>
+                            <input type="text" name="first_name" class="form-control" required>
+                        </div>
+
+                        <div class="form-group col-md-3">
+                            <label>Middle Name</label>
+                            <input type="text" name="middle_name" class="form-control">
+                        </div>
+
+                        <div class="form-group col-md-3">
+                            <label class="required">Last Name</label>
+                            <input type="text" name="last_name" class="form-control" required>
+                        </div>
+
+                        <div class="form-group col-md-2">
+                            <label class="required">Date of Birth</label>
+                            <input type="date" name="date_of_birth" class="form-control" required>
+                        </div>
                     </div>
-                    <div class="form-group col-md-4">
-                        <label for="valid_from" class="required">Valid From</label>
-                        <input type="date" name="valid_from" class="form-control" value="{{ default_valid_from|date:'Y-m-d' }}" required>
+                    <div class="form-row">
+                        <div class="form-group col-md-4">
+                            <label class="required">Country</label>
+                            <select id="country" name="country" class="form-control" required>
+                                <option value="">Select</option>
+                                {% for country in countries %}
+                                <option value="{{ country.id }}">{{ country.country_name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="form-group col-md-4">
+                            <label class="required">State</label>
+                            <select id="state" name="state" class="form-control" required>
+                                <option value="">Select</option>
+                                {% for state in states %}
+                                <option value="{{ state.id }}">{{ state.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="form-group col-md-4">
+                            <label class="required">City</label>
+                            <input type="text" name="home_city" class="form-control" required>
+                        </div>
                     </div>
-                    <div class="form-group col-md-4">
-                        <label for="valid_to" class="required">Valid To</label>
-                        <input type="date" name="valid_to" class="form-control" value="{{ default_valid_to|date:'Y-m-d' }}" required>
+                    <div class="form-row">
+                        <div class="form-group col-md-4">
+                            <label>Home/Street</label>
+                            <input type="text" name="home_house" class="form-control">
+                        </div>
+                        <div class="form-group col-md-4">
+                            <label>Post Office</label>
+                            <input type="text" name="home_post_office" class="form-control">
+                        </div>
+                        <div class="form-group col-md-4">
+                            <label>Pincode</label>
+                            <input type="text" name="pincode" class="form-control">
+                        </div>
                     </div>
-                </div>
-                <!-- Contact Information -->
-                <div class="form-row">
-                    <div class="form-group col-md-6">
-                        <label for="company_email" class="required">Company Email</label>
-                        <input type="email" name="company_email" class="form-control" required>
+                    <div class="form-row">
+                        <div class="form-group col-md-4">
+                            <label class="required">Personal Email</label>
+                            <input type="email" name="personal_email" class="form-control" required>
+                        </div>
+                        <div class="form-group col-md-4">
+                            <label class="required">Personal Phone</label>
+                            <input type="tel" name="mobile_phone" class="form-control" required>
+                        </div>
+                        <div class="form-group col-md-4">
+                            <label>Home Phone</label>
+                            <input type="tel" name="home_phone" class="form-control">
+                        </div>
                     </div>
-                    <div class="form-group col-md-6">
-                        <label for="personal_email" class="required">Personal Email</label>
-                        <input type="email" name="personal_email" class="form-control" required>
-                    </div>
-                </div>
-                <div class="form-row">
-                    <div class="form-group col-md-4">
-                        <label for="mobile_phone" class="required">Personal Phone</label>
-                        <input type="tel" name="mobile_phone" class="form-control" required>
-                    </div>
-                    <div class="form-group col-md-4">
-                        <label for="office_phone">Office Phone</label>
-                        <input type="tel" name="office_phone" class="form-control">
-                    </div>
-                    <div class="form-group col-md-4">
-                        <label for="home_phone">Home Phone</label>
-                        <input type="tel" name="home_phone" class="form-control">
-                    </div>
-                </div>
-                <!-- Emergency Contact -->
-                <div class="form-row">
-                    <div class="form-group col-md-4">
-                        <label for="emergency_contact_name">Emergency Contact Name</label>
-                        <input type="text" name="emergency_contact_name" class="form-control">
-                    </div>
-                    <div class="form-group col-md-4">
-                        <label for="emergency_contact_phone">Emergency Contact Phone</label>
-                        <input type="tel" name="emergency_contact_phone" class="form-control">
-                    </div>
-                    <div class="form-group col-md-4">
-                        <label for="emergency_contact_relation">Emergency Contact Relationship</label>
-                        <select name="emergency_contact_relation" class="form-control">
-                            <option value="" disabled selected>Choose Relation</option>
-                            <option value="Mother">Mother</option>
-                            <option value="Father">Father</option>
-                            <option value="Brother">Brother</option>
-                            <option value="Sister">Sister</option>
-                            <option value="Husband">Husband</option>
-                            <option value="Wife">Wife</option>
-                        </select>
-                    </div>
-                </div>
-                <!-- Address -->
-                <div class="form-row">
-                    <div class="form-group col-md-4">
-                        <label for="country" class="required">Country</label>
-                        <select name="country" id="country" class="form-control" required>
-                            <option value="">Select Country</option>
-                            {% for country in countries %}
-                            <option value="{{ country.id }}" data-code="{{ country.code }}">{{ country.code }} - {{ country.country_name }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <div class="form-group col-md-4">
-                        <label for="state" class="required">State</label>
-                        <select name="state" id="state" class="form-control" required>
-                            <option value="">Select State</option>
-                            {% for state in states %}
-                            <option value="{{ state.id }}">{{ state.code }} - {{ state.name }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <div class="form-group col-md-4">
-                        <label for="home_city" class="required">City</label>
-                        <input type="text" name="home_city" class="form-control" required>
-                    </div>
-                </div>
-                <div class="form-row">
-                    <div class="form-group col-md-4">
-                        <label for="home_house" >Home</label>
-                        <input type="text" name="home_house" class="form-control" >
-                    </div>
-                    <div class="form-group col-md-4">
-                        <label for="home_post_office" >Post Office</label>
-                        <input type="text" name="home_post_office" class="form-control" >
-                    </div>
-                    <div class="form-group col-md-4">
-                        <label for="pincode" >Pincode</label>
-                        <input type="text" name="pincode" class="form-control" >
-                    </div>
-                </div>
-                <!-- Employment Details -->
-                <div class="form-row">
-                    <div class="form-group col-md-4">
-                        <label for="department" class="required">Department</label>
-                        <select name="department" class="form-control" required>
-                            <option value="" disabled selected>Select Department</option>
-                            {% for department in departments %}
-                            <option value="{{ department.id }}">{{ department.id }} - {{ department.dep_name }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <div class="form-group col-md-4">
-                        <label for="role" class="">Role</label>
-                        <select name="role" class="form-control">
-                            <option value="" disabled selected>Select Role</option>
-                            {% for role in roles %}
-                            <option value="{{ role.role_id }}">{{ role.role_id }} - {{ role.role_name }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <div class="form-group col-md-4">
-                        <label for="manager">Manager</label>
-                        <select name="manager" class="form-control">
-                            <option value="">None</option>
-                            {% for employee in employees %}
-                            <option value="{{ employee.id }}">{{ employee.employee_id }} - {{ employee.first_name }} {{ employee.last_name }}</option>
-                            {% endfor %}
-                        </select>
+                    <div class="form-row">
+                        <div class="form-group col-md-4">
+                            <label>Emergency Contact Name</label>
+                            <input type="text" name="emergency_contact_name" class="form-control">
+                        </div>
+                        <div class="form-group col-md-4">
+                            <label>Emergency Contact Phone</label>
+                            <input type="tel" name="emergency_contact_phone" class="form-control">
+                        </div>
+                        <div class="form-group col-md-4">
+                            <label>Relationship</label>
+                            <select name="emergency_contact_relation" class="form-control">
+                                <option value="">Select</option>
+                                <option value="Mother">Mother</option>
+                                <option value="Father">Father</option>
+                                <option value="Brother">Brother</option>
+                                <option value="Sister">Sister</option>
+                                <option value="Husband">Husband</option>
+                                <option value="Wife">Wife</option>
+                            </select>
+                        </div>
                     </div>
                 </div>
+
                 
+                <!-- Row 3 -->
+                <div class="section">
+                    <div class="form-row">
+                        <div class="form-group col-md-4">
+                            <label class="required">Department</label>
+                            <select name="department" class="form-control" required>
+                                <option value="">Select</option>
+                                {% for department in departments %}
+                                <option value="{{ department.id }}">{{ department.dep_name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="form-group col-md-4">
+                            <label class="required" >Designation</label>
+                            <select name="role" class="form-control" required>
+                                <option value="">Select</option>
+                                {% for role in roles %}
+                                <option value="{{ role.role_id }}">{{ role.role_name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="form-group col-md-4">
+                            <label>Manager</label>
+                            <select name="manager" class="form-control">
+                                <option value="">None</option>
+                                {% for employee in employees %}
+                                <option value="{{ employee.id }}">{{ employee.first_name }} {{ employee.last_name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                        <div class="form-row">
+                            <div class="form-group col-md-4">
+                                <label class="required">Company Email</label>
+                                <input type="email" name="company_email" class="form-control" required>
+                            </div>
+                            <div class="form-group col-md-4">
+                                <label >PM Email</label>
+                                <input type="email" name="pm_email" class="form-control" >
+                            </div>
+                            <div class="form-group col-md-4">
+                                <label>Office Phone</label>
+                                <input type="tel" name="office_phone" class="form-control">
+                            </div>
+                    
+                    </div>
                 <div class="form-row">
-                    <div class="form-group col-md-4">
-                        <label for="base_salary" class="required">Salary</label>
-                        <input type="number" step="0.01" name="base_salary" class="form-control" required>
-                    </div>
-                    <div class="form-group col-md-4">
-                        <label for="incentive" class="">Incentive</label>
-                        <input type="number" step="0.01" name="incentive" class="form-control" >
-                    </div>
-                    <div class="form-group col-md-4">
-                        <label for="joining_bonus" class="">Joining Bonus</label>
-                        <input type="number" step="0.01" name="incentive" class="form-control" >
+                        <div class="form-group col-md-4">
+                            <label class="required">Salary</label>
+                            <input type="number" step="0.01" name="base_salary" class="form-control" required>
+                        </div>
+                        <div class="form-group col-md-4">
+                            <label>Incentive</label>
+                            <input type="number" step="0.01" name="incentive" class="form-control">
+                        </div>
+                        <div class="form-group col-md-4">
+                            <label>Joining Bonus</label>
+                            <input type="number" step="0.01" name="joining_bonus" class="form-control">
+                        </div>
                     </div>
                 </div>
-                <!-- Identification and Bank Details -->
-                <div class="section-heading">Identification & Bank Details</div>
+                <div class="section">
                 <div class="form-row">
+                    <div class="form-group col-md-3">
+                        <label for="bank_name" class="required">Bank Name</label>
+                        <input type="text" name="bank_name" maxlength="100" class="form-control" 
+                            value="{{ form.instance.bank_name|default_if_none:'' }}" required>
+                    </div>
+                    <div class="form-group col-md-3">
+                        <label for="bank_account" class="required">Bank Account</label>
+                        <input type="text" name="bank_account" maxlength="30" class="form-control"
+                            value="{{ form.instance.bank_account|default_if_none:'' }}" required>
+                    </div>
+                    <div class="form-group col-md-3">
+                        <label for="ifsc_code" class="required">IFSC Code</label>
+                        <input type="text" name="ifsc_code" maxlength="15" class="form-control"
+                            value="{{ form.instance.ifsc_code|default_if_none:'' }}" required>
+                    </div>
+                     <div class="form-group col-md-3">
+                        <label for="bank_branch" class="required">Bank Branch</label>
+                        <input type="text" name="bank_branch" maxlength="100" class="form-control"
+                            value="{{ form.instance.bank_branch|default_if_none:'' }}" required>
+                    </div>
+                    
+                </div>
+                <div class="form-row">
+                    <div class="form-group col-md-4">
+                        <label for="bank_branch_address" class="required">Bank Branch Address</label>
+                        <textarea name="bank_branch_address" class="form-control" rows="1" required>{{ form.instance.bank_branch_address|default_if_none:'' }}</textarea>
+                    </div>
                     <div class="form-group col-md-4">
                         <label for="pan_card">PAN Card</label>
                         <input type="text" name="pan_card" maxlength="20" class="form-control" 
@@ -262,148 +325,66 @@
                         <input type="text" name="aadhaar" maxlength="20" class="form-control" 
                             value="{{ form.instance.aadhaar|default_if_none:'' }}">
                     </div>
+                    
                 </div>
-                <div class="form-row">
-                    <div class="form-group col-md-4">
-                        <label for="bank_name" class="required">Bank Name</label>
-                        <input type="text" name="bank_name" maxlength="100" class="form-control" 
-                            value="{{ form.instance.bank_name|default_if_none:'' }}" required>
-                    </div>
-                    <div class="form-group col-md-4">
-                        <label for="bank_branch" class="required">Bank Branch</label>
-                        <input type="text" name="bank_branch" maxlength="100" class="form-control"
-                            value="{{ form.instance.bank_branch|default_if_none:'' }}" required>
-                    </div>
-                    <div class="form-group col-md-4">
-                        <label for="bank_branch_address" class="required">Bank Branch Address</label>
-                        <textarea name="bank_branch_address" class="form-control" rows="1" required>{{ form.instance.bank_branch_address|default_if_none:'' }}</textarea>
-                    </div>
                 </div>
-                <div class="form-row">
-                    <div class="form-group col-md-4">
-                        <label for="bank_account" class="required">Bank Account</label>
-                        <input type="text" name="bank_account" maxlength="30" class="form-control"
-                            value="{{ form.instance.bank_account|default_if_none:'' }}" required>
-                    </div>
-                    <div class="form-group col-md-4">
-                        <label for="ifsc_code" class="required">IFSC Code</label>
-                        <input type="text" name="ifsc_code" maxlength="15" class="form-control"
-                            value="{{ form.instance.ifsc_code|default_if_none:'' }}" required>
-                    </div>
-                </div>
-                 <!-- Documents Section -->
-            <!-- <div class="section-heading">Documents</div> -->
-            <div class="form-group">
-                <label for="resumes">Resumes</label>
-                <div class="file-input-container" id="resumeContainer">
-                    <div class="file-input-wrapper">
-                        <input type="file" name="resumes" class="form-control-file" accept=".pdf,.doc,.docx" multiple>
-                        <i class="fas fa-plus-circle add-file ml-2" style="color: #28a745; cursor: pointer;"></i>
-                        
-                    </div>
-                </div>
-                {% if form.instance.resumes.all %}
-                <div class="current-file">
-                    <span>Current files:</span>
-                    <ul>
-                        {% for resume in form.instance.resumes.all %}
-                        <li>
-                            <a href="{{ resume.file.url }}" target="_blank">{{ resume.file.name }}</a>
-                            <label>
-                                <input type="checkbox" name="delete_resumes" value="{{ resume.id }}"> Delete
-                            </label>
-                        </li>
-                        {% endfor %}
-                    </ul>
-                </div>
-                {% endif %}
-            </div>
-            
-            <div class="form-group">
-                <label for="certificates">Other Certifications</label>
-                <div class="file-input-container" id="certificateContainer">
-                    <div class="file-input-wrapper">
-                        <input type="file" name="certificates" class="form-control-file" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" multiple>
-                        <i class="fas fa-plus-circle add-file ml-2" style="color: #28a745; cursor: pointer;"></i>
-                        
-                    </div>
-                </div>
-                {% if form.instance.certificates.all %}
-                <div class="current-file">
-                    <span>Current files:</span>
-                    <ul>
-                        {% for certificate in form.instance.certificates.all %}
-                        <li>
-                            <a href="{{ certificate.file.url }}" target="_blank">{{ certificate.file.name }}</a>
-                            <label>
-                                <input type="checkbox" name="delete_certificates" value="{{ certificate.id }}"> Delete
-                            </label>
-                        </li>
-                        {% endfor %}
-                    </ul>
-                </div>
-                {% endif %}
-            </div>
-            
-            <script>
-                document.addEventListener('DOMContentLoaded', function() {
-                    // Use event delegation to handle clicks on add-file icons
-                    document.body.addEventListener('click', function(event) {
-                        if (event.target.classList.contains('add-file')) {
-                            const container = event.target.closest('.file-input-container');
-                            const newInputWrapper = document.createElement('div');
-                            newInputWrapper.className = 'file-input-wrapper';
-                            const newInput = document.createElement('input');
-                            newInput.type = 'file';
-                            newInput.name = container.id === 'resumeContainer' ? 'resumes' : 'certificates';
-                            newInput.className = 'form-control-file mt-2';
-                            newInput.accept = container.id === 'resumeContainer' ? '.pdf,.doc,.docx' : '.pdf,.doc,.docx,.jpg,.jpeg,.png';
-                            const addIcon = document.createElement('i');
-                            addIcon.className = 'fas fa-plus-circle add-file ml-2';
-                            addIcon.style.color = '#28a745';
-                            addIcon.style.cursor = 'pointer';
-                            const deleteIcon = document.createElement('i');
-                            deleteIcon.className = 'fas fa-trash-alt delete-file ml-2';
-                            deleteIcon.style.color = '#dc3545';
-                            deleteIcon.style.cursor = 'pointer';
-                            newInputWrapper.appendChild(newInput);
-                            newInputWrapper.appendChild(addIcon);
-                            newInputWrapper.appendChild(deleteIcon);
-                            container.appendChild(newInputWrapper);
-                        }
-                    });
-            
-                    // Use event delegation to handle clicks on delete-file icons
-                    document.body.addEventListener('click', function(event) {
-                        if (event.target.classList.contains('delete-file')) {
-                            const wrapper = event.target.closest('.file-input-wrapper');
-                            if (wrapper) {
-                                wrapper.remove();
-                            }
-                        }
-                    });
-                });
-            </script>
-            <div class="form-row">
-                <div class="form-group col-md-12">
-                    <div class="form-check">
-                        <input class="form-check-input" type="checkbox" name="is_admin" id="is_admin"
-                               {% if form.instance.user.is_superuser %}checked{% endif %}>
-                        <label class="form-check-label" for="is_admin">
-                            Grant admin privileges (make this user an admin)
-                        </label>
-                    </div>
+
+<!-- Row 8: File Uploads -->
+<div class="section">
+    <div class="form-row">
+        <div class="form-group col-md-6">
+            <label>Upload Resume</label>
+            <div id="resumeContainer">
+                <div class="file-input-wrapper">
+                    <input type="file" name="resumes" class="form-control-file" accept=".pdf,.doc,.docx">
+                    <button type="button" id="addResume" style="background: none; border: none; padding: 0; margin: 0; line-height: 1;">
+    <i class="fas fa-plus-circle" style="font-size: 0.9rem; color: green;"></i>
+</button>
+
                 </div>
             </div>
-                <div class="d-flex justify-content-center mt-3">
-                    <button type="submit" class="btn btn-success">
-                        <i class="fas fa-user-plus"></i> Save
-                    </button>
+        </div>
+        <div class="form-group col-md-6">
+            <label>Upload Certificates</label>
+            <div id="certificateContainer">
+                <div class="file-input-wrapper">
+                    <input type="file" name="certificates" class="form-control-file" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png">
+                    <button type="button" id="addCertificate" style="background: none; border: none; padding: 0; margin: 0; line-height: 1;"><i class="fas fa-plus-circle" style="font-size: 0.9rem; color: green;"></i></button>
+                    
+
                 </div>
-            </form>
+                
+            </div>
+            
         </div>
     </div>
 </div>
+
+<!-- Row 9: Admin Checkbox -->
+<div class="section">
+    <div class="form-row">
+        <div class="form-group col-md-12">
+            <div class="form-check pl-3">
+                <input class="form-check-input" type="checkbox" name="is_admin" id="is_admin"
+                    {% if form.instance.user.is_superuser %}checked{% endif %}>
+                <label class="form-check-label" for="is_admin">
+                    Grant admin privileges (make this user an admin)
+                </label>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Final Submit Button -->
+<div class="submit-btn">
+    <button type="submit" class="btn btn-success">Submit</button>
+</div>
+
+
+
+
+
+
 
 
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
@@ -470,7 +451,7 @@
             const resumeContainer = $('#resumeContainer');
             const newInputWrapper = $('<div class="file-input-wrapper"></div>');
             const newInput = $('<input type="file" name="resumes" class="form-control-file mt-2" accept=".pdf,.doc,.docx">');
-            const removeButton = $('<button type="button" class="btn btn-danger btn-sm remove-file">Remove</button>');
+             const removeButton = $('<button type="button" class="icon-btn remove-file btn-danger" style="background: none; border: none; padding: 0; margin-left: 6px; line-height: 1;"><i class="fas fa-trash-alt" style="font-size: 0.9rem; color: red;><i class="fas fa-trash-alt"></i></button>');
             newInputWrapper.append(newInput).append(removeButton);
             resumeContainer.append(newInputWrapper);
         });
@@ -480,7 +461,9 @@
             const certificateContainer = $('#certificateContainer');
             const newInputWrapper = $('<div class="file-input-wrapper"></div>');
             const newInput = $('<input type="file" name="certificates" class="form-control-file mt-2" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png">');
-            const removeButton = $('<button type="button" class="btn btn-danger btn-sm remove-file">Remove</button>');
+            const removeButton = $('<button type="button" class="icon-btn remove-file btn-danger" style="background: none; border: none; padding: 0; margin-left: 6px; line-height: 1;"><i class="fas fa-trash-alt" style="font-size: 0.9rem; color: red;><i class="fas fa-trash-alt"></i></button>');
+ 
+
             newInputWrapper.append(newInput).append(removeButton);
             certificateContainer.append(newInputWrapper);
         });

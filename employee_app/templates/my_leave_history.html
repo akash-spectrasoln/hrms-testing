@@ -9,17 +9,17 @@
     }
 
     .container {
-        position: fixed;
-        top: 72px;
-        left: 250px;
-        right: 0;
-        bottom: 0;
-        overflow: hidden;
-        background-color: #f4f4f9;
-        padding: 40px 20px;
-        display: flex;
-        justify-content: center;
-    }
+    margin-left: 220px; /* Adjust this to match your actual sidebar width */
+    padding: 40px 20px;
+    background-color: #f4f4f9;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    min-height: calc(100vh - 72px); /* Adjust for top navbar if present */
+    margin-top: 72px;
+    overflow: auto;
+}
+
 
     .content-wrapper {
         width: 95%;

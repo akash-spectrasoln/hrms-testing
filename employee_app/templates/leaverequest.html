@@ -4,18 +4,15 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
     <style>
         .leave-request-content {
-            position: fixed;
-            top: 72px;
-            left: 250px;
-            right: 0;
-            bottom: 0;
-            overflow-y: auto;
-            background-color: #f4f4f9;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            padding: 20px;
-            z-index: 1;
+    margin-left: 50px; /* Adjust this to match your actual sidebar width */
+    padding: 40px 20px;
+    background-color: #f4f4f9;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    min-height: calc(100vh - 72px); /* Adjust for top navbar if present */
+    margin-top: 72px;
+    overflow: auto;
         }
 
         .form-container {
@@ -380,33 +377,33 @@
                 <div class="error-message">You have exhausted your Casual and Floating Leave entitlements for this year.</div>
                 {% endif %}
             </div>
-
             <div class="form-group" id="start-date-group">
-                <label class="form-label" for="id_start_date">Start Date</label>
-                <input type="text" id="id_start_date" name="start_date" class="form-input"
-                       value="{{ form.start_date.value|default:'' }}" required autocomplete="off">
-                {% if form.start_date.errors %}
-                <div class="error-message">
-                    {% for error in form.start_date.errors %}
-                    <p>{{ error }}</p>
-                    {% endfor %}
-                </div>
-                {% endif %}
-            </div>
+    <label class="form-label" for="id_start_date">Start Date</label>
+    <input type="date" id="id_start_date" name="start_date" class="form-input"
+           value="{{ form.start_date.value|default:'' }}" required autocomplete="off">
+    {% if form.start_date.errors %}
+    <div class="error-message">
+        {% for error in form.start_date.errors %}
+        <p>{{ error }}</p>
+        {% endfor %}
+    </div>
+    {% endif %}
+</div>
 
-            <div class="form-group" id="end-date-group">
-                <label class="form-label" for="id_end_date">End Date</label>
-                <input type="text" id="id_end_date" name="end_date" class="form-input"
-                       value="{{ form.end_date.value|default:'' }}" autocomplete="off">
-                {% if form.end_date.errors %}
-                <div class="error-message">
-                    {% for error in form.end_date.errors %}
-                    <p>{{ error }}</p>
-                    {% endfor %}
-                </div>
-                {% endif %}
-            </div>
+<div class="form-group" id="end-date-group">
+    <label class="form-label" for="id_end_date">End Date</label>
+    <input type="date" id="id_end_date" name="end_date" class="form-input"
+           value="{{ form.end_date.value|default:'' }}" required autocomplete="off">
+    {% if form.end_date.errors %}
+    <div class="error-message">
+        {% for error in form.end_date.errors %}
+        <p>{{ error }}</p>
+        {% endfor %}
+    </div>
+    {% endif %}
+</div>
 
+           
             <div class="form-group">
                 <label class="form-label" for="id_reason">Reason</label>
                 <textarea id="id_reason" name="reason" class="form-textarea" rows="4" required>{{ form.reason.value|default_if_none:'' }}</textarea>
@@ -445,6 +442,46 @@
 {% endblock %}
 
 {% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const startInput = document.getElementById('id_start_date');
+    const endInput = document.getElementById('id_end_date');
+
+    function formatDate(date) {
+        return date.toISOString().split('T')[0];
+    }
+
+    function setTodayIfEmpty(input) {
+        if (!input.value) {
+            input.value = formatDate(new Date());
+        }
+    }
+
+    function setEndDateMinBasedOnStart() {
+        const startDate = new Date(startInput.value);
+        const nextDay = new Date(startDate);
+        nextDay.setDate(startDate.getDate() + 1);
+
+        const minEndDate = formatDate(nextDay);
+        endInput.min = minEndDate;
+
+        // Set end date only if it's empty or before min
+        if (!endInput.value || new Date(endInput.value) < nextDay) {
+            endInput.value = minEndDate;
+        }
+    }
+
+    // Step 1: Set today if blank
+    setTodayIfEmpty(startInput);
+
+    // Step 2: Set end date minimum and value
+    setEndDateMinBasedOnStart();
+
+    // Step 3: When user changes start date, auto-fix end date if needed
+    startInput.addEventListener('change', setEndDateMinBasedOnStart);
+});
+</script>
+
 <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 <script>
 document.addEventListener("DOMContentLoaded", function () {
@@ -559,77 +596,86 @@ document.addEventListener("DOMContentLoaded", function () {
     });
 
     leaveForm.addEventListener("submit", function(event) {
-        clearInlineError();
-        const startDateValue = startDateInput.value;
-        const endDateValue = endDateInput.value;
-        if (startDateValue && endDateValue && startDateValue > endDateValue) {
-            event.preventDefault();
-            showInlineError("Start Date cannot be after End Date.");
+    clearInlineError();
+    const startDateValue = startDateInput.value;
+    const endDateValue = endDateInput.value;
+
+    if (startDateValue && endDateValue && startDateValue > endDateValue) {
+        event.preventDefault();
+        hideSpinnerAndEnableButtons();  // ✅ Hide spinner if validation fails
+        showInlineError("Start Date cannot be after End Date.");
+        return;
+    }
+
+    // Always fill end date for one-day BEFORE AJAX or submit
+    if (dayTypeSelect.value === "one") {
+        endDateInput.value = startDateInput.value;
+    }
+
+    if (!document.getElementById('floating_holiday_confirmed')) {
+        event.preventDefault();
+
+        const startDate = startDateInput.value;
+        const endDate = dayTypeSelect.value === "one" ? startDate : endDateInput.value;
+        const leaveType = leaveTypeSelect.value;
+
+        if (!startDate || !endDate) {
+            hideSpinnerAndEnableButtons();  // ✅ Show/hide in all early returns
+            leaveForm.submit();
             return;
         }
 
-        // Always fill end date for one-day BEFORE AJAX or submit
-        if (dayTypeSelect.value === "one") {
-            endDateInput.value = startDateInput.value;
-        }
+        fetch("{% url 'check_leave_conflicts' %}", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            },
+            body: `start_date=${encodeURIComponent(startDate)}&end_date=${encodeURIComponent(endDate)}&leave_type=${encodeURIComponent(leaveType)}`
+        })
+        .then(response => response.json())
+        .then(data => {
+            const conflictDates = data.conflict_dates || [];
+            const floatingNotApplied = data.floating_holiday_not_applied || [];
 
-        // Only check for conflicts if not confirmed/finalized yet
-        if (!document.getElementById('floating_holiday_confirmed')) {
-            event.preventDefault();
-
-            const startDate = startDateInput.value;
-            const endDate = dayTypeSelect.value === "one" ? startDate : endDateInput.value;
-            const leaveType = leaveTypeSelect.value;
-
-            if (!startDate || !endDate) {
-                leaveForm.submit();
+            if (conflictDates.length > 0) {
+                hideSpinnerAndEnableButtons();  // ✅ Hide spinner on conflict
+                alert("A leave is already applied for these date(s):\n" + conflictDates.join('\n'));
                 return;
             }
 
-            fetch("{% url 'check_leave_conflicts' %}", {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
-                },
-                body: `start_date=${encodeURIComponent(startDate)}&end_date=${encodeURIComponent(endDate)}&leave_type=${encodeURIComponent(leaveType)}`
-            })
-            .then(response => response.json())
-            .then(data => {
-                const conflictDates = data.conflict_dates || [];
-                const floatingNotApplied = data.floating_holiday_not_applied || [];
-                if (conflictDates.length > 0) {
-                    alert("A leave is already applied for these date(s):\n" + conflictDates.join('\n'));
-                    return;
-                }
-                // Case-insensitive and trimmed check for robustness:
-                if (floatingNotApplied.length > 0 && leaveType.trim().toLowerCase() === "casual leave") {
-                    const formattedDates = floatingNotApplied.map(formatDate).join('<br>');
-                    const message = `
-                        <b>Your leave request includes ${floatingNotApplied.length} floating holiday(s):</b><br>
-                        ${formattedDates}<br><br>
-                        Do you want to convert these to <b>Casual Leave</b>?
-                    `;
-                    showModal(message, function() {
-                        // Add hidden input and submit
-                        const hiddenInput = document.createElement('input');
-                        hiddenInput.type = 'hidden';
-                        hiddenInput.name = 'floating_holiday_confirmed';
-                        hiddenInput.id = 'floating_holiday_confirmed';
-                        hiddenInput.value = 'true';
-                        leaveForm.appendChild(hiddenInput);
-                        leaveForm.submit();
-                    }, function() {/* just close modal */});
-                } else {
+            if (floatingNotApplied.length > 0 && leaveType.trim().toLowerCase() === "casual leave") {
+                hideSpinnerAndEnableButtons();  // ✅ Hide before modal
+                const formattedDates = floatingNotApplied.map(formatDate).join('<br>');
+                const message = `
+                    <b>Your leave request includes ${floatingNotApplied.length} floating holiday(s):</b><br>
+                    ${formattedDates}<br><br>
+                    Do you want to convert these to <b>Casual Leave</b>?
+                `;
+                showModal(message, function() {
+                    const hiddenInput = document.createElement('input');
+                    hiddenInput.type = 'hidden';
+                    hiddenInput.name = 'floating_holiday_confirmed';
+                    hiddenInput.id = 'floating_holiday_confirmed';
+                    hiddenInput.value = 'true';
+                    leaveForm.appendChild(hiddenInput);
                     leaveForm.submit();
-                }
-            })
-            .catch(err => {
-                alert("Error checking leave conflicts!");
-                leaveForm.submit(); // fallback to submit in case of error
-            });
-        }
-    });
+                }, function() {
+                    // User canceled modal → no submit, spinner off
+                    hideSpinnerAndEnableButtons();  // ✅ Spinner off here too
+                });
+            } else {
+                leaveForm.submit();
+            }
+        })
+        .catch(err => {
+            hideSpinnerAndEnableButtons();  // ✅ On error
+            alert("Error checking leave conflicts!");
+            leaveForm.submit(); // fallback submit
+        });
+    }
+});
+
 
     // --- Modal Helpers ---
     function formatDate(dateString) {

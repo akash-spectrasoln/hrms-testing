@@ -2,80 +2,94 @@
 
 {% block styles %}
 <style>
-    body, html {
-        height: 100%;
+    html, body {
         margin: 0;
         padding: 0;
+        height: 100%;
         background: #f4f4f9;
+        font-family: Arial, sans-serif;
     }
-    #layout-wrapper {
-        display: flex;
-        flex-direction: row;
-        min-height: 100vh;
-    }
+
     #admin-sidebar {
         width: 250px;
-        min-width: 80px;
+        position: fixed;
+        top: 72px;
+        left: 0;
+        height: 100vh;
         background: #fff;
         border-right: 1px solid #e4e6ef;
-        height: 100vh;
-        z-index: 9;
+        z-index: 1000;
     }
-    #main-content {
-        flex: 1 1 0%;
-        min-width: 0;
+
+    nav {
+        height: 72px;
         width: 100%;
-        display: flex;
-        flex-direction: column;
+        position: fixed;
+        top: 0;
+        left: 0;
+        background-color: white;
+        z-index: 1001;
+        border-bottom: 1px solid #e4e6ef;
     }
+
+    #main-content {
+        padding-left: 250px;  /* Push right of sidebar */
+        padding-top: 72px;    /* Push below navbar */
+        box-sizing: border-box;
+    }
+
     .leave-requests-table-container {
+        max-width: 1100px;
+        margin: 0 auto;
         padding: 40px 20px;
         background-color: #f4f4f9;
         min-height: 100vh;
-        width: 100%;
         box-sizing: border-box;
     }
-    #main-content {
-    align-items: center;
-}
-.leave-requests-table-container {
-    max-width: 90%;
-    margin: 0 auto;
-}
+
     .leave-requests-heading {
         margin-bottom: 24px;
         color: #2c3e50;
         font-size: 2rem;
         font-weight: 600;
         text-align: center;
-        letter-spacing: 1px;
     }
+
     .leave-requests-table {
-        width: 90%;
+        width: 100%;
         background: #fff;
         border-radius: 8px;
         box-shadow: 0 2px 4px rgba(0,0,0,0.07);
         border-collapse: collapse;
         overflow: hidden;
+        table-layout: auto;
     }
-    .leave-requests-table th, .leave-requests-table td {
+
+    .leave-requests-table th,
+    .leave-requests-table td {
         padding: 14px 12px;
-        text-align: left;
+        text-align: center;
     }
+
     .leave-requests-table th {
         background: #f3f7fa;
         color: #3b82f6;
     }
+
     .leave-requests-table tr:not(:last-child) td {
         border-bottom: 1px solid #e2e8f0;
     }
+
     .leave-requests-table tr:hover {
         background-color: #f0f4f8;
     }
+
     .action-buttons {
         display: flex;
         gap: 10px;
+        justify-content: center;
     }
+
     .btn {
         padding: 5px 14px;
         border: none;
@@ -86,10 +100,25 @@
         min-width: 80px;
         transition: all 0.2s;
     }
-    .btn-accept { background: #3b82f6; color: #fff;}
-    .btn-reject { background: #ef4444; color: #fff;}
-    .btn-accept:hover { background: #2563eb;}
-    .btn-reject:hover { background: #dc2626;}
+
+    .btn-accept {
+        background: #3b82f6;
+        color: #fff;
+    }
+
+    .btn-reject {
+        background: #ef4444;
+        color: #fff;
+    }
+
+    .btn-accept:hover {
+        background: #2563eb;
+    }
+
+    .btn-reject:hover {
+        background: #dc2626;
+    }
+
     .no-requests-row {
         text-align: center;
         color: #999;
@@ -97,60 +126,37 @@
         font-size: 1.05rem;
         background-color: #fff;
     }
-    @media (max-width: 1100px) {
-        #admin-sidebar { width: 200px; }
-    }
-    @media (max-width: 900px) {
-        .leave-requests-table-container {
-            padding: 15px 7px 30px 7px;
-        }
-        .leave-requests-heading {
-            font-size: .7rem;
-        }
-    }
-    @media (max-width: 600px) {
-        #layout-wrapper { flex-direction: column; }
-        #admin-sidebar {
-            width: 100vw;
-            height: auto;
-            border-right: none;
-            border-bottom: 1px solid #e4e6ef;
-        }
-        #main-content { width: 100vw; }
-        .leave-requests-table-container {
-            padding: 12px 4px;
-            top: 72px !important;
-        }
-        .leave-requests-table th,
-        .leave-requests-table td {
-            padding: 10px 4px;
-            font-size: 13px;
-        }
-    }
+
     .status-pending {
         color: #ca8a04;
         font-weight: 600;
     }
+
     .status-upcoming {
         color: #06b6d4;
         font-weight: 600;
     }
-    .status-approved{
+
+    .status-approved {
         color: #22c55e;
         font-weight: 600;
     }
+
     .status-rejected {
         color: #ef4444;
         font-weight: 600;
     }
+
     .status-deleted {
         color: #850d0d;
         font-weight: 600;
     }
+
     .status-other {
         color: #64748b;
         font-weight: 600;
     }
+
     .btn-search {
         padding: 7px 18px;
         border-radius: 4px;
@@ -165,10 +171,49 @@
         gap: 8px;
         transition: all 0.18s;
     }
+
     .btn-search:hover {
         background: #2563eb;
     }
+
+    /* Responsive Fixes */
+    @media (max-width: 1100px) {
+        #admin-sidebar {
+            width: 200px;
+        }
+        #main-content {
+            padding-left: 200px;
+        }
+    }
+
+    @media (max-width: 768px) {
+        #admin-sidebar {
+            position: relative;
+            width: 100%;
+            height: auto;
+            border-right: none;
+            border-bottom: 1px solid #e4e6ef;
+        }
+
+        nav {
+            position: relative;
+        }
+
+        #main-content {
+            padding-left: 0;
+            padding-top: 0;
+        }
+
+        .leave-requests-table-container {
+            padding: 20px 10px;
+        }
+
+        .leave-requests-heading {
+            font-size: 1.2rem;
+        }
+    }
 </style>
+
 <!-- Font Awesome icon for search button (CDN) -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css"/>
 {% endblock %}

@@ -60,11 +60,11 @@ class EmployeeEditForm(forms.ModelForm):
         empty_label="None"
     )
     # Changed employee_type from ChoiceField to ModelChoiceField for FK relation
-    employee_type = forms.ModelChoiceField(
-        queryset=EmployeeType.objects.all(),
-        required=True,
-        widget=forms.Select(attrs={'class': 'form-control'})
-    )
+    # employee_type = forms.ModelChoiceField(
+    #     queryset=EmployeeType.objects.all(),
+    #     required=True,
+    #     widget=forms.Select(attrs={'class': 'form-control'})
+    # )
     resignation_date = forms.DateField(
         required=False,
         widget=forms.DateInput(attrs={'type': 'date', 'class': 'form-control'})
@@ -125,9 +125,9 @@ class EmployeeEditForm(forms.ModelForm):
             'home_phone', 'valid_from', 'valid_to', 'country', 'state', 
             'department', 'role', 'manager','home_city','pincode','emergency_contact_name','emergency_contact_phone','emergency_contact_email',
              'emergency_contact_relation',
-            'base_salary', 'employee_type',
+             'base_salary',#'employee_type',
             'resignation_date', 'home_house', 'resumes', 'certificates', 'incentive', 'joining_bonus',
-            'date_of_birth',
+            'date_of_birth','pm_email',
             # ADD THE NEW FIELDS BELOW
             'pan_card', 'aadhaar', 'bank_name', 'bank_branch', 'bank_branch_address', 'bank_account', 'ifsc_code'
         ]
@@ -242,8 +242,8 @@ class Holiday_Form(forms.Form):
         ('floating', 'Floating Holiday'),
     ]
 
-    leave_type = forms.ChoiceField(choices=LEAVE_TYPE_CHOICES, label="Leave Type")
-    name = forms.CharField(max_length=100, label="Holiday Name")
+    leave_type = forms.ChoiceField(choices=LEAVE_TYPE_CHOICES, label="Leave Type", required=True)
+    name = forms.CharField(max_length=100, label="Holiday Name", required=True)
     date = forms.DateField(
         widget=forms.DateInput(attrs={'type': 'date', 'min': None, 'max': None}),
         label="Holiday Date",
