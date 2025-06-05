@@ -94,7 +94,7 @@ from django.contrib import messages
 from datetime import date
 from .forms import EmployeeEditForm
 from .models import Role, Department, state, Country, Salutation, Employees
-
+@signin_required
 def add_employee(request):
     if request.method == 'POST':
         form = EmployeeEditForm(request.POST, request.FILES, request=request)
@@ -319,7 +319,7 @@ from django.db.models import Q
 from django.utils import timezone
 from .models import Employees, Country  # Adjust as needed
 from datetime import date
-
+@signin_required
 def list_employees(request):
     queryset = Employees.objects.filter(is_deleted=False).order_by('-modified_on')
     country_list = Country.objects.all().order_by('country_name')
@@ -406,7 +406,7 @@ from django.shortcuts import get_object_or_404, redirect
 from django.contrib import messages
 from datetime import date
 from .models import LeaveRequest, Employees  # Adjust this import if your app name/model name differs
-
+@signin_required
 def delete_leave_request(request, leave_id):
     leave = get_object_or_404(LeaveRequest, id=leave_id)
     employee = leave.employee_user
@@ -484,11 +484,13 @@ import logging
 import traceback
 from .models import Employees, Salutation, Country, state, Department, Role
 from .forms import EmployeeEditForm
+from django.utils.decorators import method_decorator
+
 
 
 
 logger = logging.getLogger(__name__)
-
+@method_decorator(signin_required, name='dispatch')
 class EmployeeUpdateView(UpdateView):
     model = Employees
     form_class = EmployeeEditForm
@@ -1001,7 +1003,7 @@ from django.shortcuts import get_object_or_404, redirect
 from django.views.generic import DeleteView
 from django.contrib import messages
 from .models import Employees
-
+@method_decorator(signin_required, name='dispatch')
 class EmployeeDeleteView(DeleteView):
     model = Employees
     template_name = 'delete_employee.html'
@@ -1041,7 +1043,7 @@ def restore_employee(request, pk):
 
 from django.views.generic.list import ListView
 from .models import Employees
-
+@method_decorator(signin_required, name='dispatch')
 class DeletedEmployeeListView(ListView):
     model = Employees
     template_name = "deleted_employees_display.html"
@@ -1075,7 +1077,7 @@ from django.contrib import messages
 from django.core.mail import send_mail
 from django.conf import settings
 from datetime import timedelta
-
+@signin_required
 def accept_leave_request(request, leave_request_id):
     if request.method == "POST":
         leave_request = get_object_or_404(LeaveRequest, id=leave_request_id)
@@ -1168,7 +1170,7 @@ def accept_leave_request(request, leave_request_id):
 
     return HttpResponse("Invalid Request", status=400)
 
-
+@signin_required
 def reject_leave_request(request, leave_request_id):
     if request.method == "POST":
         leave_request = get_object_or_404(LeaveRequest, id=leave_request_id)
@@ -1243,7 +1245,7 @@ from datetime import datetime
 from django.shortcuts import render, redirect
 from django.contrib import messages
 from django.urls import reverse
-
+@signin_required
 def add_holidays(request):
     # Figure out initial/current filter values:
     # 1) POST (user submitting form, which may error)
@@ -1472,7 +1474,7 @@ from django.db.models import Q
 from datetime import date
 from .models import Country  # Import your Country model
 
-
+@signin_required
 def admin_leave_requests(request):
     countries = Country.objects.all().order_by('country_name')
 
