@@ -230,6 +230,87 @@
         });
     });
 </script>
+<script>
+    (function() {
+        'use strict';
+        
+        // Hide spinner immediately (before DOM loads)
+        if (document.getElementById('spinner-overlay')) {
+            document.getElementById('spinner-overlay').style.display = 'none';
+        }
+        
+        function showSpinner() {
+            const spinner = document.getElementById('spinner-overlay');
+            if (spinner) {
+                spinner.style.display = 'flex';
+            }
+        }
+        
+        function hideSpinner() {
+            const spinner = document.getElementById('spinner-overlay');
+            if (spinner) {
+                spinner.style.display = 'none';
+            }
+        }
+        
+        function enableButtons() {
+            document.querySelectorAll('button, input[type=submit]').forEach(el => {
+                el.disabled = false;
+            });
+        }
+        
+        function disableButtons() {
+            document.querySelectorAll('button, input[type=submit]').forEach(el => {
+                el.disabled = true;
+            });
+        }
+        
+        // Initialize on DOM ready
+        document.addEventListener('DOMContentLoaded', () => {
+            hideSpinner();
+            enableButtons();
+            
+            // Form submissions
+            document.querySelectorAll('form').forEach(form => {
+                form.addEventListener('submit', (e) => {
+                    if (form.checkValidity()) {
+                        showSpinner();
+                        disableButtons();
+                    }
+                });
+            });
+            
+            // Navigation with debouncing
+            let navigationTimer;
+            window.addEventListener('beforeunload', (e) => {
+                clearTimeout(navigationTimer);
+                navigationTimer = setTimeout(() => {
+                    showSpinner();
+                    disableButtons();
+                }, 50);
+            });
+            
+            // Cancel navigation
+            window.addEventListener('unload', () => {
+                clearTimeout(navigationTimer);
+            });
+        });
+        
+        // Handle browser back/forward
+        window.addEventListener('pageshow', (event) => {
+            hideSpinner();
+            enableButtons();
+        });
+        
+        // Handle visibility change
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden) {
+                hideSpinner();
+                enableButtons();
+            }
+        });
+    })();
+    </script>
 {% endblock javascript %}
 
     <div id="spinner-overlay" class="spinner-overlay">

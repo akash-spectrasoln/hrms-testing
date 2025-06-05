@@ -96,10 +96,10 @@ WSGI_APPLICATION = 'hrms_project.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',  # or 'django.db.backends.mysql' for MySQL
-        'NAME': 'hrms-testing',
+        'NAME': 'postgres',
         'USER': 'postgres',
-        'PASSWORD': 'Spectra$123',
-        'HOST': '34.16.118.216',  # or 'localhost' if using Cloud SQL Proxy
+        'PASSWORD': 'Hrms@123',
+        'HOST': '34.29.190.19',  # or 'localhost' if using Cloud SQL Proxy
         'PORT': '5432',  # PostgreSQL default port, or '3306' for MySQL
     }
 }
