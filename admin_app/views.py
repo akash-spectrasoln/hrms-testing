@@ -156,14 +156,15 @@ def export_employees_to_excel(request):
     # Define the header row
     headers = [
         'Employee ID', 'Salutation', 'First Name', 'Middle Name', 'Last Name',
-        'Company Email', 'Personal Email', 'Mobile Phone', 'Office Phone', 'Home Phone',
-        'Valid From', 'Valid To', 'Country', 'State', 'Address', 'Home House',
-        'Home City', 'Pincode', 'Role', 'Department', 'Designation', 'Manager',
-        'Employee Status', 'Emergency Contact Name', 'Emergency Contact Phone',
+        'Date of Birth', 'Company Email', 'Personal Email', 'Mobile Phone', 'Office Phone', 
+        'Home Phone', 'Valid From', 'Valid To', 'Country', 'State', 'Address', 
+        'Home House', 'Home Post Office', 'Home City', 'Pincode', 'Role', 'Department', 
+        'Manager', 'Employee Status', 'Emergency Contact Name', 'Emergency Contact Phone',
         'Emergency Contact Email', 'Emergency Contact Relation', 'Base Salary',
-        'Resume', 'Certificates', 'Created On', 'Modified On', 'Is Deleted',
-        'Floating Holidays Balance', 'Floating Holidays Used', 'Total Leaves',
-        'Used Leaves','Date Of Birth'
+        'Created On', 'Modified On', 'Is Deleted', 'Floating Holidays Balance', 
+        'Floating Holidays Used', 'Total Leaves', 'Used Leaves', 'Resignation Date',
+        'Incentive', 'Joining Bonus', 'PAN Card', 'Aadhaar', 'Bank Name', 
+        'Bank Branch', 'Bank Branch Address', 'Bank Account', 'IFSC Code'
     ]
 
     # Write the header row to the sheet
@@ -187,41 +188,61 @@ def export_employees_to_excel(request):
             employee.middle_name,
             employee.last_name,
             employee.date_of_birth,
-            employee.company_email,
-            employee.personal_email,
-            employee.mobile_phone,
+            employee.company_email,  # This is encrypted but accessed directly
+            employee.enc_personal_email,  # Using encrypted property
+            employee.enc_mobile_phone,    # Using encrypted property
             employee.office_phone,
-            employee.home_phone,
+            employee.enc_home_phone,      # Using encrypted property
             employee.valid_from,
             employee.valid_to,
             employee.country.country_name if employee.country else '',
             employee.state.name if employee.state else '',
-            employee.address,
-            employee.home_house,
-            employee.home_city,
-            employee.pincode,
+            employee.enc_address,         # Using encrypted property
+            employee.enc_home_house,      # Using encrypted property
+            employee.home_post_office,    # Not encrypted in your model
+            employee.enc_home_city,       # Using encrypted property
+            employee.enc_pincode,         # Using encrypted property
             employee.role.role_name if employee.role else '',
             employee.department.dep_name if employee.department else '',
-            employee.designation,
             f"{employee.manager.first_name} {employee.manager.last_name}" if employee.manager else '',
             employee.employee_status,
-            employee.emergency_contact_name,
-            employee.emergency_contact_phone,
+            employee.enc_emergency_contact_name,      # Using encrypted property
+            employee.enc_emergency_contact_phone,     # Using encrypted property
             employee.emergency_contact_email,
-            employee.emergency_contact_relation,
-            float(employee.base_salary),
+            employee.enc_emergency_contact_relation,  # Using encrypted property
+            employee.enc_base_salary,                 # Using encrypted property
             created_on,
             modified_on,
             employee.is_deleted,
             employee.floating_holidays_balance,
             employee.floating_holidays_used,
             employee.total_leaves,
-            employee.used_leaves
+            employee.used_leaves,
+            employee.resignation_date,
+            employee.enc_incentive,         # Using encrypted property
+            employee.enc_joining_bonus,     # Using encrypted property
+            employee.enc_pan_card,          # Using encrypted property
+            employee.enc_aadhaar,           # Using encrypted property
+            employee.enc_bank_name,         # Using encrypted property
+            employee.enc_bank_branch,       # Using encrypted property
+            employee.enc_bank_branch_address,  # Using encrypted property
+            employee.enc_bank_account,      # Using encrypted property
+            employee.enc_ifsc_code          # Using encrypted property
         ]
 
         for col_num, cell_value in enumerate(row, 1):
             col_letter = get_column_letter(col_num)
-            sheet[f'{col_letter}{row_num}'] = cell_value
+            # Handle None values and ensure proper data types
+            if cell_value is None:
+                sheet[f'{col_letter}{row_num}'] = ''
+            elif isinstance(cell_value, str) and cell_value.replace('.', '').replace('-', '').isdigit():
+                # Try to convert numeric strings to float for salary/incentive fields
+                try:
+                    sheet[f'{col_letter}{row_num}'] = float(cell_value)
+                except ValueError:
+                    sheet[f'{col_letter}{row_num}'] = cell_value
+            else:
+                sheet[f'{col_letter}{row_num}'] = cell_value
 
     # Set the response headers
     response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
@@ -231,11 +252,6 @@ def export_employees_to_excel(request):
     workbook.save(response)
 
     return response
-
-
-
-
-
 
 from django.db.models import Q
 from django.utils import timezone
@@ -697,49 +713,62 @@ class EmployeeExcelCreateView(View):
                     try:
                         print(f"[DEBUG] Row {excel_row_num}: Creating Employee object")
                         with transaction.atomic():
+                            # Create employee with non-encrypted fields first
                             employee = Employees(
                                 employee_type=employee_type_obj,
-                                employee_id = generate_employee_id(employee_type_obj.code),
+                                employee_id=generate_employee_id(employee_type_obj.code),
                                 salutation=salutation,
                                 first_name=parse(row['First Name']),
                                 middle_name=parse(row['Middle Name']) if 'Middle Name' in row else '',
                                 last_name=parse(row['Last Name']),
-                                company_email=parse(row['Company Email']),
-                                personal_email=parse(row['Personal Email']),
-                                mobile_phone=str(parse(row['Mobile Phone'])),
+                                company_email=parse(row['Company Email']),  # This is stored encrypted but no property exists
                                 office_phone=str(parse(row['Office Phone'])) if 'Office Phone' in row else '',
-                                home_phone=str(parse(row['Home Phone'])) if 'Home Phone' in row else '',
                                 valid_from=parse_date_field(row['Valid From']),
                                 valid_to=parse_date_field(row['Valid To']),
                                 country=country,
                                 state=state_obj,
-                                address=parse(row['Address']) if 'Address' in row else '',
-                                home_house=parse(row['Home House']),
                                 home_post_office=parse(row['Home Post Office']),
-                                home_city=parse(row['Home City']),
-                                pincode=str(parse(row['Pincode'])) if 'Pincode' in row else '',
                                 department=department,
                                 role=role_obj,
                                 manager=manager,
-                                
-                                emergency_contact_name=parse(row['Emergency Contact Name']) if 'Emergency Contact Name' in row else None,
-                                emergency_contact_phone=str(parse(row['Emergency Contact Phone'])) if 'Emergency Contact Phone' in row else '',
-                                
-                                emergency_contact_relation=parse(row['Emergency Contact Relation']) if 'Emergency Contact Relation' in row else None,
-                                base_salary=parse_decimal(row['Base Salary']),
                                 date_of_birth=parse_date_field(row['Date Of Birth']) if 'Date Of Birth' in row else None,
                                 resignation_date=parse_date_field(row['Resignation Date']) if 'Resignation Date' in row else None,
-                                joining_bonus=parse_decimal(row['Joining Bonus']) if 'Joining Bonus' in row else 0.0,
-                                incentive=parse_decimal(row['Incentive']) if 'Incentive' in row else 0.0,
-                                pan_card = parse(row['PAN Card']) if 'PAN Card' in row else '',
-                                aadhaar = parse(row['Aadhar']) if 'Aadhar' in row else '',
-                                bank_name = parse(row['Bank Name']) if 'Bank Name' in row else '',
-                                bank_branch = parse(row['Bank Branch']) if 'Bank Branch' in row else '',
-                                bank_branch_address = parse(row['Bank Branch Address']) if 'Bank Branch Address' in row else '',
-                                bank_account = parse(row['Bank Account']) if 'Bank Account' in row else '',
-                                ifsc_code = parse(row['IFSC Code']) if 'IFSC Code' in row else '',
-
+                                emergency_contact_email=parse(row['Emergency Contact Email']) if 'Emergency Contact Email' in row else None,
                             )
+                            
+                            # Set encrypted fields using the properties
+                            # Personal information
+                            employee.enc_personal_email = parse(row['Personal Email'])
+                            employee.enc_mobile_phone = str(parse(row['Mobile Phone']))
+                            employee.enc_home_phone = str(parse(row['Home Phone'])) if 'Home Phone' in row else ''
+                            
+                            # Address information
+                            employee.enc_address = parse(row['Address']) if 'Address' in row else ''
+                            employee.enc_home_house = parse(row['Home House'])
+                            employee.enc_home_city = parse(row['Home City'])
+                            employee.enc_pincode = str(parse(row['Pincode'])) if 'Pincode' in row else ''
+                            
+                            # Emergency contact
+                            employee.enc_emergency_contact_name = parse(row['Emergency Contact Name']) if 'Emergency Contact Name' in row else None
+                            employee.enc_emergency_contact_phone = str(parse(row['Emergency Contact Phone'])) if 'Emergency Contact Phone' in row else ''
+                            employee.enc_emergency_contact_relation = parse(row['Emergency Contact Relation']) if 'Emergency Contact Relation' in row else None
+                            
+                            # Financial information
+                            employee.enc_base_salary = str(parse_decimal(row['Base Salary']))
+                            employee.enc_joining_bonus = str(parse_decimal(row['Joining Bonus'])) if 'Joining Bonus' in row else '0.0'
+                            employee.enc_incentive = str(parse_decimal(row['Incentive'])) if 'Incentive' in row else '0.0'
+                            
+                            # Government IDs
+                            employee.enc_pan_card = parse(row['PAN Card']) if 'PAN Card' in row else ''
+                            employee.enc_aadhaar = parse(row['Aadhar']) if 'Aadhar' in row else ''
+                            
+                            # Bank information
+                            employee.enc_bank_name = parse(row['Bank Name']) if 'Bank Name' in row else ''
+                            employee.enc_bank_branch = parse(row['Bank Branch']) if 'Bank Branch' in row else ''
+                            employee.enc_bank_branch_address = parse(row['Bank Branch Address']) if 'Bank Branch Address' in row else ''
+                            employee.enc_bank_account = parse(row['Bank Account']) if 'Bank Account' in row else ''
+                            employee.enc_ifsc_code = parse(row['IFSC Code']) if 'IFSC Code' in row else ''
+                            
                             employee.save()
 
                             if employee.user:
@@ -758,7 +787,7 @@ class EmployeeExcelCreateView(View):
                             'department': employee.department.dep_name if employee.department else '',
                             'role': str(employee.role) if employee.role else '',
                             'company_email': employee.company_email,
-                            'mobile_phone': employee.mobile_phone
+                            'mobile_phone': employee.enc_mobile_phone  # Use encrypted property for display
                         })
 
                     except Exception as e:
@@ -787,8 +816,7 @@ class EmployeeExcelCreateView(View):
         except Exception as e:
             import traceback
             print("[DEBUG] Top-level exception in POST handler:")
-            print(traceback.format_exc())
-            return JsonResponse({'error': f"Failed to process the Excel file: {str(e)}"}, status=400)
+            print
 from django.contrib import messages
 from django.views import View
 from .models import Employees
@@ -1048,17 +1076,41 @@ def accept_leave_request(request, leave_request_id):
         leave_request.leave_days = casual_days + floating_days  # or just "leave_days" if consistent
         leave_request.save()
 
-        # Email
+        # Email to Employee
         employee_email = employee.user.email
-        subject = "Leave Request Approved"
-        message = (
+        employee_subject = "Leave Request Approved"
+        employee_message = (
             f"Dear {employee.first_name},\n\n"
             f"Your leave request from {leave_request.start_date} to {leave_request.end_date} has been approved.\n"
             f"Status: Approved\n"
+            f"Casual Leave Days: {casual_days}\n"
+            f"Floating Holiday Days: {floating_days}\n"
+            f"Total Leave Days: {casual_days + floating_days}\n"
             f"Enjoy your leave!\n\n"
             f"Best Regards,\nYour Leave Management System"
         )
-        send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [employee_email])
+        
+        # Send email to employee
+        send_mail(employee_subject, employee_message, settings.DEFAULT_FROM_EMAIL, [employee_email])
+        
+        # Email to PM (if PM email exists)
+        if employee.pm_email:
+            pm_subject = f"Leave Request Approved - {employee.first_name} {employee.last_name}"
+            pm_message = (
+                f"Dear Project Manager,\n\n"
+                f"{employee.first_name} {employee.last_name}'s leave request has been approved.\n\n"
+                f"Employee ID: {employee.employee_id}\n"
+                f"Leave Period: {leave_request.start_date} to {leave_request.end_date}\n"
+                f"Casual Leave Days: {casual_days}\n"
+                f"Floating Holiday Days: {floating_days}\n"
+                f"Total Leave Days: {casual_days + floating_days}\n"
+                f"Reason: {leave_request.leave_reason}\n\n"
+                f"Best Regards,\nYour Leave Management System"
+            )
+            
+            # Send email to PM
+            send_mail(pm_subject, pm_message, settings.DEFAULT_FROM_EMAIL, [employee.pm_email])
+        
         messages.success(request, "The leave request has been approved.")
 
         return redirect('leave_request_display')
@@ -1070,24 +1122,43 @@ def reject_leave_request(request, leave_request_id):
     if request.method == "POST":
         leave_request = get_object_or_404(LeaveRequest, id=leave_request_id)
         leave_request.status = "Rejected"
-        leave_request.approved_by = request.user  # Set who approved
+        leave_request.approved_by = request.user  # Set who rejected
         leave_request.save()
 
-        # Fetch employee's email
-        employee_email = leave_request.employee_master.user.email  # Assuming `user` is a related field
+        # Get employee object
+        employee = leave_request.employee_master
+        employee_email = employee.user.email
 
-        # Email content
-        subject = "Leave Request Rejected"
-        message = (
-            f"Dear {leave_request.employee_master.first_name},\n\n"
-            f"Your leave request from {leave_request.start_date} to {leave_request.end_date} has been rejected by the admin.\n"
+        # Email to Employee
+        employee_subject = "Leave Request Rejected"
+        employee_message = (
+            f"Dear {employee.first_name},\n\n"
+            f"Your leave request from {leave_request.start_date} to {leave_request.end_date} has been rejected.\n"
             f"Status: Rejected\n"
-            f"If you have any questions, please contact HR.\n\n"
+            f"If you have any questions or would like to discuss this decision, please contact HR.\n\n"
             f"Best Regards,\nYour Leave Management System"
         )
 
-        # Send email
-        send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [employee_email])
+        # Send email to employee
+        send_mail(employee_subject, employee_message, settings.DEFAULT_FROM_EMAIL, [employee_email])
+
+        # Email to PM (if PM email exists)
+        if employee.pm_email:
+            pm_subject = f"Leave Request Rejected - {employee.first_name} {employee.last_name}"
+            pm_message = (
+                f"Dear Project Manager,\n\n"
+                f"{employee.first_name} {employee.last_name}'s leave request has been rejected.\n\n"
+                f"Employee ID: {employee.employee_id}\n"
+                f"Leave Period: {leave_request.start_date} to {leave_request.end_date}\n"
+                f"Reason for Leave: {leave_request.leave_reason}\n"
+                f"Status: Rejected\n\n"
+                f"The employee has been notified of this decision.\n\n"
+                f"Best Regards,\nYour Leave Management System"
+            )
+            
+            # Send email to PM
+            send_mail(pm_subject, pm_message, settings.DEFAULT_FROM_EMAIL, [employee.pm_email])
+
         messages.success(request, "The leave request has been rejected.")
 
         return redirect('leave_request_display')  # Redirect back to the display page

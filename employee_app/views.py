@@ -925,34 +925,72 @@ def request_leave(request):
             leave_request.leave_days = leave_duration
             leave_request.created_by = request.user
             leave_request.save()
-
             manager = getattr(employee, 'manager', None)
+            # Email to Employee
             send_mail(
                 subject="Leave Request Submitted",
                 message=(
-                    f"Dear {employee.first_name},\n\nYour leave request ({leave_request.leave_type}) "
-                    f"from {leave_request.start_date} to {leave_request.end_date} has been submitted and is pending approval.\n\n"
-                    "Best regards,\nHR Team"
+                    f"Dear {employee.first_name},\n\n"
+                    f"Your leave request has been submitted successfully.\n\n"
+                    f"Leave Type: {leave_request.leave_type}\n"
+                    f"Leave Period: {leave_request.start_date} to {leave_request.end_date}\n"
+                    f"Total Days: {leave_request.leave_days} days\n"
+                    
+                    f"Reason: {leave_request.leave_reason}\n"
+                    f"Status: Pending Approval\n\n"
+                    f"You will be notified once your request is reviewed.\n\n"
+                    f"Best regards,\nHR Team"
                 ),
                 from_email="lms@spectrasoln.com",
                 recipient_list=[employee.company_email],
                 fail_silently=False,
             )
+
+        # Email to Manager
             if manager and getattr(manager, 'company_email', None):
                 send_mail(
-                    subject="Leave Approval Required",
-                    message = (
-                                f"Dear {manager.first_name},\n\n"
-                                f"Employee {employee.first_name} {employee.last_name} "
-                                f"has requested leave ({leave_request.leave_type}) from {leave_request.start_date} "
-                                f"to {leave_request.end_date}. Please review the request in the HR system.\n\n"
-                                f"Login here: {approval_url}\n\n"
-                                f"Best regards,\nHR Team"
-                            ),
+                    subject=f"Leave Approval Required - {employee.first_name} {employee.last_name}",
+                    message=(
+                        f"Dear {manager.first_name},\n\n"
+                        f"Employee {employee.first_name} {employee.last_name} has submitted a leave request.\n\n"
+                        f"Employee ID: {employee.employee_id}\n"
+                        f"Leave Type: {leave_request.leave_type}\n"
+                        f"Leave Period: {leave_request.start_date} to {leave_request.end_date}\n"
+                        f"Total Days: {leave_request.leave_days} days\n"
+                        
+                        f"Reason: {leave_request.leave_reason}\n"
+                        f"Employee's Leave Balance: {employee.total_leaves - employee.used_leaves} days remaining\n\n"
+                        f"Please review the request in the HR system.\n"
+                        f"Login here: {approval_url}\n\n"
+                        f"Best regards,\nHR Team"
+                    ),
                     from_email="lms@spectrasoln.com",
                     recipient_list=[manager.company_email],
                     fail_silently=False,
                 )
+
+                # Email to PM (if PM email exists)
+            if employee.pm_email:
+                send_mail(
+                    subject=f"Leave Request Notification - {employee.first_name} {employee.last_name}",
+                    message=(
+                        f"Dear Project Manager,\n\n"
+                        f"{employee.first_name} {employee.last_name} has applied for leave.\n\n"
+                        f"Employee ID: {employee.employee_id}\n"
+                        f"Leave Type: {leave_request.leave_type}\n"
+                        f"Leave Period: {leave_request.start_date} to {leave_request.end_date}\n"
+                        f"Total Days: {leave_request.leave_days} days\n"
+                        
+                        f"Reason: {leave_request.leave_reason}\n"
+                        f"Status: Pending Approval\n\n"
+                        f"This is for your information. The leave request is pending approval from the reporting manager.\n\n"
+                        f"Best regards,\nHR Team"
+                    ),
+                    from_email="lms@spectrasoln.com",
+                    recipient_list=[employee.pm_email],
+                    fail_silently=False,
+                )
+
             messages.success(request, "Leave request submitted successfully.")
             return redirect('request_leave')
 
@@ -1727,6 +1765,9 @@ def manage_leave_request(request, leave_request_id):
                 return redirect('manager_leave_requests')
 
             # Email to employee: LEAVE APPROVED
+            
+    
+    # Email to employee: LEAVE APPROVED
             send_mail(
                 subject="Your Leave Request Has Been Approved",
                 message=(
@@ -1739,11 +1780,30 @@ def manage_leave_request(request, leave_request_id):
                 recipient_list=[employee.company_email],
                 fail_silently=False,
             )
+            
+    # Email to PM (if PM email exists): LEAVE APPROVED
+    
+            send_mail(
+                subject=f"Leave Request Approved - {employee.first_name} {employee.last_name}",
+                message=(
+                    f"Dear Project Manager,\n\n"
+                    f"{employee.first_name} {employee.last_name}'s leave request has been approved.\n\n"
+                    f"Employee ID: {employee.employee_id}\n"
+                    f"Leave Type: {leave_request.leave_type}\n"
+                    f"Leave Period: {leave_request.start_date} to {leave_request.end_date}\n"
+                    f"Reason: {leave_request.leave_reason}\n"
+                    f"Status: Approved\n\n"
+                    f"Please plan accordingly for the employee's absence during this period.\n\n"
+                    f"Best regards,\nHR Team"
+                ),
+                from_email="lms@spectrasoln.com",
+                recipient_list=[employee.pm_email],
+                fail_silently=False,
+            )
 
-        elif action == 'reject':
-            leave_request.status = 'Rejected'
 
-            # Email to employee: LEAVE REJECTED
+        else:
+    # Email to employee: LEAVE REJECTED
             send_mail(
                 subject="Your Leave Request Has Been Rejected",
                 message=(
@@ -1756,6 +1816,26 @@ def manage_leave_request(request, leave_request_id):
                 recipient_list=[employee.company_email],
                 fail_silently=False,
             )
+            
+            # Email to PM (if PM email exists): LEAVE REJECTED
+            if employee.pm_email:
+                send_mail(
+                    subject=f"Leave Request Rejected - {employee.first_name} {employee.last_name}",
+                    message=(
+                        f"Dear Project Manager,\n\n"
+                        f"{employee.first_name} {employee.last_name}'s leave request has been rejected.\n\n"
+                        f"Employee ID: {employee.employee_id}\n"
+                        f"Leave Type: {leave_request.leave_type}\n"
+                        f"Leave Period: {leave_request.start_date} to {leave_request.end_date}\n"
+                        f"Reason: {leave_request.leave_reason}\n"
+                        f"Status: Rejected\n\n"
+                        f"The employee has been notified of this decision.\n\n"
+                        f"Best regards,\nHR Team"
+                    ),
+                    from_email="lms@spectrasoln.com",
+                    recipient_list=[employee.pm_email],
+                    fail_silently=False,
+                )
 
         if request.user.is_superuser:
             leave_request.approved_by = request.user
