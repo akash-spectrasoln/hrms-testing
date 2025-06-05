@@ -1157,7 +1157,7 @@ def accept_leave_request(request, leave_request_id):
                 f"Casual Leave Days: {casual_days}\n"
                 f"Floating Holiday Days: {floating_days}\n"
                 f"Total Leave Days: {casual_days + floating_days}\n"
-                f"Reason: {leave_request.leave_reason}\n\n"
+                f"Reason: {leave_request.reason}\n\n"
                 f"Best Regards,\nYour Leave Management System"
             )
             
@@ -1203,7 +1203,7 @@ def reject_leave_request(request, leave_request_id):
                 f"{employee.first_name} {employee.last_name}'s leave request has been rejected.\n\n"
                 f"Employee ID: {employee.employee_id}\n"
                 f"Leave Period: {leave_request.start_date} to {leave_request.end_date}\n"
-                f"Reason for Leave: {leave_request.leave_reason}\n"
+                f"Reason for Leave: {leave_request.reason}\n"
                 f"Status: Rejected\n\n"
                 f"The employee has been notified of this decision.\n\n"
                 f"Best Regards,\nYour Leave Management System"
