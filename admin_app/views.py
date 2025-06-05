@@ -42,7 +42,7 @@ def signin_required(fn):
     def wrapper(request, *args, **kwargs):
         # Check if the user is authenticated
         if not request.user.is_authenticated:
-            return redirect("login")
+            return redirect("admin_login")
         
         # Check if the session has timed out due to inactivity
         current_time = time.time()
@@ -51,7 +51,7 @@ def signin_required(fn):
         if current_time - last_activity > TIMEOUT_DURATION:
             # If the session expired due to inactivity, log the user out
             logout(request)
-            return redirect("login")  # Redirect to sign-in page
+            return redirect("admin_login")  # Redirect to sign-in page
 
         # Update the session's last activity timestamp
         request.session['last_activity'] = current_time
