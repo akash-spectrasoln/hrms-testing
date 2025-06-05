@@ -1,6 +1,12 @@
 from django.db import models
 from .models import *
 
+import json
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+from encryption.encryption import encrypt_field, decrypt_field 
+
+
 
 # Create your models here.
 
@@ -90,21 +96,23 @@ class Employees(models.Model):
     first_name = models.CharField(max_length=50, verbose_name="First Name")
     middle_name = models.CharField(max_length=50, verbose_name="Middle Name", blank=True,null=True,)
     last_name = models.CharField(max_length=50, verbose_name="Last Name")
-    company_email = models.EmailField(unique=True, verbose_name="Company Email")
-    personal_email = models.EmailField(verbose_name="Personal Email")
+    
+    # company_email = models.EmailField(unique=True, verbose_name="Company Email")
+    company_email = models.TextField(unique=True, verbose_name="Encrypted Company Email")
+    personal_email = models.TextField(verbose_name="Personal Email")
     pm_email = models.EmailField(null=True , blank=True,verbose_name="PM Email")
-    mobile_phone = models.CharField(max_length=15)
+    mobile_phone = models.TextField()
     office_phone = models.CharField(max_length=15, blank=True,null=True,)
-    home_phone = models.CharField(max_length=15, blank=True,null=True,)
+    home_phone = models.TextField(blank=True,null=True,)
     valid_from = models.DateField()
     valid_to = models.DateField()
     country = models.ForeignKey('Country', on_delete=models.CASCADE)
     state = models.ForeignKey('state', on_delete=models.CASCADE)
-    address = models.CharField(max_length=150, blank=True,null=True,)
+    address = models.TextField( blank=True,null=True,)
     home_house = models.TextField(null=True)
     home_post_office = models.TextField(null=True)
     home_city = models.TextField()
-    pincode = models.CharField(max_length=10, blank=True,null=True,)
+    pincode = models.TextField( blank=True,null=True,)
     role = models.ForeignKey('Role', on_delete=models.CASCADE, to_field="role_id", null=True, blank=True)
     department = models.ForeignKey('Department', on_delete=models.CASCADE)
     
@@ -114,11 +122,12 @@ class Employees(models.Model):
     choices=STATUS_CHOICES,
     default='employed'
     )
-    emergency_contact_name = models.CharField(max_length=100,null=True,blank=True)
-    emergency_contact_phone = models.CharField(max_length=15,null=True,blank=True)
+    emergency_contact_name = models.TextField(null=True,blank=True)
+    emergency_contact_phone = models.TextField(null=True,blank=True)
     emergency_contact_email = models.EmailField(null=True,blank=True)
-    emergency_contact_relation = models.CharField(max_length=100,null=True,blank=True)
-    base_salary = models.DecimalField(max_digits=10, decimal_places=2)
+    emergency_contact_relation = models.TextField(null=True,blank=True)
+    # base_salary = models.DecimalField(max_digits=10, decimal_places=2)
+    base_salary = models.TextField()
     created_on = models.DateTimeField(auto_now_add=True, null=True)
     modified_on = models.DateTimeField(auto_now=True, null=True)
     is_deleted = models.BooleanField(default=False)
@@ -131,28 +140,29 @@ class Employees(models.Model):
 
     password = models.CharField(max_length=128, null=True, blank=True)
     resignation_date = models.DateField(null=True, blank=True)
-    incentive = models.DecimalField(max_digits=10, decimal_places=2, default=0.0,null=True)
-    joining_bonus=models.DecimalField(max_digits=10, decimal_places=2, default=0.0,null=True)
-    pan_card = models.CharField(
-        max_length=20, 
+    # incentive = models.DecimalField(max_digits=10, decimal_places=2, default=0.0,null=True)
+    incentive = models.TextField(null=True,blank=True)
+    joining_bonus=models.TextField(null=True)
+    pan_card = models.TextField(
+         
         null=True, 
         blank=True, 
         verbose_name="PAN Card Number"
     )
-    aadhaar = models.CharField(
-        max_length=20, 
+    aadhaar = models.TextField(
+       
         null=True, 
         blank=True, 
         verbose_name="Aadhaar Number"
     )
-    bank_name = models.CharField(
-        max_length=100, 
+    bank_name = models.TextField(
+        
         null=True, 
         blank=True, 
         verbose_name="Bank Name"
     )
-    bank_branch = models.CharField(
-        max_length=100, 
+    bank_branch = models.TextField(
+        
         null=True, 
         blank=True, 
         verbose_name="Bank Branch"
@@ -162,14 +172,13 @@ class Employees(models.Model):
         blank=True, 
         verbose_name="Bank Branch Address"
     )
-    bank_account = models.CharField(
-        max_length=30, 
+    bank_account = models.TextField(
+        
         null=True, 
         blank=True, 
         verbose_name="Bank Account Number"
     )
-    ifsc_code = models.CharField(
-        max_length=15, 
+    ifsc_code = models.TextField(
         null=True, 
         blank=True, 
         verbose_name="IFSC Code"
@@ -270,6 +279,351 @@ class Employees(models.Model):
 
     def __str__(self):
         return f"{self.employee_id} "
+    
+
+    # encryt/decrypt 
+
+    # @property
+    # def data(self):
+    #     """Decrypt and return the company name."""
+    #     return self._decrypt_field(self.company_email)
+
+    # @data.setter
+    # def data(self, value):
+
+    #     """Temporarily store `cmp_name` for encryption during save."""
+    #     if value is not None:
+    #         self._data_to_encrypt = value  # Store the raw value temporarily
+    #     else:
+    #         self._data_to_encrypt = None
+    #         self.company_email = None
+    # home_house
+
+    @property
+    def enc_home_house(self):
+        """Decrypt and return the company name."""
+        return self._decrypt_field(self.home_house)
+
+    @enc_home_house.setter
+    def enc_home_house(self, value):
+        if value is not None:
+            if not hasattr(self, '_fields_to_encrypt'):
+                self._fields_to_encrypt = {}
+            self._fields_to_encrypt['home_house'] = value
+
+
+
+    @property
+    def enc_emergency_contact_relation(self):
+        """Decrypt and return the company name."""
+        return self._decrypt_field(self.emergency_contact_relation)
+
+    @enc_emergency_contact_relation.setter
+    def enc_emergency_contact_relation(self, value):
+        if value is not None:
+            if not hasattr(self, '_fields_to_encrypt'):
+                self._fields_to_encrypt = {}
+            self._fields_to_encrypt['emergency_contact_relation'] = value
+
+
+
+    @property
+    def enc_incentive(self):
+        """Decrypt and return the company name."""
+        return self._decrypt_field(self.incentive)
+
+    @enc_incentive.setter
+    def enc_incentive(self, value):
+        if value is not None:
+            if not hasattr(self, '_fields_to_encrypt'):
+                self._fields_to_encrypt = {}
+            self._fields_to_encrypt['incentive'] = value 
+
+
+    @property
+    def enc_joining_bonus(self):
+        """Decrypt and return the company name."""
+        return self._decrypt_field(self.joining_bonus)
+
+    @enc_joining_bonus.setter
+    def enc_joining_bonus(self, value):
+        if value is not None:
+            if not hasattr(self, '_fields_to_encrypt'):
+                self._fields_to_encrypt = {}
+            self._fields_to_encrypt['joining_bonus'] = value 
+
+
+ 
+
+    @property
+    def enc_emergency_contact_relation(self):
+        """Decrypt and return the company name."""
+        return self._decrypt_field(self.emergency_contact_relation)
+
+    @enc_emergency_contact_relation.setter
+    def enc_emergency_contact_relation(self, value):
+        if value is not None:
+            if not hasattr(self, '_fields_to_encrypt'):
+                self._fields_to_encrypt = {}
+            self._fields_to_encrypt['emergency_contact_relation'] = value    
+
+
+    @property
+    def enc_ifsc_code(self):
+        """Decrypt and return the company name."""
+        return self._decrypt_field(self.ifsc_code)
+
+    @enc_ifsc_code.setter
+    def enc_ifsc_code(self, value):
+        if value is not None:
+            if not hasattr(self, '_fields_to_encrypt'):
+                self._fields_to_encrypt = {}
+            self._fields_to_encrypt['ifsc_code'] = value    
+
+
+    @property
+    def enc_bank_account(self):
+        """Decrypt and return the company name."""
+        return self._decrypt_field(self.bank_account)
+
+    @enc_bank_account.setter
+    def enc_bank_account(self, value):
+        if value is not None:
+            if not hasattr(self, '_fields_to_encrypt'):
+                self._fields_to_encrypt = {}
+            self._fields_to_encrypt['bank_account'] = value    
+
+    @property
+    def enc_bank_branch_address(self):
+        """Decrypt and return the company name."""
+        return self._decrypt_field(self.bank_branch_address)
+
+    @enc_bank_branch_address.setter
+    def enc_bank_branch_address(self, value):
+        if value is not None:
+            if not hasattr(self, '_fields_to_encrypt'):
+                self._fields_to_encrypt = {}
+            self._fields_to_encrypt['bank_branch_address'] = value
+
+    @property
+    def enc_bank_branch(self):
+        """Decrypt and return the company name."""
+        return self._decrypt_field(self.bank_branch)
+
+    @enc_bank_branch.setter
+    def enc_bank_branch(self, value):
+        if value is not None:
+            if not hasattr(self, '_fields_to_encrypt'):
+                self._fields_to_encrypt = {}
+            self._fields_to_encrypt['bank_branch'] = value
+
+    @property
+    def enc_bank_name(self):
+        """Decrypt and return the company name."""
+        return self._decrypt_field(self.bank_name)
+
+    @enc_bank_name.setter
+    def enc_bank_name(self, value):
+        if value is not None:
+            if not hasattr(self, '_fields_to_encrypt'):
+                self._fields_to_encrypt = {}
+            self._fields_to_encrypt['bank_name'] = value
+
+
+
+    @property
+    def enc_aadhaar(self):
+        """Decrypt and return the company name."""
+        return self._decrypt_field(self.aadhaar)
+
+    @enc_aadhaar.setter
+    def enc_aadhaar(self, value):
+        if value is not None:
+            if not hasattr(self, '_fields_to_encrypt'):
+                self._fields_to_encrypt = {}
+            self._fields_to_encrypt['aadhaar'] = value
+
+
+    @property
+    def enc_pan_card(self):
+        """Decrypt and return the company name."""
+        return self._decrypt_field(self.pan_card)
+
+    @enc_pan_card.setter
+    def enc_pan_card(self, value):
+        if value is not None:
+            if not hasattr(self, '_fields_to_encrypt'):
+                self._fields_to_encrypt = {}
+            self._fields_to_encrypt['pan_card'] = value
+
+
+    @property
+    def enc_base_salary(self):
+        """Decrypt and return the company name."""
+        return self._decrypt_field(self.base_salary)
+
+    @enc_base_salary.setter
+    def enc_base_salary(self, value):
+        if value is not None:
+            if not hasattr(self, '_fields_to_encrypt'):
+                self._fields_to_encrypt = {}
+            self._fields_to_encrypt['base_salary'] = value
+
+
+
+    @property
+    def enc_emergency_contact_phone(self):
+        """Decrypt and return the company name."""
+        return self._decrypt_field(self.emergency_contact_phone)
+
+    @enc_emergency_contact_phone.setter
+    def enc_emergency_contact_phone(self, value):
+        if value is not None:
+            if not hasattr(self, '_fields_to_encrypt'):
+                self._fields_to_encrypt = {}
+            self._fields_to_encrypt['emergency_contact_phone'] = value
+
+    
+    @property
+    def enc_pincode(self):
+        """Decrypt and return the company name."""
+        return self._decrypt_field(self.pincode)
+
+    @enc_pincode.setter
+    def enc_pincode(self, value):
+        if value is not None:
+            if not hasattr(self, '_fields_to_encrypt'):
+                self._fields_to_encrypt = {}
+            self._fields_to_encrypt['pincode'] = value  
+    
+    #
+    @property
+    def enc_address(self):
+        """Decrypt and return the company name."""
+        return self._decrypt_field(self.address)
+
+    @enc_address.setter
+    def enc_address(self, value):
+        if value is not None:
+            if not hasattr(self, '_fields_to_encrypt'):
+                self._fields_to_encrypt = {}
+            self._fields_to_encrypt['address'] = value    
+    
+    #
+    @property
+    def enc_emergency_contact_name(self):
+        """Decrypt and return the company name."""
+        return self._decrypt_field(self.emergency_contact_name)
+
+    @enc_emergency_contact_name.setter
+    def enc_emergency_contact_name(self, value):
+        if not hasattr(self, '_fields_to_encrypt'):
+            self._fields_to_encrypt = {}
+        self._fields_to_encrypt['emergency_contact_name'] = value    
+    
+    #
+    @property
+    def enc_home_phone(self):
+        """Decrypt and return the company name."""
+        return self._decrypt_field(self.home_phone)
+
+    @enc_home_phone.setter
+    def enc_home_phone(self, value):
+        if not hasattr(self, '_fields_to_encrypt'):
+            self._fields_to_encrypt = {}
+        self._fields_to_encrypt['home_phone'] = value
+
+    #
+    @property
+    def enc_mobile_phone(self):
+        """Decrypt and return the company name."""
+        return self._decrypt_field(self.mobile_phone)
+
+    @enc_mobile_phone.setter
+    def enc_mobile_phone(self, value):
+        if not hasattr(self, '_fields_to_encrypt'):
+            self._fields_to_encrypt = {}
+        self._fields_to_encrypt['mobile_phone'] = value
+
+    @property
+    def enc_home_city(self):
+        """Decrypt and return the company name."""
+        return self._decrypt_field(self.home_city)
+
+    @enc_home_city.setter
+    def enc_home_city(self, value):
+        if not hasattr(self, '_fields_to_encrypt'):
+            self._fields_to_encrypt = {}
+        self._fields_to_encrypt['home_city'] = value
+
+    @property
+    def enc_personal_email(self):
+        """Decrypt and return the company name."""
+        return self._decrypt_field(self.personal_email)
+
+    @enc_personal_email.setter
+    def enc_personal_email(self, value):
+        if not hasattr(self, '_fields_to_encrypt'):
+            self._fields_to_encrypt = {}
+        self._fields_to_encrypt['personal_email'] = value
+
+    
+
+    # @property
+    # def enc_country(self):
+    #     """Decrypt and return the company name."""
+    #     return self._decrypt_field(self.country)
+
+    # @enc_country.setter
+    # def enc_country(self, value):
+
+    #     """Temporarily store `cmp_name` for encryption during save."""
+    #     if value is not None:
+    #         self._data_to_encrypt = value  # Store the raw value temporarily
+    #     else:
+    #         self._data_to_encrypt = None
+    #         self.country = None
+
+    def _decrypt_field(self, encrypted_value):
+        if encrypted_value:
+            try:
+                encrypted_value = json.loads(encrypted_value)
+                (encrypted_data, nonce, tag, salt, original_type, iterations) = encrypted_value
+
+                # Calculate created_day and incremented_value for decryption
+                created_day = self.created_on.day  # Extract the day from the created_at timestamp
+                incremented_value = self.id + created_day  # Combine cmp_id with created day
+
+                # Use incremented_value for decryption
+                return decrypt_field(
+                    encrypted_data, incremented_value, nonce, tag, salt, original_type
+                )
+            except (ValueError, KeyError, TypeError) as e:
+                print(f"Decryption error: {e}")
+                return None
+        return None
+
+    def __str__(self):
+        return f"Company: {self.cmp_name or 'N/A'}"
+
+
+@receiver(post_save, sender=Employees)
+def encrypt_data(sender, instance, created, **kwargs):
+    if hasattr(instance, '_fields_to_encrypt'):  # Encrypt on both create and update
+        created_day = instance.created_on.day
+        incremented_value = instance.id + created_day
+
+        for field_name, raw_value in instance._fields_to_encrypt.items():
+            encrypted_data = encrypt_field(raw_value, incremented_value)
+            setattr(instance, field_name, json.dumps(encrypted_data))
+
+        # Avoid infinite recursion by saving without triggering signals again
+        Employees.objects.filter(id=instance.id).update(
+            **{field: getattr(instance, field) for field in instance._fields_to_encrypt}
+        )
+
+
+
 
 
 class Resume(models.Model):

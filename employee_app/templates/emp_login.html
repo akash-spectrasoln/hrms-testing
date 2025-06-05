@@ -229,6 +229,7 @@
             margin-bottom: 20px;
             position: relative;
             width: 100%;
+            max-width: 304px;
         }
 
         label {
@@ -255,6 +256,7 @@
 
         button {
             width: 100%;
+            max-width: 304px;
             padding: 12px;
             background-color: #1a73e8;
             border: none;
@@ -318,6 +320,39 @@
             align-items: center;
             width: 100%;
         }
+
+                .captcha-wrapper {
+            width: 100%;
+            max-width: 304px;
+            margin: 0 auto 20px auto;
+            position: relative;
+            height: auto;
+            display: flex;
+            justify-content: center;
+        }
+
+.g-recaptcha {
+    transform: scale(1);
+    transform-origin: top center;
+    -webkit-transform: scale(1);
+    width: 304px;
+    height: 78px;
+}
+
+@media (max-width: 400px) {
+    .g-recaptcha {
+        transform: scale(0.85);
+        -webkit-transform: scale(0.85);
+    }
+}
+
+@media (max-width: 320px) {
+    .g-recaptcha {
+        transform: scale(0.7);
+        -webkit-transform: scale(0.7);
+    }
+}
+
     </style>
 </head>
 <body>
@@ -355,6 +390,9 @@
                 Forgot Password?<a href="{% url 'password_reset' %}">Reset Now</a>
             </div>
 
+            <div class="captcha-wrapper">
+                <div class="g-recaptcha" data-sitekey="6Lf471IrAAAAAFWj_6hXPoVU6wsqlqwk6uLFhSKc"></div>
+            </div>
             <button type="submit">Login</button>
         </form>
 
@@ -367,4 +405,5 @@
         {% endif %}
     </div>
 </body>
+<script src="https://www.google.com/recaptcha/api.js" async defer></script>
 </html>

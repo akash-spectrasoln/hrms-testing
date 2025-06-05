@@ -54,11 +54,27 @@ def signin_required(fn):
 
 from django.contrib.auth import authenticate, login
 from django.contrib import messages
+import requests
 
 def employee_login(request):
     if request.method == 'POST':
         email = request.POST.get('email')  # emp_email
         password = request.POST.get('password')
+
+        recaptcha_response = request.POST.get('g-recaptcha-response')  # Get captcha token from frontend
+
+        #  Verify reCAPTCHA with Google
+        data = {
+            'secret': settings.RECAPTCHA_SECRET_KEY,
+            'response': recaptcha_response
+        }
+        r = requests.post('https://www.google.com/recaptcha/api/siteverify', data=data)
+        result = r.json()
+
+        if not result.get('success'):
+            messages.error(request, 'Invalid reCAPTCHA. Please try again.')
+            return redirect('admin_login')
+
 
         # Authenticate with email as the username
         user = authenticate(request, username=email, password=password)

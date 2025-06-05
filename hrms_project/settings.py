@@ -13,6 +13,10 @@ import os
 from pathlib import Path
 
 
+#google recaptcha
+RECAPTCHA_PUBLIC_KEY = '6Lf471IrAAAAAFWj_6hXPoVU6wsqlqwk6uLFhSKc'
+RECAPTCHA_SECRET_KEY = '6Lf471IrAAAAAHRA0rHcweY24t2dCCZmtGZw38_L'
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 

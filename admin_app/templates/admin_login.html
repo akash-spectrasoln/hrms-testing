@@ -23,7 +23,7 @@
 
         .login-container {
             background: white;
-            padding: 40px;
+            padding: 30px;
             border-radius: 10px;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
             width: 100%;
@@ -33,15 +33,15 @@
         h2 {
             text-align: center;
             color: #333;
-            margin-bottom: 30px;
+            margin-bottom: 10px;
             font-size: 24px;
             font-weight: 600;
         }
 
         .input-container {
-            margin-bottom: 20px;
-            position: relative;
+            margin-bottom: 10px;
             width: 100%;
+            max-width: 304px;
         }
 
         label {
@@ -68,8 +68,10 @@
             box-shadow: 0 0 0 3px rgba(26, 115, 232, 0.1);
         }
 
-        .login-btn {
+        .login-btn,
+        .otp-btn {
             width: 100%;
+            max-width: 305px;
             padding: 12px;
             background-color: #1a73e8;
             border: none;
@@ -82,7 +84,8 @@
             margin-top: 10px;
         }
 
-        .login-btn:hover {
+        .login-btn:hover,
+        .otp-btn:hover {
             background-color: #1557b0;
         }
 
@@ -100,12 +103,12 @@
             font-size: 14px;
         }
 
-        .first-letter-underline {
+        /* .first-letter-underline {
             text-decoration: underline;
             text-decoration-color: #1a73e8;
             text-decoration-thickness: 2px;
             text-underline-offset: 3px;
-        }
+        } */
 
         .forgot-password-container {
             text-align: center;
@@ -132,41 +135,89 @@
             align-items: center;
             width: 100%;
         }
+
+        .captcha-wrapper {
+            width: 100%;
+            max-width: 304px;
+            margin: 0 auto 20px auto;
+            position: relative;
+            height: auto;
+            display: flex;
+            justify-content: center;
+        }
+
+.g-recaptcha {
+    transform: scale(1);
+    transform-origin: top center;
+    -webkit-transform: scale(1);
+    width: 304px;
+    height: 78px;
+}
+
+@media (max-width: 400px) {
+    .g-recaptcha {
+        transform: scale(0.85);
+        -webkit-transform: scale(0.85);
+    }
+}
+
+@media (max-width: 320px) {
+    .g-recaptcha {
+        transform: scale(0.7);
+        -webkit-transform: scale(0.7);
+    }
+}
+
     </style>
 </head>
 <body>
 <div class="login-container">
-    <h2>Admin Login</h2>
-    <form method="POST">
-        {% csrf_token %}
-        <div class="input-container">
-            <label for="username">
-                <span class="first-letter-underline">U</span>sername:
-            </label>
-            <input type="text" id="username" name="username" required>
-        </div>
+    {% if show_otp_form %}
+        <h2>Enter the OTP sent to you</h2>
+        <form method="post" action="{% url 'verify-otp' %}">
+            {% csrf_token %}
+            <div class="input-container">
+                <label for="otp">OTP Code:</label>
+                <input type="text" id="otp" name="otp" placeholder="6-digit code" required />
+            </div>
+            <button type="submit" class="otp-btn">Verify OTP</button>
+        </form>
+    {% else %}
+        <h2>Admin Login</h2>
+        <form method="POST" action="{% url 'admin_login' %}">
+            {% csrf_token %}
+            <div class="input-container">
+                <label for="username"><span class="first-letter-underline">U</span>sername:</label>
+                <input type="text" id="username" name="username" required>
+            </div>
 
-        <div class="input-container">
-            <label for="password">
-                <span class="first-letter-underline">P</span>assword:
-            </label>
-            <input type="password" id="password" name="password" required>
-        </div>
+            <div class="input-container">
+                <label for="password"><span class="first-letter-underline">P</span>assword:</label>
+                <input type="password" id="password" name="password" required>
+            </div>
 
-        <div class="forgot-password-container">
-            Forgot Password?<a href="{% url 'admin_password_reset' %}" class="forgot-password-link">Reset Now</a>
-        </div>
+            <div class="forgot-password-container">
+                Forgot Password? <a href="{% url 'admin_password_reset' %}" class="forgot-password-link">Reset Now</a>
+            </div>
 
-        <button type="submit" class="login-btn">Login</button>
-    </form>
+            <div class="captcha-wrapper">
+                <div class="g-recaptcha" data-sitekey="6Lf471IrAAAAAFWj_6hXPoVU6wsqlqwk6uLFhSKc"></div>
+            </div>
+
+            <button type="submit" class="login-btn">Login</button>
+        </form>
+    {% endif %}
 
     {% if messages %}
-    <ul class="error-messages">
-        {% for message in messages %}
-        <li>{{ message }}</li>
-        {% endfor %}
-    </ul>
+        <ul class="error-messages">
+            {% for message in messages %}
+                <li>{{ message }}</li>
+            {% endfor %}
+        </ul>
     {% endif %}
 </div>
+
+<script src="https://www.google.com/recaptcha/api.js" async defer></script>
+
 </body>
 </html>

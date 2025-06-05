@@ -49,7 +49,30 @@ def add_employee(request):
         form = EmployeeEditForm(request.POST, request.FILES, request=request)
         if form.is_valid():
             try:
-                employee = form.save(commit=False)  # Save the form but don't commit to the database yet
+                employee = form.save(commit=False) 
+                # employee.data=employee.company_email  # Save the form but don't commit to the database yet
+                employee.enc_home_city=employee.home_city
+                employee.enc_personal_email=employee.personal_email 
+                employee.enc_mobile_phone=employee.mobile_phone 
+                employee.enc_home_phone=employee.home_phone  
+                employee.enc_address=employee.address  
+                employee.enc_pincode=employee.pincode  
+                employee.enc_emergency_contact_phone=employee.emergency_contact_phone
+                employee.enc_emergency_contact_name=employee.emergency_contact_name
+                employee.enc_base_salary=employee.base_salary 
+                employee.enc_pan_card=employee.pan_card  
+                employee.enc_aadhaar=employee.aadhaar  
+                employee.enc_bank_name=employee.bank_name   
+                employee.enc_bank_branch=employee.bank_branch  
+                employee.enc_bank_branch_address=employee.bank_branch_address   
+                employee.enc_bank_account=employee.bank_account   
+                employee.enc_ifsc_code=employee.ifsc_code 
+                employee.enc_emergency_contact_relation=employee.emergency_contact_relation 
+                employee.enc_incentive=employee.incentive 
+                employee.enc_home_house=employee.home_house
+                
+                employee.enc_joining_bonus=employee.joining_bonus 
+
                 employee.save()  # Now save the employee instance
                 
                 # Handle Admin Privileges
@@ -61,7 +84,8 @@ def add_employee(request):
                     user_obj.is_superuser = is_admin  # Set admin privileges as per checkbox state
                     user_obj.is_staff = is_admin  
                     user_obj.first_name = employee.first_name 
-                    user_obj.last_name = employee.last_name  # Typically set is_staff alongside is_superuser
+                    user_obj.last_name = employee.last_name 
+                     # Typically set is_staff alongside is_superuser
                     user_obj.save()
 
                 # Handle multiple resumes
@@ -287,7 +311,7 @@ def list_employees(request):
             'first_name': employee.first_name,
             'last_name': employee.last_name,
             'company_email': employee.company_email,
-            'mobile_phone': employee.mobile_phone,
+            'mobile_phone': employee.enc_mobile_phone,
             'department': employee.department.dep_name if employee.department else "",
             'designation': employee.role.role_name if employee.role else "",
             'country': employee.country.country_name if employee.country else "",
@@ -425,8 +449,8 @@ class EmployeeUpdateView(UpdateView):
             context['selected_state'] = employee.state if employee.state else None
             context['home_post_office'] = employee.home_post_office
             
-            context['incentive'] = employee.incentive
-            context['joining_bonus'] = employee.joining_bonus
+            context['incentive'] = employee.enc_incentive
+            context['joining_bonus'] = employee.enc_joining_bonus
             
             return context
         except Exception as e:
@@ -1460,33 +1484,45 @@ from django.shortcuts import render, redirect
 from django.contrib.auth import authenticate, login
 from django.contrib.auth.models import User
 from django.contrib import messages
-
+import requests
 
 def admin_login(request):
     if request.method == 'POST':
         identifier = request.POST.get('username')  # Username or email
         password = request.POST.get('password')
+        recaptcha_response = request.POST.get('g-recaptcha-response')  # Get captcha token from frontend
 
-        # Check if it's an email or username
+        #  Verify reCAPTCHA with Google
+        data = {
+            'secret': settings.RECAPTCHA_SECRET_KEY,
+            'response': recaptcha_response
+        }
+        r = requests.post('https://www.google.com/recaptcha/api/siteverify', data=data)
+        result = r.json()
+
+        if not result.get('success'):
+            messages.error(request, 'Invalid reCAPTCHA. Please try again.')
+            return redirect('admin_login')
+
+        #  Continue login if captcha passed
         user = None
-        if '@' in identifier:  # If email
+        if '@' in identifier: 
             try:
                 user = User.objects.get(email=identifier)
-                username = user.username  # Get username from email
+                username = user.username
             except User.DoesNotExist:
-                messages.error(request, 'Invalid email or username')
+                messages.error(request, 'Invalid email or username.')
                 return redirect('admin_login')
         else:
-            username = identifier  # Treat input as username
+            username = identifier
 
-        # Authenticate
         user = authenticate(request, username=username, password=password)
 
         if user is not None and (user.is_staff or user.is_superuser):
             login(request, user)
-            return redirect('admin_index')  # Redirect to admin dashboard
+            return redirect('admin_index')  # Replace with your actual dashboard route
         else:
-            messages.error(request, 'Invalid credentials or insufficient permissions')
+            messages.error(request, 'Invalid credentials or insufficient permissions.')
 
     return render(request, 'admin_login.html')  # Render login page
 

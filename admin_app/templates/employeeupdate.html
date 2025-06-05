@@ -78,7 +78,7 @@ label {
                     <div class="form-row">
                     <div class="form-group col-md-4">
                         <label for="employee_id" class="required">Employee ID</label>
-                        <input type="text" id="employee_id" name="employee_id" class="form-control" value="{{ form.instance.employee_id }}" readonly required>
+                        <input type="text" id="employee_id" name="employee_id" class="form-control" value="{{ form.instance.enc_employee_id }}" readonly required>
                     </div>
                     <div class="form-group col-md-4">
                         <label for="valid_from" class="required">Valid From</label>
@@ -147,56 +147,56 @@ label {
                     </div>
                     <div class="form-group col-md-4">
                         <label for="home_city" class="required">City</label>
-                        <input type="text" name="home_city" class="form-control"value="{{ form.instance.home_city }}" required>
+                        <input type="text" name="home_city" class="form-control"value="{{ form.instance.enc_home_city }}" required>
                     </div>
                 </div>
                 <div class="form-row">
                     <div class="form-group col-md-4">
                         <label for="home_house" >Home/Street</label>
-                        <input type="text" name="home_house"  class="form-control" value="{{ form.instance.home_house }}">
+                        <input type="text" name="home_house"  class="form-control" value="{{ form.instance.enc_home_house }}">
                     </div>
                     <div class="form-group col-md-4">
                         <label for="home_post_office" >Post Office</label>
-                        <input type="text" name="home_post_office" class="form-control" value="{{ form.instance.home_post_office }}" >
+                        <input type="text" name="home_post_office" class="form-control" value="{{ form.instance.enc_home_post_office }}" >
                     </div>
                     <div class="form-group col-md-4">
                         <label for="pincode" >Pincode</label>
-                        <input type="text" name="pincode" class="form-control" value="{{ form.instance.pincode }}" >
+                        <input type="text" name="pincode" class="form-control" value="{{ form.instance.enc_pincode }}" >
                     </div>
                 </div>
                   <div class="form-row">
                     <div class="form-group col-md-4">
                         <label for="personal_email" class="required">Personal Email</label>
-                        <input type="email" name="personal_email" class="form-control" value="{{ form.instance.personal_email }}" required>
+                        <input type="email" name="personal_email" class="form-control" value="{{ form.instance.enc_personal_email }}" required>
                     </div>
                     <div class="form-group col-md-4">
                         <label for="mobile_phone" class="required">Personal Phone</label>
-                        <input type="tel" name="mobile_phone" class="form-control" value="{{ form.instance.mobile_phone }}" required>
+                        <input type="tel" name="mobile_phone" class="form-control" value="{{ form.instance.enc_mobile_phone }}" required>
                     </div>
                     <div class="form-group col-md-4">
                         <label for="home_phone">Home Phone</label>
-                        <input type="tel" name="home_phone" class="form-control" value="{{ form.instance.home_phone }}">
+                        <input type="tel" name="home_phone" class="form-control" value="{{ form.instance.enc_home_phone }}">
                     </div>
                 </div>
                 <div class="form-row">
                     <div class="form-group col-md-4">
                         <label for="emergency_contact_name" >Emergency Contact Name</label>
-                        <input type="text" name="emergency_contact_name" class="form-control" value="{{ form.instance.emergency_contact_name }}" >
+                        <input type="text" name="emergency_contact_name" class="form-control" value="{{ form.instance.enc_emergency_contact_name }}" >
                     </div>
                     <div class="form-group col-md-4">
                         <label for="emergency_contact_phone" >Emergency Contact Phone</label>
-                        <input type="tel" name="emergency_contact_phone" class="form-control" value="{{ form.instance.emergency_contact_phone }}" >
+                        <input type="tel" name="emergency_contact_phone" class="form-control" value="{{ form.instance.enc_emergency_contact_phone }}" >
                     </div>
                     <div class="form-group col-md-4">
                     <label for="emergency_contact_relation" >Emergency Contact Relationship</label>
                     <select name="emergency_contact_relation" class="form-control" >
                         <option value="" disabled selected>Choose Relation</option>
-                        <option value="Mother" {% if form.instance.emergency_contact_relation == 'Mother' %}selected{% endif %}>Mother</option>
-                        <option value="Father" {% if form.instance.emergency_contact_relation == 'Father' %}selected{% endif %}>Father</option>
-                        <option value="Brother" {% if form.instance.emergency_contact_relation == 'Brother' %}selected{% endif %}>Brother</option>
-                        <option value="Sister" {% if form.instance.emergency_contact_relation == 'Sister' %}selected{% endif %}>Sister</option>
-                        <option value="Husband" {% if form.instance.emergency_contact_relation == 'Husband' %}selected{% endif %}>Husband</option>
-                        <option value="Wife" {% if form.instance.emergency_contact_relation == 'Wife' %}selected{% endif %}>Wife</option>
+                        <option value="Mother" {% if form.instance.enc_emergency_contact_relation == 'Mother' %}selected{% endif %}>Mother</option>
+                        <option value="Father" {% if form.instance.enc_emergency_contact_relation == 'Father' %}selected{% endif %}>Father</option>
+                        <option value="Brother" {% if form.instance.enc_emergency_contact_relation == 'Brother' %}selected{% endif %}>Brother</option>
+                        <option value="Sister" {% if form.instance.enc_emergency_contact_relation == 'Sister' %}selected{% endif %}>Sister</option>
+                        <option value="Husband" {% if form.instance.enc_emergency_contact_relation == 'Husband' %}selected{% endif %}>Husband</option>
+                        <option value="Wife" {% if form.instance.enc_emergency_contact_relation == 'Wife' %}selected{% endif %}>Wife</option>
                     </select>
                 </div>
                 </div>
@@ -278,12 +278,12 @@ label {
 
     <div class="form-group col-md-3"> <!-- Salary -->
       <label class="required">Salary</label>
-      <input type="text" name="base_salary" class="form-control" value="{{ form.instance.base_salary|default_if_none:'' }}" required>
+      <input type="text" name="base_salary" class="form-control" value="{{ form.instance.enc_base_salary|default_if_none:'' }}" required>
     </div>
 
     <div class="form-group col-md-3"> <!-- Incentive -->
       <label>Incentive</label>
-      <input type="text" name="incentive" class="form-control" value="{{ form.instance.incentive|default_if_none:'0.0' }}">
+      <input type="text" name="incentive" class="form-control" value="{{ form.instance.enc_incentive|default_if_none:'0.0' }}">
     </div>
 
     <div class="form-group col-md-3"> <!-- Joining Bonus -->
@@ -297,39 +297,39 @@ label {
                     <div class="form-group col-md-3">
                         <label for="bank_name" class="required">Bank Name</label>
                         <input type="text" name="bank_name" maxlength="100" class="form-control" 
-                            value="{{ form.instance.bank_name|default_if_none:'' }}" required>
+                            value="{{ form.instance.enc_bank_name|default_if_none:'' }}" required>
                     </div>
                     <div class="form-group col-md-3">
                         <label for="bank_account" class="required">Bank Account</label>
                         <input type="text" name="bank_account" maxlength="30" class="form-control"
-                            value="{{ form.instance.bank_account|default_if_none:'' }}" required>
+                            value="{{ form.instance.enc_bank_account|default_if_none:'' }}" required>
                     </div>
                     <div class="form-group col-md-3">
                         <label for="ifsc_code" class="required">IFSC Code</label>
                         <input type="text" name="ifsc_code" maxlength="15" class="form-control"
-                            value="{{ form.instance.ifsc_code|default_if_none:'' }}" required>
+                            value="{{ form.instance.enc_ifsc_code|default_if_none:'' }}" required>
                     </div>
                      <div class="form-group col-md-3">
                         <label for="bank_branch" class="required">Bank Branch</label>
                         <input type="text" name="bank_branch" maxlength="100" class="form-control"
-                            value="{{ form.instance.bank_branch|default_if_none:'' }}" required>
+                            value="{{ form.instance.enc_bank_branch|default_if_none:'' }}" required>
                     </div>
                     
                 </div>
                 <div class="form-row">
                     <div class="form-group col-md-4">
                         <label for="bank_branch_address" class="required">Bank Branch Address</label>
-                        <textarea name="bank_branch_address" class="form-control" rows="1" required>{{ form.instance.bank_branch_address|default_if_none:'' }}</textarea>
+                        <textarea name="bank_branch_address" class="form-control" rows="1" required>{{ form.instance.enc_bank_branch_address|default_if_none:'' }}</textarea>
                     </div>
                     <div class="form-group col-md-4">
                         <label for="pan_card">PAN Card</label>
                         <input type="text" name="pan_card" maxlength="20" class="form-control" 
-                            value="{{ form.instance.pan_card|default_if_none:'' }}">
+                            value="{{ form.instance.enc_pan_card|default_if_none:'' }}">
                     </div>
                     <div class="form-group col-md-4">
                         <label for="aadhaar">Aadhaar</label>
                         <input type="text" name="aadhaar" maxlength="20" class="form-control" 
-                            value="{{ form.instance.aadhaar|default_if_none:'' }}">
+                            value="{{ form.instance.enc_aadhaar|default_if_none:'' }}">
                     </div>
                     
                 </div>
