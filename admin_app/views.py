@@ -532,6 +532,29 @@ class EmployeeUpdateView(UpdateView):
     def form_valid(self, form):
         try:
             employee = form.save(commit=False)
+            employee.enc_home_city=employee.home_city
+            employee.enc_personal_email=employee.personal_email 
+            employee.enc_mobile_phone=employee.mobile_phone 
+            employee.enc_home_phone=employee.home_phone  
+            employee.enc_address=employee.address  
+            employee.enc_pincode=employee.pincode  
+            employee.enc_emergency_contact_phone=employee.emergency_contact_phone
+            employee.enc_emergency_contact_name=employee.emergency_contact_name
+            employee.enc_base_salary=employee.base_salary 
+            employee.enc_pan_card=employee.pan_card  
+            employee.enc_aadhaar=employee.aadhaar  
+            employee.enc_bank_name=employee.bank_name   
+            employee.enc_bank_branch=employee.bank_branch  
+            employee.enc_bank_branch_address=employee.bank_branch_address   
+            employee.enc_bank_account=employee.bank_account   
+            employee.enc_ifsc_code=employee.ifsc_code 
+            employee.enc_emergency_contact_relation=employee.emergency_contact_relation 
+            employee.enc_incentive=employee.incentive 
+            employee.enc_home_house=employee.home_house
+            
+            employee.enc_joining_bonus=employee.joining_bonus 
+
+            employee.save() 
             current_status = form.cleaned_data.get('employee_status')
             new_employee_type =  form.cleaned_data.get("employee_type")
             if current_status == 'employed':

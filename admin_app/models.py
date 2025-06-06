@@ -100,7 +100,7 @@ class Employees(models.Model):
     # company_email = models.EmailField(unique=True, verbose_name="Company Email")
     company_email = models.TextField(unique=True, verbose_name="Encrypted Company Email")
     personal_email = models.TextField(verbose_name="Personal Email")
-    pm_email = models.EmailField(null=True , blank=True,verbose_name="PM Email")
+    pm_email = models.EmailField(blank=True,null=True ,verbose_name="PM Email")
     mobile_phone = models.TextField()
     office_phone = models.CharField(max_length=15, blank=True,null=True,)
     home_phone = models.TextField(blank=True,null=True,)

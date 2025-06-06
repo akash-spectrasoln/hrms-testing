@@ -123,7 +123,7 @@
                             <select name="salutation" class="form-control" required>
                                 <option value="">Select</option>
                                 {% for sal in salutations %}
-                                <option value="{{ sal.id }}">{{ sal.sal_name }}</option>
+                                <option value="{{ sal.id }}">{{sal.id}} - {{ sal.sal_name }}</option>
                                 {% endfor %}
                             </select>
                         </div>
@@ -154,7 +154,7 @@
                             <select id="country" name="country" class="form-control" required>
                                 <option value="">Select</option>
                                 {% for country in countries %}
-                                <option value="{{ country.id }}">{{ country.country_name }}</option>
+                                <option value="{{ country.id }}">{{country.code}} - {{ country.country_name }}</option>
                                 {% endfor %}
                             </select>
                         </div>
@@ -163,7 +163,7 @@
                             <select id="state" name="state" class="form-control" required>
                                 <option value="">Select</option>
                                 {% for state in states %}
-                                <option value="{{ state.id }}">{{ state.name }}</option>
+                                <option value="{{ state.id }}">{{state.code}} - {{ state.name }}</option>
                                 {% endfor %}
                             </select>
                         </div>
@@ -233,7 +233,7 @@
                             <select name="department" class="form-control" required>
                                 <option value="">Select</option>
                                 {% for department in departments %}
-                                <option value="{{ department.id }}">{{ department.dep_name }}</option>
+                                <option value="{{ department.id }}">{{department.id}} - {{ department.dep_name }}</option>
                                 {% endfor %}
                             </select>
                         </div>
@@ -242,7 +242,7 @@
                             <select name="role" class="form-control" required>
                                 <option value="">Select</option>
                                 {% for role in roles %}
-                                <option value="{{ role.role_id }}">{{ role.role_name }}</option>
+                                <option value="{{ role.role_id }}">{{role.role_id}} - {{ role.role_name }}</option>
                                 {% endfor %}
                             </select>
                         </div>
