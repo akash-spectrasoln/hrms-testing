@@ -55,7 +55,7 @@
               </tr>
               <tr>
                 <th><i class="bi bi-phone"></i> Mobile Phone</th>
-                <td>{{ employee.emc_mobile_phone }}</td>
+                <td>{{ employee.enc_mobile_phone }}</td>
               </tr>
               <tr>
                 <th><i class="bi bi-calendar-plus"></i>Start Date</th>
@@ -75,28 +75,25 @@
                 </td>
               </tr>
               
-              <tr>
-                <th><i class="bi bi-calendar-check"></i> Leaves Remaining</th>
-                <td>{{ available_leaves }}</td>
-              </tr>
+              
             </tbody>
           </table>
           <div class="row mt-4">
             <div class="col-md-6">
               <div class="section-heading"><i class="bi bi-house-heart"></i> Address</div>
               <div class="text-muted small">
-                {{ employee.address }}<br>
-                {{ employee.home_house }}, {{ employee.home_post_office }}<br>
-                {{ employee.home_city }}, {{ employee.state }}, {{ employee.country }} - {{ employee.pincode }}
+                
+                {{ employee.enc_home_house }}, {{ employee.enc_home_post_office }}<br>
+                {{ employee.enc_home_city }}, {{ employee.state }}, {{ employee.country }} - {{ employee.enc_pincode }}
               </div>
             </div>
             <div class="col-md-6">
               <div class="section-heading"><i class="bi bi-person-hearts"></i> Emergency Contact</div>
               <div class="text-muted small">
-                <strong>{{ employee.emergency_contact_name }}</strong><br>
-                {% if employee.emergency_contact_relation %}({{ employee.emergency_contact_relation }})<br>{% endif %}
-                {{ employee.emergency_contact_phone }}<br>
-                {% if employee.emergency_contact_email %}{{ employee.emergency_contact_email }}{% endif %}
+                <strong>{{ employee.enc_emergency_contact_name }}</strong><br>
+                {% if employee.enc_emergency_contact_relation %}({{ employee.enc_emergency_contact_relation }})<br>{% endif %}
+                {{ employee.enc_emergency_contact_phone }}<br>
+                {% if employee.enc_emergency_contact_email %}{{ employee.enc_emergency_contact_email }}{% endif %}
               </div>
             </div>
           </div>
