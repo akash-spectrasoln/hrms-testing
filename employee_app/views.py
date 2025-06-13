@@ -25,6 +25,7 @@ from django.utils import timezone
 import datetime
 from django.db import IntegrityError
 import time
+from django.contrib.auth.decorators import login_required
 TIMEOUT_DURATION = 60 * 60  # 60 minutes
 
 def signin_required(fn):
@@ -90,7 +91,7 @@ def employee_login(request):
             if user.check_password("defaultpassword"):
                 return redirect('set_password')  # Redirect to the set password page
 
-            return redirect('index')  # Redirect to employee dashboard
+            return redirect('emp_dashboard')  # Redirect to employee dashboard
         else:
             messages.error(request, 'Invalid credentials')
             # return HttpResponse("invalid credentials")
@@ -99,6 +100,22 @@ def employee_login(request):
     return render(request, 'emp_login.html')
 
 
+
+#dashboard view of employee
+login_required
+def dashboard_view(request):
+    try:
+        employee = Employees.objects.get(company_email=request.user.username)
+    except Employees.DoesNotExist:
+        return render(request, 'error.html', {'message': 'Employee not found.'})
+
+    return render(request, 'emp_dashboard.html', {
+        'employee': employee,
+        'emp_id': employee.employee_id,
+        'emp_fname': employee.first_name,
+        'emp_lname': employee.last_name,
+        'emp_designation': employee.role.role_name,
+    })
 
 
 
@@ -172,7 +189,7 @@ def set_password(request):
 
             update_session_auth_hash(request, user)  # Keep the user logged in
             messages.success(request, 'Your password has been updated!')
-            return redirect('index')
+            return redirect('emp_dashboard')
         else:
             messages.error(request, 'Please correct the errors below.')
     else:
@@ -1533,6 +1550,7 @@ def holiday_list(request):
     # Filter holidays and floating holidays for the current year
     holidays = Holiday.objects.filter(date__year=current_year,country=employee.country).order_by('date')
     floating_holidays = FloatingHoliday.objects.filter(date__year=current_year,country=employee.country).order_by('date')
+
 
     # Check if the logged-in user is a manager
     

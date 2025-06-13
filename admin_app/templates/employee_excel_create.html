@@ -43,15 +43,39 @@
     }
     .employee-list {
         margin-top: 20px;
+        overflow: auto;
+        
     }
-    .table {
-        margin-top: 20px;
+    .employee-list table {
+        max-width: 100%;
+        table-layout: fixed; 
+        border-collapse: collapse;
     }
+
+    .employee-list th:nth-child(1),
+    .employee-list td:nth-child(1) {
+        width: 10%;  /* For "#" column */
+    }
+
+    .employee-list th:nth-child(2),
+    .employee-list td:nth-child(2) {
+        width: 30%;  /* Employee ID */
+    }
+
+    .employee-list th:nth-child(3),
+    .employee-list td:nth-child(3) {
+        width: 60%;  /* Name */
+    }
+
     .message {
         margin-top: 20px;
         font-weight: bold;
         color: #28a745;
     }
+
+    #spinner-overlay {
+      display: none !important;
+  }
     @media (max-width: 768px) {
         .card {
             max-width: 100%;
@@ -161,5 +185,7 @@
         document.querySelector('.loading-spinner').style.display = 'none';
     });
 });
+
 </script>
+
 {% endblock %}

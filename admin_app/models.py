@@ -92,6 +92,7 @@ class Employees(models.Model):
     # employee_type = models.CharField(max_length=3, choices=EMPLOYEE_TYPE_CHOICES, verbose_name="Employee Type", null=True)
     employee_type = models.ForeignKey(EmployeeType, on_delete=models.SET_NULL, null=True, blank=True)
     employee_id = models.CharField(max_length=10, unique=True)
+    old_employee_id=models.CharField(max_length=10, unique=True, null=True, blank=True)
     salutation = models.ForeignKey('Salutation', on_delete=models.CASCADE)
     first_name = models.CharField(max_length=50, verbose_name="First Name")
     middle_name = models.CharField(max_length=50, verbose_name="Middle Name", blank=True,null=True,)
@@ -127,7 +128,7 @@ class Employees(models.Model):
     emergency_contact_email = models.EmailField(null=True,blank=True)
     emergency_contact_relation = models.TextField(null=True,blank=True)
     # base_salary = models.DecimalField(max_digits=10, decimal_places=2)
-    base_salary = models.TextField()
+    base_salary = models.TextField(null=True, blank=True)
     created_on = models.DateTimeField(auto_now_add=True, null=True)
     modified_on = models.DateTimeField(auto_now=True, null=True)
     is_deleted = models.BooleanField(default=False)
@@ -400,7 +401,7 @@ class Employees(models.Model):
 
     @enc_bank_branch_address.setter
     def enc_bank_branch_address(self, value):
-        if value is not None:
+        if value not in [None,""]:
             if not hasattr(self, '_fields_to_encrypt'):
                 self._fields_to_encrypt = {}
             self._fields_to_encrypt['bank_branch_address'] = value
@@ -412,7 +413,7 @@ class Employees(models.Model):
 
     @enc_bank_branch.setter
     def enc_bank_branch(self, value):
-        if value is not None:
+        if value not in [None,""]:
             if not hasattr(self, '_fields_to_encrypt'):
                 self._fields_to_encrypt = {}
             self._fields_to_encrypt['bank_branch'] = value
@@ -464,10 +465,11 @@ class Employees(models.Model):
 
     @enc_base_salary.setter
     def enc_base_salary(self, value):
-        if value is not None:
+        if value not in [None,""]:
             if not hasattr(self, '_fields_to_encrypt'):
                 self._fields_to_encrypt = {}
             self._fields_to_encrypt['base_salary'] = value
+
 
 
 
@@ -603,8 +605,7 @@ class Employees(models.Model):
                 return None
         return None
 
-    def __str__(self):
-        return f"Company: {self.cmp_name or 'N/A'}"
+    
 
 
 @receiver(post_save, sender=Employees)

@@ -1,0 +1,111 @@
+{% extends 'partials/base.html' %} 
+
+{% block title %}HRMS{% endblock %}
+
+{% block admin_left-sidebar %}
+<!-- Intentionally left empty to remove the sidebar -->
+{% endblock admin_left-sidebar %}
+
+{% block styles %}
+<style>
+
+.container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh; /* center vertically */
+    
+}
+
+
+</style>
+{% endblock styles %}
+
+
+
+{% block content %}
+<div class="container">
+    <div class="content-wrapper">
+        <h2 class="page-title">Dashboard</h2>
+
+        <div class="card-wrapper">
+            
+            <!-- Leave management system -->
+            <a href="{% url 'index' %}" class="card">
+                <div class="card-content">
+                    <span class="card-icon">📅</span>
+                    <h3>Leave management</h3>
+                </div>
+            </a>
+
+            
+        </div>
+    </div>
+</div>
+<style>
+    .content-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-right: 100px;
+    
+    }
+
+    .page-title{
+        margin-bottom: 40px;
+    }
+
+    .card {
+        display: block;
+        width: 150px;  /* Ensures the card is square */
+        height: 150px;
+        background: #ffffff;
+        border-radius: 8px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        text-decoration: none;
+        color: inherit;
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+    }
+
+    .card-content {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 100%;
+        padding: 20px;
+        text-align: center;
+    }
+
+    .card-icon {
+        font-size: 2rem;  /* Larger icon size */
+        margin-bottom: 10px;
+        color: #3b82f6;  /* Icon color */
+    }
+
+    .card-content h3 {
+        margin: 0;
+        font-size: 1rem;
+        color: #2c3e50;
+    }
+
+    @media (max-width: 768px) {
+        .card {
+            width: 130px;
+            height: 130px;
+        }
+    }
+
+    @media (max-width: 480px) {
+        .card {
+            width: 100px;
+            height: 100px;
+        }
+    }
+</style>
+{% endblock content %}

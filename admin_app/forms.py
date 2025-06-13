@@ -95,12 +95,12 @@ class EmployeeEditForm(forms.ModelForm):
         label="Bank Name"
     )
     bank_branch = forms.CharField(
-        required=True,
+        required=False,
         max_length=100,
         label="Bank Branch"
     )
     bank_branch_address = forms.CharField(
-        required=True,
+        required=False,
         widget=forms.Textarea(attrs={'rows': 2}),
         label="Bank Branch Address"
     )
@@ -120,7 +120,7 @@ class EmployeeEditForm(forms.ModelForm):
     class Meta:
         model = Employees
         fields = [
-            'employee_id', 'salutation', 'first_name', 'middle_name', 'last_name',
+            'employee_id', 'old_employee_id','salutation', 'first_name', 'middle_name', 'last_name',
             'company_email', 'personal_email', 'mobile_phone', 'office_phone',
             'home_phone', 'valid_from', 'valid_to', 'country', 'state', 
             'department', 'role', 'manager','home_city','pincode','emergency_contact_name','emergency_contact_phone','emergency_contact_email',
@@ -187,6 +187,12 @@ class EmployeeEditForm(forms.ModelForm):
             if file.size > 5 * 1024 * 1024:  # 5MB limit
                 raise ValidationError("File must be under 5MB.")
         return files
+
+    def clean_old_employee_id(self):
+        value = self.cleaned_data.get("old_employee_id")
+        if value in [None, '']:  # explicitly check for empty input
+            return None
+        return value 
 
     def save(self, commit=True):
         instance = super().save(commit=False)

@@ -793,6 +793,7 @@ class EmployeeExcelCreateView(View):
                             employee = Employees(
                                 employee_type=employee_type_obj,
                                 employee_id=generate_employee_id(employee_type_obj.code),
+                                old_employee_id=parse(row["Old Employee Id"]) if 'Old Employee Id' in row else '',
                                 salutation=salutation,
                                 first_name=parse(row['First Name']),
                                 middle_name=parse(row['Middle Name']) if 'Middle Name' in row else '',
@@ -1712,7 +1713,7 @@ def generate_emp_id(request):
 
         new_employee_id = f"{employee_type_code}{new_number}"
 
-        return JsonResponse({"employee_id": new_employee_id})
+        return JsonResponse({"employee_id": new_employee_id}) 
 
     return JsonResponse({"error": "Invalid request method"}, status=405)
 
