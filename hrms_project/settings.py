@@ -43,6 +43,11 @@ STATICFILES_DIRS = [
 # ALLOWED_HOSTS = ["35.225.224.226", "127.0.0.1"]
 ALLOWED_HOSTS = ["34.58.114.68","127.0.0.1",'localhost','*','34.29.104.90','employee.spectrasoln.com']
 
+#added for domain
+CSRF_TRUSTED_ORIGINS = [
+    'https://employee.spectrasoln.com',
+]
+
 
 # Application definition
 
