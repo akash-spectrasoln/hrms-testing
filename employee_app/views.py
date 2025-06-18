@@ -812,12 +812,25 @@ def request_leave(request):
 
     # Helper: get all holidays as sets (avoids repeat queries)
     def get_holidays(employee, fy_start, fy_end):
-        holidays = set(
+
+        # Dates from country-based holidays
+        country_holiday_dates = set(
             Holiday.objects.filter(
                 country=employee.country,
                 date__range=(fy_start, fy_end)
             ).values_list('date', flat=True)
         )
+
+        # Dates from state-based holidays
+        state_holiday_dates = set(
+            StateHoliday.objects.filter(
+                state=employee.state,
+                date__range=(fy_start, fy_end)
+            ).values_list('date', flat=True)
+        )
+
+        # Combine both sets
+        holidays = country_holiday_dates | state_holiday_dates
         floating = set(
             FloatingHoliday.objects.filter(
                 country=employee.country,
@@ -864,6 +877,7 @@ def request_leave(request):
             day_type = request.POST.get('day_type')
             if day_type == 'one':
                 leave_request.end_date = leave_request.start_date
+                leave_request.leave_days=1
             else:
                 if not leave_request.end_date or leave_request.end_date < leave_request.start_date:
                     messages.error(request, "Please select a valid End Date.")
@@ -1535,6 +1549,7 @@ def total_leaves_view(request):
 from django.shortcuts import render
 from datetime import date
 from .models import Holiday, FloatingHoliday
+from admin_app.models import StateHoliday
 from datetime import datetime
 
 def holiday_list(request):
@@ -1548,7 +1563,22 @@ def holiday_list(request):
             pass  # If no employee record is found, keep is_manager as False
 
     # Filter holidays and floating holidays for the current year
-    holidays = Holiday.objects.filter(date__year=current_year,country=employee.country).order_by('date')
+    country_holidays = Holiday.objects.filter(date__year=current_year,country=employee.country).order_by('date')
+    state_holidays=StateHoliday.objects.filter(date__year=current_year,country=employee.country,state=employee.state).order_by('date')
+    holidays=[]
+    # holidays.extend([for holiday in coutry_holidays{}])
+    holidays.extend([{
+            'name': holiday.name,
+            'date': holiday.date
+        } for holiday in country_holidays])
+    holidays.extend([{
+            'name': holiday.name,
+            'date': holiday.date
+        } for holiday in state_holidays])
+
+    holidays.sort(key=lambda x:x['date'])
+    
+
     floating_holidays = FloatingHoliday.objects.filter(date__year=current_year,country=employee.country).order_by('date')
 
 

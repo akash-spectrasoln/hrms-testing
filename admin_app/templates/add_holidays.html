@@ -81,12 +81,24 @@
                             <label for="id_leave_type" class="required form-label">Leave Type</label>
                             <select name="leave_type" id="id_leave_type" class="form-select" required>
                                 <option value="">Select Leave Type</option>
-                                <option value="fixed" {% if form.leave_type.value == 'fixed' %}selected{% endif %}>Fixed Holiday</option>
+                                <option value="country" {% if form.leave_type.value == 'country' %}selected{% endif %}>Country Holiday</option>
                                 <option value="floating" {% if form.leave_type.value == 'floating' %}selected{% endif %}>Floating Holiday</option>
+                                <option value="state" {% if form.leave_type.value == 'state' %}selected{% endif %}>State Holiday</option>
                             </select>
                             {% if form.leave_type.errors %}
                                 <div class="field-error">
                                     {% for error in form.leave_type.errors %}{{ error }}{% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                        <div class="mb-3" id="state-field" style="display: none;">
+                            <label for="id_state" class="form-label required">State</label>
+                            <select name="state" id="id_state" class="form-select" required>
+                                <option value="">Select State</option>
+                            </select>
+                            {% if form.state.errors %}
+                                <div class="field-error">
+                                    {% for error in form.state.errors %}{{ error }}{% endfor %}
                                 </div>
                             {% endif %}
                         </div>
@@ -126,17 +138,18 @@
                                     <option value="{{ country.id }}" {% if filter_country|stringformat:"s" == country.id|stringformat:"s" %}selected{% endif %}>{{ country.country_name }}</option>
                                 {% endfor %}
                             </select>
-                            <label for="year-filter" class="form-label mt-2 me-2">Select a Year</label>
+                            <label for="year-filter" class="form-label mt-2 me-2">Select Year</label>
                             <select id="year-filter" class="form-select form-select-sm" style="width: auto; margin-right: 10px;">
                                 {% for year in years %}
                                     <option value="{{ year }}" {% if year|stringformat:"s" == filter_year|stringformat:"s" %}selected{% endif %}>{{ year }}</option>
                                 {% endfor %}
                             </select>
-                            <label for="type-filter" class="form-label mt-2 me-2">Select Type</label>
+                            <label for="type-filter" class="form-label mt-2 me-2">Type</label>
                             <select id="type-filter" class="form-select form-select-sm" style="width: auto; margin-right: 10px;">
-                                <option value="fixed" {% if filter_leave_type == 'fixed' %}selected{% endif %}>Fixed Holiday</option>
+                                <option value="country" {% if filter_leave_type == 'country' %}selected{% endif %}>Country Holiday</option>
                                 <option value="floating" {% if filter_leave_type == 'floating' %}selected{% endif %}>Floating Holiday</option>
-                                <option value="" {% if not filter_leave_type %}selected{% endif %}>Both</option>
+                                <option value="state" {% if filter_leave_type == 'state' %}selected{% endif %}>State Holiday</option>
+                                <option value="" {% if not filter_leave_type %}selected{% endif %}>All</option>
                             </select>
                         </div>
                     </div>
@@ -168,12 +181,66 @@
         const form = document.getElementById('holidayForm');
         const dateInput = document.getElementById('id_date');
         const leaveTypeSelect = document.getElementById('id_leave_type');
+        const stateFieldDiv = document.getElementById('state-field');
         const yearFilter = document.getElementById('year-filter');
         const typeFilter = document.getElementById('type-filter');
         const countryFilter = document.getElementById('country-filter');
         const holidayTbody = document.getElementById('holiday-tbody');
         const noEntries = document.getElementById('no-entries');
         const selectedYearSpan = document.getElementById('selected-year');
+        const countrySelect = document.getElementById('id_country'); // Assuming jQuery uses `#country`
+        const stateSelect = document.getElementById('id_state');
+        
+
+        function toggleStateField() {
+            if (leaveTypeSelect.value === 'state') {
+                stateFieldDiv.style.display = 'block';
+                loadStatesFromBackend($(countrySelect).val()); // Fetch states using jQuery AJAX
+            } else {
+                stateFieldDiv.style.display = 'none';
+            }
+        }
+
+        function loadStatesFromBackend(countryId) {
+            const $stateSelect = $('#id_state');
+            $stateSelect.prop('disabled', true).empty().append('<option value="">Select State</option>');
+
+            if (!countryId) return;
+
+            $.ajax({
+                url: "{% url 'get_states' %}",  // Django URL name for state-fetching view
+                data: { 'country_id': countryId },
+                method: 'GET',
+                dataType: 'json',
+                success: function (response) {
+                    if (Array.isArray(response)) {
+                        response.forEach(state => {
+                            $stateSelect.append(new Option(state.code + ' - ' + state.name, state.id));
+                        });
+                    }
+                },
+                error: function () {
+                    alert('Error loading states. Please try again.');
+                },
+                complete: function () {
+                    $stateSelect.prop('disabled', false);
+                }
+            });
+        }
+
+        // On leave type change
+        leaveTypeSelect.addEventListener('change', toggleStateField);
+
+        // On country change
+        $('#id_country').on('change', function () {
+            if (leaveTypeSelect.value === 'state') {
+                loadStatesFromBackend($(this).val());
+            }
+        });
+
+        // On initial page load
+        toggleStateField();
+
 
         // Set minimum date to today for fixed holidays
         /*function updateDateRestrictions() {
@@ -210,7 +277,7 @@
 
         // Fetch holidays with year, type, country filters
         function fetchHolidaysForYearTypeCountry(year, type, countryId) {
-            let url = `/admin_app/filter-holidays/${year}/?type=${encodeURIComponent(type)}${countryId ? "&country=" + encodeURIComponent(countryId) : ''}`;
+            let url = `/hrms/admin/filter-holidays/${year}/?type=${encodeURIComponent(type)}${countryId ? "&country=" + encodeURIComponent(countryId) : ''}`;
             fetch(url)
                 .then(response => response.json())
                 .then(data => {
@@ -254,5 +321,7 @@
             fetchHolidaysForYearTypeCountry(yearFilter.value, typeFilter.value, countryFilter.value);
         });
     });
+
+
 </script>
 {% endblock %}

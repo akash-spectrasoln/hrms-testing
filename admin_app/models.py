@@ -282,23 +282,7 @@ class Employees(models.Model):
         return f"{self.employee_id} "
     
 
-    # encryt/decrypt 
 
-    # @property
-    # def data(self):
-    #     """Decrypt and return the company name."""
-    #     return self._decrypt_field(self.company_email)
-
-    # @data.setter
-    # def data(self, value):
-
-    #     """Temporarily store `cmp_name` for encryption during save."""
-    #     if value is not None:
-    #         self._data_to_encrypt = value  # Store the raw value temporarily
-    #     else:
-    #         self._data_to_encrypt = None
-    #         self.company_email = None
-    # home_house
 
     @property
     def enc_home_house(self):
@@ -646,14 +630,27 @@ class Certificate(models.Model):
 # leave management section
 
 from datetime import datetime
-class Holiday(models.Model):
+class Holiday(models.Model): # this is the country based holiday
     date=models.DateField()
     name=models.CharField(max_length=100)
     day=models.CharField(max_length=50,null=True)
     year = models.IntegerField(default=datetime.now().year)
     country = models.ForeignKey('Country', on_delete=models.CASCADE)
 
-#
+
+
+class StateHoliday(models.Model): # this is the country based holiday
+    date=models.DateField()
+    name=models.CharField(max_length=100)
+    year = models.IntegerField(default=datetime.now().year)
+    country = models.ForeignKey(Country, on_delete=models.CASCADE, null=True)
+    state = models.ForeignKey(state, on_delete=models.CASCADE, null=True)
+
+    def __str__(self):
+        return self.name
+
+
+
 # below is the leave request model
 
 

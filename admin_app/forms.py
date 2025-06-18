@@ -244,8 +244,10 @@ class AdminRegistrationForm(forms.ModelForm):
 
 class Holiday_Form(forms.Form):
     LEAVE_TYPE_CHOICES = [
-        ('fixed', 'Fixed Holiday'),
+        ('country', 'Country Holiday'),
         ('floating', 'Floating Holiday'),
+        ('state', 'State Holiday'),
+        
     ]
 
     leave_type = forms.ChoiceField(choices=LEAVE_TYPE_CHOICES, label="Leave Type", required=True)
@@ -259,6 +261,17 @@ class Holiday_Form(forms.Form):
         empty_label="Select Country",
         label="Country"
     )
+    
+
+    state = forms.ModelChoiceField(
+        queryset=state.objects.all(),  # Will be updated dynamically
+        required=False,
+        label="State"
+    )
+
+
+
+
 def clean_date(self):
     return self.cleaned_data['date']  # Accept any valid date without validation
 

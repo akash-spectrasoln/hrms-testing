@@ -31,7 +31,7 @@ path('ajax/load-states/', load_states, name='load_states'),  # This is for AJAX 
 #     path('dashboard/', admin_dashboard, name='admin_dashboard'),  # Admin dashboard URL
 # path('logout/', logout_admin, name='logout_admin'),
 
-path('admin_login/', admin_login, name='admin_login'),
+path('login/', admin_login, name='admin_login'),
 
 # Admin Dashboard (After successful login)
 path('admin_dashboard/', admin_dashboard, name='admin_dashboard'),

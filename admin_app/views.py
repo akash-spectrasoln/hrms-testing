@@ -411,7 +411,11 @@ def delete_leave_request(request, leave_id):
     leave = get_object_or_404(LeaveRequest, id=leave_id)
     employee = leave.employee_user
     leave_days = leave.leave_days  # Ensure this exists in your model
-    current_user = Employees.objects.get(user=request.user)
+    try:
+        current_user = Employees.objects.get(user=request.user)
+    except Employees.DoesNotExist:
+        messages.error(request, "You are not registered as an employee.")
+        return redirect("leave_request_display")
 
     try:
         emp_obj = Employees.objects.get(company_email=employee.email)
@@ -1260,7 +1264,7 @@ from django.shortcuts import render, redirect
 from django.http import JsonResponse
 from django.contrib import messages
 from datetime import datetime
-from .models import Holiday, FloatingHoliday
+from .models import Holiday, FloatingHoliday , StateHoliday
 from .forms import Holiday_Form
 
 
@@ -1286,6 +1290,7 @@ def add_holidays(request):
 
     if request.method == "POST":
         form = Holiday_Form(request.POST)
+        print("Submitted leave_type:===============================", request.POST.get('leave_type'))
         if form.is_valid():
             leave_type = form.cleaned_data['leave_type']
             name = form.cleaned_data['name']
@@ -1296,9 +1301,9 @@ def add_holidays(request):
 
             year_param = selected_year  # Use the year from the added holiday
 
-            if leave_type == 'fixed':
+            if leave_type == 'country':
                 if Holiday.objects.filter(date=selected_date, country=country).exists():
-                    messages.warning(request, "⚠️ The date you have entered is already added as a Fixed Holiday for this country.")
+                    messages.warning(request, "⚠️ The date you have entered is already added as a Country Holiday for this country.")
                 else:
                     Holiday.objects.create(
                         date=selected_date, 
@@ -1307,7 +1312,7 @@ def add_holidays(request):
                         year=selected_year, 
                         country=country
                     )
-                    messages.success(request, "✅ Fixed holiday added successfully!")
+                    messages.success(request, "✅ Country holiday added successfully!")
 
             elif leave_type == 'floating':
                 if FloatingHoliday.objects.filter(date=selected_date, country=country).exists():
@@ -1320,6 +1325,22 @@ def add_holidays(request):
                         country=country
                     )
                     messages.success(request, "✅ Floating holiday added successfully!")
+            elif leave_type == 'state':
+                state = form.cleaned_data['state']
+                if StateHoliday.objects.filter(date=selected_date, country=country, state=state).exists():
+                    messages.warning(request, "⚠️ This date already exists as a State Holiday for the selected state.")
+                else:
+                    StateHoliday.objects.create(
+                        name=name,
+                        date=selected_date,
+                        year=selected_year,
+                        country=country,
+                        state=state
+                    )
+                    messages.success(request, "✅ State holiday added successfully!")
+
+
+
             # Redirect and preserve filters (send to GET with filters)
             return redirect(f"{reverse('add_holidays')}?country={country.id}&leave_type={leave_type}&year={year_param}")
  
@@ -1338,19 +1359,19 @@ def add_holidays(request):
         filter_kwargs['country__id'] = filter_country
 
     # For displaying types, filter accordingly:
-    if filter_leave_type == 'fixed':
-        fixed_holidays = Holiday.objects.filter(**filter_kwargs)
+    if filter_leave_type == 'country':
+        country_holidays = Holiday.objects.filter(**filter_kwargs)
         floating_holidays = FloatingHoliday.objects.none()
     elif filter_leave_type == 'floating':
-        fixed_holidays = Holiday.objects.none()
+        country_holidays = Holiday.objects.none()
         floating_holidays = FloatingHoliday.objects.filter(**filter_kwargs)
     else:
-        fixed_holidays = Holiday.objects.filter(**filter_kwargs)
+        country_holidays = Holiday.objects.filter(**filter_kwargs)
         floating_holidays = FloatingHoliday.objects.filter(**filter_kwargs)
 
     context = {
         'form': form,
-        'fixed_holidays': fixed_holidays,
+        'fixed_holidays': country_holidays,
         'floating_holidays': floating_holidays,
         'current_year': filter_year,
         'filter_country': filter_country,
@@ -1364,7 +1385,7 @@ from .models import Holiday, FloatingHoliday
 
 
 def filter_holidays_by_year(request, year):
-    holiday_type = request.GET.get('type', '')  # Leave type filter ('fixed', 'floating', or '')
+    holiday_type = request.GET.get('type', '')  # Leave type filter ('country', 'floating', or '')
     country_id = request.GET.get('country', '')  # Country id filter as string
 
     holidays = []
@@ -1374,14 +1395,14 @@ def filter_holidays_by_year(request, year):
     if country_id:
         filter_kwargs['country_id'] = country_id  # filter by country if provided
 
-    if holiday_type == 'fixed' or holiday_type == '':
-        # Get fixed holidays filtered by year and country (if any)
-        fixed_holidays = Holiday.objects.filter(**filter_kwargs).order_by('date')
+    if holiday_type == 'country' or holiday_type == '':
+        # Get country holidays filtered by year and country (if any)
+        country_holidays = Holiday.objects.filter(**filter_kwargs).order_by('date') # Country Holidays are stored in Holiday model
         holidays.extend([{
             'name': holiday.name,
             'date': holiday.date.strftime('%Y-%m-%d'),
-            'type': 'Fixed'
-        } for holiday in fixed_holidays])
+            'type': 'Country'
+        } for holiday in country_holidays])
 
     if holiday_type == 'floating' or holiday_type == '':
         # Get floating holidays filtered by year and country (if any)
@@ -1391,6 +1412,17 @@ def filter_holidays_by_year(request, year):
             'date': holiday.date.strftime('%Y-%m-%d'),
             'type': 'Floating'
         } for holiday in floating_holidays])
+
+    if holiday_type == 'state' or holiday_type == '':
+        # Get floating holidays filtered by year and country (if any)
+        state_holidays = StateHoliday.objects.filter(**filter_kwargs).order_by('date')
+        holidays.extend([{
+            'name': holiday.name,
+            'date': holiday.date.strftime('%Y-%m-%d'),
+            'type': 'State'
+        } for holiday in state_holidays])
+
+
 
     return JsonResponse({'holidays': holidays})
 
