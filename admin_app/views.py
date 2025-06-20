@@ -521,7 +521,6 @@ class EmployeeUpdateView(UpdateView):
             context['states'] = state.objects.filter(country=employee.country) if employee.country else []
             context['selected_state'] = employee.state if employee.state else None
             context['home_post_office'] = employee.home_post_office
-            
             context['incentive'] = employee.enc_incentive
             context['joining_bonus'] = employee.enc_joining_bonus
             
@@ -897,7 +896,100 @@ class EmployeeExcelCreateView(View):
         except Exception as e:
             import traceback
             print("[DEBUG] Top-level exception in POST handler:")
-            print
+
+import pandas as pd
+from django.shortcuts import render, redirect
+from django.contrib import messages
+from datetime import datetime
+from .models import Holiday, FloatingHoliday, StateHoliday, Country, state  # import your models
+
+class HolidayExcelCreateView(View):
+    template_name = 'holiday_excel_create.html'
+
+    def get(self, request):
+        return render(request, self.template_name)
+
+    def post(self, request):
+        excel_file = request.FILES.get('excel_file')
+        if not excel_file:
+            messages.error(request, "No file uploaded.")
+            return redirect(request.path)
+
+        try:
+            df = pd.read_excel(excel_file)
+            df = df.where(pd.notnull(df), None)  # Replace NaNs with None
+            df.columns = [c.strip() for c in df.columns]  # Clean column names
+
+            success_rows = []
+            failed_rows = []
+
+            for index, row in df.iterrows():
+                try:
+                    name = row['name']
+                    leave_type = row['leave_type'].strip().lower()
+                    date = pd.to_datetime(row['date']).date()
+                    year = date.year
+                    day = date.strftime("%A")
+
+                    country = Country.objects.get(code=row['country_code'])
+
+                    if leave_type == 'country':
+                        if not Holiday.objects.filter(date=date, country=country).exists():
+                            Holiday.objects.create(
+                                name=name,
+                                date=date,
+                                day=day,
+                                year=year,
+                                country=country
+                            )
+                            success_rows.append({'name':name,'type':'Counrty'})
+                        else:
+                            failed_rows.append({'name':name})
+
+                    elif leave_type == 'floating':
+                        if not FloatingHoliday.objects.filter(date=date, country=country).exists():
+                
+                            FloatingHoliday.objects.create(
+                                name=name,
+                                date=date,
+                                year=year,
+                                country=country
+                            )
+                            success_rows.append({'name':name,'type':'Floating'})
+                        else:
+                            failed_rows.append({'name':name})
+
+                    elif leave_type == 'state':
+                        holiday_state= state.objects.get(code=row['State Code']) # holiday_state - state to which holiday is added
+                        if not StateHoliday.objects.filter(date=date, country=country, state=holiday_state).exists():
+                            StateHoliday.objects.create(
+                                name=name,
+                                date=date,
+                                year=year,
+                                country=country,
+                                state=holiday_state
+                            )
+                            success_rows.append({'name':name,'type':'State'})
+                        else:
+                            failed_rows.append({'name':name})
+
+                except Exception as e:
+                    print(f"failed: {e}")
+                    traceback.print_exc()
+
+            messages.success(request, f"✅ {len(success_rows)} holidays uploaded successfully!")
+            if failed_rows:
+                messages.warning(request, f"⚠️ Failed to upload rows: {failed_rows}")
+            return render(request, self.template_name, {
+                                "success_names": success_rows,
+                                "failed_rows": failed_rows
+                            })
+
+        except Exception as e:
+            messages.error(request, f"❌ Error reading file: {e}")
+            return redirect(request.path)
+
+
 from django.contrib import messages
 from django.views import View
 from .models import Employees
@@ -1290,7 +1382,6 @@ def add_holidays(request):
 
     if request.method == "POST":
         form = Holiday_Form(request.POST)
-        print("Submitted leave_type:===============================", request.POST.get('leave_type'))
         if form.is_valid():
             leave_type = form.cleaned_data['leave_type']
             name = form.cleaned_data['name']
@@ -1401,7 +1492,8 @@ def filter_holidays_by_year(request, year):
         holidays.extend([{
             'name': holiday.name,
             'date': holiday.date.strftime('%Y-%m-%d'),
-            'type': 'Country'
+            'type':'Country',
+            'region': holiday.country.country_name
         } for holiday in country_holidays])
 
     if holiday_type == 'floating' or holiday_type == '':
@@ -1410,7 +1502,8 @@ def filter_holidays_by_year(request, year):
         holidays.extend([{
             'name': holiday.name,
             'date': holiday.date.strftime('%Y-%m-%d'),
-            'type': 'Floating'
+            'type': 'Floating',
+            'region': holiday.country.country_name
         } for holiday in floating_holidays])
 
     if holiday_type == 'state' or holiday_type == '':
@@ -1419,7 +1512,8 @@ def filter_holidays_by_year(request, year):
         holidays.extend([{
             'name': holiday.name,
             'date': holiday.date.strftime('%Y-%m-%d'),
-            'type': 'State'
+            'type': 'State',
+            'region': holiday.state.name
         } for holiday in state_holidays])
 
 
@@ -1723,6 +1817,8 @@ def generate_emp_id(request):
     """
     if request.method == "GET":
         employee_type_code = request.GET.get("employee_type", "").strip()
+        print(employee_type_code,"=================================================")
+        
 
         if not employee_type_code:
             return JsonResponse({"error": "Missing employee_type parameter"}, status=400)
@@ -1740,10 +1836,12 @@ def generate_emp_id(request):
                 # If parse fails, fallback to default start number
                 last_number = 100000
             new_number = last_number + 1
+    
         else:
             new_number = 100000  # Start from 100000 if no employees found
 
         new_employee_id = f"{employee_type_code}{new_number}"
+        print(new_employee_id,"=============================================")
 
         return JsonResponse({"employee_id": new_employee_id}) 
 

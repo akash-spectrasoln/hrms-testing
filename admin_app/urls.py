@@ -76,6 +76,7 @@ path('generate-emp-id/', generate_emp_id, name='generate_emp_id'),
 path('filter-holidays/<int:year>/', filter_holidays_by_year, name='filter_holidays_by_year'),
 path('delete-file/', delete_file, name='delete_file'),
 path('employees/upload/', EmployeeExcelCreateView.as_view(), name='employee_excel_create'),
+path('holiday/upload/',HolidayExcelCreateView.as_view(),name='holiday_excel_create'),
 ]
 
 

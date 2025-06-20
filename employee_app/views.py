@@ -831,12 +831,25 @@ def request_leave(request):
 
         # Combine both sets
         holidays = country_holiday_dates | state_holiday_dates
-        floating = set(
+        floating_holidays = set(
             FloatingHoliday.objects.filter(
                 country=employee.country,
                 date__range=(fy_start, fy_end)
             ).values_list('date', flat=True)
         )
+
+        state_excluded = set(
+        StateHoliday.objects.filter(
+            country=employee.country,
+            date__range=(fy_start, fy_end)
+        ).exclude(
+            state=employee.state
+        ).values_list('date', flat=True)
+        )
+
+        floating=floating_holidays | state_excluded
+        
+
         return holidays, floating
 
     # Helper for aggregation: get all leaves in a date range with one query
@@ -1566,7 +1579,6 @@ def holiday_list(request):
     country_holidays = Holiday.objects.filter(date__year=current_year,country=employee.country).order_by('date')
     state_holidays=StateHoliday.objects.filter(date__year=current_year,country=employee.country,state=employee.state).order_by('date')
     holidays=[]
-    # holidays.extend([for holiday in coutry_holidays{}])
     holidays.extend([{
             'name': holiday.name,
             'date': holiday.date
@@ -1579,7 +1591,18 @@ def holiday_list(request):
     holidays.sort(key=lambda x:x['date'])
     
 
-    floating_holidays = FloatingHoliday.objects.filter(date__year=current_year,country=employee.country).order_by('date')
+    floating_holidays1 = FloatingHoliday.objects.filter(date__year=current_year,country=employee.country).order_by('date')
+    floating_holidays2 = StateHoliday.objects.filter(date__year=current_year,country=employee.country).exclude(state=employee.state).order_by('date')
+
+    floating_holidays=[]
+    floating_holidays.extend([{
+        'name': holiday.name,
+        'date': holiday.date
+    } for holiday in floating_holidays1])
+    floating_holidays.extend([{
+        'name': holiday.name,
+        'date': holiday.date
+    } for holiday in floating_holidays2])
 
 
     # Check if the logged-in user is a manager
@@ -1999,9 +2022,42 @@ def allocate_leave(request, employee_id):
     is_manager = subordinates.exists()
 
     # Get fixed holidays (exclude floating holidays)
-    regular_holidays = set(Holiday.objects.filter(country=employee.country, year=current_year).values_list('date', flat=True))
-    floating_holiday_dates = set(FloatingHoliday.objects.filter(country=employee.country, year=current_year).values_list('date', flat=True))
+    # regular_holidays = set(Holiday.objects.filter(country=employee.country, year=current_year).values_list('date', flat=True))
+    # floating_holiday_dates = set(FloatingHoliday.objects.filter(country=employee.country, year=current_year).values_list('date', flat=True))
+    country_holiday_dates = set(
+        Holiday.objects.filter(
+            country=employee.country,
+            year=current_year
+        ).values_list('date', flat=True)
+    )
 
+    # Dates from state-based holidays
+    state_holiday_dates = set(
+        StateHoliday.objects.filter(
+            state=employee.state,
+            year=current_year
+        ).values_list('date', flat=True)
+    )
+
+    # Combine both sets
+    regular_holidays = country_holiday_dates | state_holiday_dates
+    floating_holidays = set(
+        FloatingHoliday.objects.filter(
+            country=employee.country,
+            year=current_year
+        ).values_list('date', flat=True)
+    )
+
+    state_excluded = set(
+    StateHoliday.objects.filter(
+        country=employee.country,
+        year=current_year
+    ).exclude(
+        state=employee.state
+    ).values_list('date', flat=True)
+    )
+
+    floating_holiday_dates=floating_holidays | state_excluded
     # Calculate financial year start and end dates
     financial_year_start, financial_year_end = get_financial_year_dates(request, employee, reference_date=today)
 

@@ -60,7 +60,9 @@
                             {% endfor %}
                         </div>
                     {% endif %}
-
+                    <a href="{% url 'holiday_excel_create' %}" class="btn btn-sm btn-info py-1 px-2" style="font-size: 0.75rem;">
+                            <i class="fas fa-file-excel"></i> Upload via Excel
+                    </a>
                     <form method="post" id="holidayForm" novalidate>
                         {% csrf_token %}
                         <div class="mb-3">
@@ -159,6 +161,7 @@
                                 <th>Name</th>
                                 <th>Date</th>
                                 <th>Type</th>
+                                <th>Region</th>
                             </tr>
                         </thead>
                         <tbody id="holiday-tbody">
@@ -287,7 +290,7 @@
 
                     holidays.forEach(holiday => {
                         const row = document.createElement('tr');
-                        row.innerHTML = `<td>${holiday.name}</td><td>${holiday.date}</td><td>${holiday.type}</td>`;
+                        row.innerHTML = `<td>${holiday.name}</td><td>${holiday.date}</td><td>${holiday.type}</td><td>${holiday.region}</td>`;
                         holidayTbody.appendChild(row);
                         hasEntries = true;
                     });

@@ -121,7 +121,7 @@ class EmployeeEditForm(forms.ModelForm):
         model = Employees
         fields = [
             'employee_id', 'old_employee_id','salutation', 'first_name', 'middle_name', 'last_name',
-            'company_email', 'personal_email', 'mobile_phone', 'office_phone',
+            'company_email', 'personal_email', 'mobile_phone', 'office_phone','home_post_office',
             'home_phone', 'valid_from', 'valid_to', 'country', 'state', 
             'department', 'role', 'manager','home_city','pincode','emergency_contact_name','emergency_contact_phone','emergency_contact_email',
              'emergency_contact_relation',
@@ -190,9 +190,18 @@ class EmployeeEditForm(forms.ModelForm):
 
     def clean_old_employee_id(self):
         value = self.cleaned_data.get("old_employee_id")
-        if value in [None, '']:  # explicitly check for empty input
+        if value in [None, '', 'None']:
             return None
-        return value 
+
+        # Check if any other record already uses this old_employee_id
+        qs = Employees.objects.filter(old_employee_id=value)
+        if self.instance.pk:
+            qs = qs.exclude(pk=self.instance.pk)  # exclude current record from check
+
+        if qs.exists():
+            raise forms.ValidationError("An employee with this Old Employee ID already exists.")
+
+        return value
 
     def save(self, commit=True):
         instance = super().save(commit=False)
