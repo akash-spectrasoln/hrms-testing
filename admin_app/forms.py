@@ -51,8 +51,8 @@ class EmployeeEditForm(forms.ModelForm):
     home_city = forms.CharField(required=False)
     emergency_contact_email=forms.EmailField(required=False)
     
-    incentive = forms.DecimalField(required=False, max_digits=10, decimal_places=2)
-    joining_bonus = forms.DecimalField(required=False, max_digits=10, decimal_places=2)
+    incentive = forms.CharField(required=False)
+    joining_bonus = forms.CharField(required=False)
     home_post_office = forms.CharField(required=False)
     manager = forms.ModelChoiceField(
         queryset=Employees.objects.all(),

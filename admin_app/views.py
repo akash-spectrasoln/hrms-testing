@@ -786,7 +786,10 @@ class EmployeeExcelCreateView(View):
                         continue
 
                     # Helpers
-                    def parse(val): return None if pd.isnull(val) or val == '' else val
+                    def parse(val): 
+                        if pd.isnull(val): return None
+                        if isinstance(val, str) and val.strip().lower() == 'nan': return None
+                        return val
                     def parse_decimal(val):
                         try: return float(val)
                         except: return 0.0
@@ -840,9 +843,9 @@ class EmployeeExcelCreateView(View):
                             employee.enc_emergency_contact_relation = parse(row['Emergency Contact Relation']) if 'Emergency Contact Relation' in row else None
                             
                             # Financial information
-                            employee.enc_base_salary = str(parse_decimal(row['Base Salary']))
-                            employee.enc_joining_bonus = str(parse_decimal(row['Joining Bonus'])) if 'Joining Bonus' in row else '0.0'
-                            employee.enc_incentive = str(parse_decimal(row['Incentive'])) if 'Incentive' in row else '0.0'
+                            employee.enc_base_salary = str(parse(row['Base Salary'])) 
+                            employee.enc_joining_bonus = str(parse(row['Joining Bonus'])) if 'Joining Bonus' in row else '0.0'
+                            employee.enc_incentive = str(parse(row['Incentive'])) if 'Incentive' in row else '0.0'
                             
                             # Government IDs
                             employee.enc_pan_card = parse(row['PAN Card']) if 'PAN Card' in row else ''
