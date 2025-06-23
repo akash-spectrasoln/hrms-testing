@@ -21,11 +21,14 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.views.generic import RedirectView
 
+from admin_app.views import Landing_page
+
 urlpatterns = [
     # path('', RedirectView.as_view(url='/admin_app/admin_login/', permanent=True)),
     path('admin/', admin.site.urls),
     path('hrms/employee/',include('employee_app.urls')),
     path('hrms/admin/',include('admin_app.urls')),
+    path('',Landing_page)
     
 ]+ static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 

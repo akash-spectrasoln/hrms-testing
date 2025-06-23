@@ -1,5 +1,5 @@
 
-from django.shortcuts import render
+from django.shortcuts import render,redirect
 from django.http import HttpResponse
 from.models import *
 from django.shortcuts import render
@@ -7,7 +7,9 @@ from django.shortcuts import render
 # Create your views here.
 
 
-# views.py
+#landing page
+def Landing_page(request):
+    return redirect('login')
 
 
 # views.py
@@ -694,8 +696,8 @@ class EmployeeExcelCreateView(View):
             'Company Email', 'Personal Email', 'Mobile Phone',
             'Valid From', 'Valid To', 'Country Code', 'State Code',
             'Home City','State Code','Date Of Birth',
-            'Department ID',  'Base Salary',
-            'Bank Name', 'Bank Branch', 'Bank Branch Address', 'Bank Account', 'IFSC Code'
+            'Department ID',
+            'Bank Name', 'Bank Branch', 'Bank Account', 'IFSC Code'
         ]
 
         try:
@@ -768,7 +770,11 @@ class EmployeeExcelCreateView(View):
                         manager=None
                         
                         print(row.get('Manager', ''))
-                        manager = Employees.objects.get(employee_id=row['Manager']) if row.get('Manager') else None   # remove whitespace
+                        manager_val = row.get('Manager')
+                        if pd.isnull(manager_val) or manager_val == '':
+                            manager = None
+                        else:
+                            manager = Employees.objects.get(employee_id=manager_val)
                     except Exception as e:
                         debug_info = traceback.format_exc()
                         print(f"[DEBUG] Row {excel_row_num}: Foreign key error:\n{debug_info}")
@@ -925,13 +931,13 @@ class HolidayExcelCreateView(View):
 
             for index, row in df.iterrows():
                 try:
-                    name = row['name']
-                    leave_type = row['leave_type'].strip().lower()
-                    date = pd.to_datetime(row['date']).date()
+                    name = row['Holiday Name']
+                    leave_type = row['Leave Type'].strip().lower()
+                    date = pd.to_datetime(row['Date']).date()
                     year = date.year
                     day = date.strftime("%A")
 
-                    country = Country.objects.get(code=row['country_code'])
+                    country = Country.objects.get(code=row['Country_Code'])
 
                     if leave_type == 'country':
                         if not Holiday.objects.filter(date=date, country=country).exists():
