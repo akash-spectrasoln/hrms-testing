@@ -1845,8 +1845,7 @@ def manage_leave_request(request, leave_request_id):
         end_date = leave_request.end_date
         employee = leave_request.employee_master
 
-        # current_year=date.today().year
-        current_year=2026
+        current_year=date.today().year
         reset_period = HolidayResetPeriod.objects.filter(country=employee.country).first()
         if reset_period:
             start_month = reset_period.start_month
