@@ -26,6 +26,8 @@ import datetime
 from django.db import IntegrityError
 import time
 from django.contrib.auth.decorators import login_required
+from .utils import get_leave_policy_details
+from .models import LeaveDetails
 TIMEOUT_DURATION = 60 * 60  # 60 minutes
 
 def signin_required(fn):
@@ -250,7 +252,7 @@ def employee_dashboard(request):
     is_manager = Employees.objects.filter(employee_manager=employee).exists()
 
     current_year = now().year  # Get current year
-    total_used_leaves = employee.emp_used_leaves  # Fetch from the Employees model
+    total_used_leaves = employee.emp_used_leaves # Fetch from the Employees model
 
     return render(request, 'emp_profile.html', {
         'employee': employee,
@@ -782,6 +784,8 @@ def leave_days_agg_request(leave_qs, fy_start, fy_end, holidays=None):
 
     return total_days
 
+
+
 @signin_required
 def request_leave(request):
     print("hi")
@@ -977,7 +981,7 @@ def request_leave(request):
                     f"Dear {employee.first_name},\n\n"
                     f"Your leave request has been submitted successfully.\n\n"
                     f"Leave Type: {leave_request.leave_type}\n"
-                    f"Leave Period: {leave_request.start_date} to {leave_request.end_date}\n"
+                    f"Leave Period: {leave_request.start_date.strftime('%B %d, %Y')} to {leave_request.end_date.strftime('%B %d, %Y')}\n"
                     f"Total Days: {leave_request.leave_days} days\n"
                     
                     f"Reason: {leave_request.reason}\n"
@@ -990,6 +994,25 @@ def request_leave(request):
                 fail_silently=False,
             )
 
+            leave_details=get_leave_policy_details(employee)
+            floating_holiday_policy = leave_details['allowed_floating_holiday_policy']
+            holiday_policy = leave_details['allowed_holiday_policy']
+
+            current_year=date.today().year
+            reset_period = HolidayResetPeriod.objects.filter(country=employee.country).first()
+            if reset_period:
+                start_month = reset_period.start_month
+                start_day = reset_period.start_day
+                financial_year_start_date = date(current_year, start_month, start_day)
+                financial_year_end_date = date(current_year+1, start_month, start_day)
+
+            if financial_year_start_date <= leave_request.start_date <= financial_year_end_date:
+                pass
+            else:
+                current_year-=1
+
+            emp_leave_details, created = LeaveDetails.objects.get_or_create(employee=employee,year=current_year)
+
         # Email to Manager
             if manager and getattr(manager, 'company_email', None):
                 send_mail(
@@ -999,11 +1022,11 @@ def request_leave(request):
                         f"Employee {employee.first_name} {employee.last_name} has submitted a leave request.\n\n"
                         f"Employee ID: {employee.employee_id}\n"
                         f"Leave Type: {leave_request.leave_type}\n"
-                        f"Leave Period: {leave_request.start_date} to {leave_request.end_date}\n"
+                        f"Leave Period: {leave_request.start_date.strftime('%B %d, %Y')} to {leave_request.end_date.strftime('%B %d, %Y')}\n"
                         f"Total Days: {leave_request.leave_days} days\n"
                         
                         f"Reason: {leave_request.reason}\n"
-                        f"Employee's Leave Balance: {employee.total_leaves - employee.used_leaves} days remaining\n\n"
+                        f"Employee's Leave Balance: {holiday_policy - emp_leave_details.casual_leaves_used} days remaining\n\n"
                         f"Please review the request in the HR system.\n"
                         f"Login here: {approval_url}\n\n"
                         f"Best regards,\nHR Team"
@@ -1260,13 +1283,28 @@ from .models import LeaveRequest
 def delete_leave(request, leave_id):
     leave = get_object_or_404(LeaveRequest, pk=leave_id, employee_user=request.user)
     employee = leave.employee_master
+    current_year=date.today().year
+    reset_period = HolidayResetPeriod.objects.filter(country=employee.country).first()
+    if reset_period:
+        start_month = reset_period.start_month
+        start_day = reset_period.start_day
+        end_month=reset_period.end_month
+        end_day=reset_period.end_day
+        financial_year_start_date = date(current_year, start_month, start_day)
+        financial_year_end_date = date(current_year+1, end_month, end_day)
+
+    if financial_year_start_date <= leave.start_date <= financial_year_end_date:
+        pass
+    else:
+        current_year-=1
+    emp_leave_details = LeaveDetails.objects.get(employee=employee,year=current_year)
     if request.method == "POST":
         if leave.status in ["Accepted", "Approved"]:
             if leave.leave_type == "Floating Leave":
-                employee.floating_holidays_used = max(0, employee.floating_holidays_used - (leave.leave_days or 0))
+                emp_leave_details.floating_holidays_used = max(0, emp_leave_details.floating_holidays_used - (leave.leave_days or 0))
             else:  # For "Casual Leave", "Sick Leave", etc.
-                employee.used_leaves = max(0, employee.used_leaves - (leave.leave_days or 0))
-            employee.save()
+                emp_leave_details.casual_leaves_used = max(0, emp_leave_details.casual_leaves_used - (leave.leave_days or 0))
+            emp_leave_details.save()
         
         # Soft delete
         leave.status = 'Deleted'
@@ -1292,7 +1330,7 @@ from django.utils.timezone import now
 from datetime import date, datetime, timedelta
 from .models import Employees, LeaveRequest, HolidayPolicy, FloatingHolidayPolicy, HolidayResetPeriod
 @signin_required
-
+ 
 def my_leave_history(request):
     user = request.user
     today = now().date()
@@ -1504,12 +1542,13 @@ def emp_index(request):
 
     # Get total used leaves for the current year
     current_year = now().year  # Get current year
-    total_used_leaves = employee.used_leaves  # Fetch from the Employees model
+    # emp_leave_details = LeaveDetails.objects.get(employee=employee)
+    # total_used_leaves = emp_leave_details.casual_leaves_used  # Fetch from the Leaveetails model
 
     return render(request, 'emp_index.html', {
         'employee': employee,
         'is_manager': is_manager , # Pass whether the employee is a manager or not
-        'total_used_leaves': total_used_leaves , # Pass the used leaves count to the template
+        # 'total_used_leaves': total_used_leaves , # Pass the used leaves count to the template
         'emp_designation': employee.role.role_name,  # Employee designation
         'emp_id': employee.employee_id,  # Employee ID
         'emp_fname' : employee.first_name, #employee firstname
@@ -1576,8 +1615,9 @@ def holiday_list(request):
             pass  # If no employee record is found, keep is_manager as False
 
     # Filter holidays and floating holidays for the current year
-    country_holidays = Holiday.objects.filter(date__year=current_year,country=employee.country).order_by('date')
-    state_holidays=StateHoliday.objects.filter(date__year=current_year,country=employee.country,state=employee.state).order_by('date')
+    
+    country_holidays = Holiday.objects.filter(country=employee.country,year=current_year).order_by('date')
+    state_holidays=StateHoliday.objects.filter(country=employee.country,state=employee.state,year=current_year).order_by('date')
     holidays=[]
     holidays.extend([{
             'name': holiday.name,
@@ -1591,8 +1631,8 @@ def holiday_list(request):
     holidays.sort(key=lambda x:x['date'])
     
 
-    floating_holidays1 = FloatingHoliday.objects.filter(date__year=current_year,country=employee.country).order_by('date')
-    floating_holidays2 = StateHoliday.objects.filter(date__year=current_year,country=employee.country).exclude(state=employee.state).order_by('date')
+    floating_holidays1 = FloatingHoliday.objects.filter(country=employee.country,year=current_year).order_by('date')
+    floating_holidays2 = StateHoliday.objects.filter(country=employee.country,year=current_year).exclude(state=employee.state).order_by('date')
 
     floating_holidays=[]
     floating_holidays.extend([{
@@ -1602,13 +1642,14 @@ def holiday_list(request):
     floating_holidays.extend([{
         'name': holiday.name,
         'date': holiday.date
-    } for holiday in floating_holidays2])
+    } for holiday in floating_holidays2 if {'name': holiday.name, 'date': holiday.date} not in floating_holidays])
 
 
     # Check if the logged-in user is a manager
     
     current_year = now().year  # Get current year
-    total_used_leaves = employee.used_leaves  # Fetch from the Employees model
+    # emp_leave_details = LeaveDetails.objects.get(employee=employee)
+    # total_used_leaves = emp_leave_details.casual_leaves_used  # Fetch from the leavedetails model
 
     context = {
         'employee':employee,
@@ -1619,7 +1660,7 @@ def holiday_list(request):
         'emp_id': employee.employee_id,  # Employee ID
         'emp_fname': employee.first_name,  # employee firstname
         'emp_lname': employee.last_name , # employee lastname
-        'total_used_leaves' : total_used_leaves
+        # 'total_used_leaves' : total_used_leaves
     }
     return render(request, 'holiday_list.html', context)
 
@@ -1794,8 +1835,9 @@ def manage_leave_request(request, leave_request_id):
         return render(request, 'employee_app/error.html', {'message': 'Employee profile not found.'})
 
     is_manager = Employees.objects.filter(manager=logged_in_employee).exists()
-    current_year = now().year
-    total_used_leaves = logged_in_employee.used_leaves
+    
+    # emp_leave_details = LeaveDetails.objects.get(employee=logged_in_employee)
+    # total_used_leaves = emp_leave_details.casual_leaves_used
 
     if request.method == 'POST':
         action = request.POST.get('action')
@@ -1803,9 +1845,29 @@ def manage_leave_request(request, leave_request_id):
         end_date = leave_request.end_date
         employee = leave_request.employee_master
 
+        # current_year=date.today().year
+        current_year=2026
+        reset_period = HolidayResetPeriod.objects.filter(country=employee.country).first()
+        if reset_period:
+            start_month = reset_period.start_month
+            start_day = reset_period.start_day
+            end_month=reset_period.end_month
+            end_day=reset_period.end_day
+            financial_year_start_date = date(current_year, start_month, start_day)
+            financial_year_end_date = date(current_year+1, end_month, end_day)
+
+        if financial_year_start_date <= leave_request.start_date <= financial_year_end_date:
+            pass
+        else:
+            current_year-=1
+
+        emp_leave_details, created = LeaveDetails.objects.get_or_create(employee=employee,year=current_year)
+
+        leave_details=get_leave_policy_details(employee)
+        floating_holiday_policy = leave_details['allowed_floating_holiday_policy']
         leave_duration = 0
-        floating_holidays_used = employee.floating_holidays_used
-        max_floating_holidays = employee.floating_holidays_balance+employee.floating_holidays_used
+        floating_holidays_used = emp_leave_details.floating_holidays_used
+        max_floating_holidays = floating_holiday_policy+emp_leave_details.floating_holidays_used
 
         current_date = start_date
         holidays = set(Holiday.objects.values_list('date', flat=True))
@@ -1827,10 +1889,10 @@ def manage_leave_request(request, leave_request_id):
 
         if action == 'accept':
             leave_request.status = 'Approved'
-            if employee.used_leaves + leave_duration <= 15:
-                employee.used_leaves += leave_duration
-                employee.floating_holidays_used = floating_holidays_used
-                employee.save()
+            if emp_leave_details.casual_leaves_used + leave_duration <= 15:
+                emp_leave_details.casual_leaves_used += leave_duration
+                emp_leave_details.floating_holidays_used = floating_holidays_used
+                emp_leave_details.save()
             else:
                 messages.error(request, "Employee cannot exceed the allowed 15 total leave days.")
                 return redirect('manager_leave_requests')
@@ -1843,7 +1905,7 @@ def manage_leave_request(request, leave_request_id):
                 subject="Your Leave Request Has Been Approved",
                 message=(
                     f"Dear {employee.first_name},\n\n"
-                    f"Your leave request from {leave_request.start_date} to {leave_request.end_date} ({leave_request.leave_type}) "
+                    f"Your leave request from {leave_request.start_date.strftime('%B %d, %Y')} to {leave_request.end_date.strftime('%B %d, %Y')} ({leave_request.leave_type}) "
                     "has been approved. Enjoy your time off!\n\n"
                     "Best regards,\nHR Team"
                 ),
@@ -1861,7 +1923,7 @@ def manage_leave_request(request, leave_request_id):
                     f"{employee.first_name} {employee.last_name}'s leave request has been approved.\n\n"
                     f"Employee ID: {employee.employee_id}\n"
                     f"Leave Type: {leave_request.leave_type}\n"
-                    f"Leave Period: {leave_request.start_date} to {leave_request.end_date}\n"
+                    f"Leave Period: {leave_request.start_date.strftime('%B %d, %Y')} to {leave_request.end_date.strftime('%B %d, %Y')}\n"
                     f"Reason: {leave_request.reason}\n"
                     f"Status: Approved\n\n"
                     f"Please plan accordingly for the employee's absence during this period.\n\n"
@@ -1874,12 +1936,13 @@ def manage_leave_request(request, leave_request_id):
 
 
         else:
+            leave_request.status= "Rejected"
     # Email to employee: LEAVE REJECTED
             send_mail(
                 subject="Your Leave Request Has Been Rejected",
                 message=(
                     f"Dear {employee.first_name},\n\n"
-                    f"Your leave request from {leave_request.start_date} to {leave_request.end_date} ({leave_request.leave_type}) "
+                    f"Your leave request from {leave_request.start_date.strftime('%B %d, %Y')} to {leave_request.end_date.strftime('%B %d, %Y')} ({leave_request.leave_type}) "
                     "has been rejected. For more information, please contact your manager.\n\n"
                     "Best regards,\nHR Team"
                 ),
@@ -1897,7 +1960,7 @@ def manage_leave_request(request, leave_request_id):
                         f"{employee.first_name} {employee.last_name}'s leave request has been rejected.\n\n"
                         f"Employee ID: {employee.employee_id}\n"
                         f"Leave Type: {leave_request.leave_type}\n"
-                        f"Leave Period: {leave_request.start_date} to {leave_request.end_date}\n"
+                        f"Leave Period: {leave_request.start_date.strftime('%B %d, %Y')} to {leave_request.end_date.strftime('%B %d, %Y')}\n"
                         f"Reason: {leave_request.reason}\n"
                         f"Status: Rejected\n\n"
                         f"The employee has been notified of this decision.\n\n"
@@ -1928,7 +1991,7 @@ def manage_leave_request(request, leave_request_id):
             'emp_id': logged_in_employee.employee_id,
             'emp_fname': logged_in_employee.first_name,
             'emp_lname': logged_in_employee.last_name,
-            'total_used_leaves': total_used_leaves
+            # 'total_used_leaves': total_used_leaves
         }
     )
 
@@ -1963,7 +2026,8 @@ def view_subordinates(request):
     is_manager = subordinates.exists()  # If they have subordinates, they're a manager
 
     current_year = now().year  # Get current year
-    total_used_leaves = manager.used_leaves  # Fetch from the Employees model
+    # manager_leave_details = LeaveDetails.objects.get(employee=manager)
+    # total_used_leaves = manager_leave_details.casual_leaves_used  # Fetch from the leavedetails model
 
     return render(request, 'view_subordinates.html', {
         'employee':manager,
@@ -1974,7 +2038,7 @@ def view_subordinates(request):
         'emp_fname' : manager.first_name,
         'emp_lname' : manager.last_name,
         'emp_designation' : manager.role.role_name,
-        'total_used_leaves' : total_used_leaves
+        # 'total_used_leaves' : total_used_leaves
     })
 
 
@@ -2027,7 +2091,6 @@ def allocate_leave(request, employee_id):
     country_holiday_dates = set(
         Holiday.objects.filter(
             country=employee.country,
-            year=current_year
         ).values_list('date', flat=True)
     )
 
@@ -2035,7 +2098,6 @@ def allocate_leave(request, employee_id):
     state_holiday_dates = set(
         StateHoliday.objects.filter(
             state=employee.state,
-            year=current_year
         ).values_list('date', flat=True)
     )
 
@@ -2044,14 +2106,12 @@ def allocate_leave(request, employee_id):
     floating_holidays = set(
         FloatingHoliday.objects.filter(
             country=employee.country,
-            year=current_year
         ).values_list('date', flat=True)
     )
 
     state_excluded = set(
     StateHoliday.objects.filter(
         country=employee.country,
-        year=current_year
     ).exclude(
         state=employee.state
     ).values_list('date', flat=True)
@@ -2189,7 +2249,7 @@ def allocate_leave(request, employee_id):
         if error:
             messages.error(request, error)
         else:
-            LeaveRequest.objects.create(
+            leave_request=LeaveRequest.objects.create(
                 employee_user=employee.user,
                 employee_master=employee,
                 start_date=start_date,
@@ -2201,18 +2261,33 @@ def allocate_leave(request, employee_id):
                 approved_by=request.user,
                 created_by=request.user
             )
+            current_year=date.today().year
+            reset_period = HolidayResetPeriod.objects.filter(country=employee.country).first()
+            if reset_period:
+                start_month = reset_period.start_month
+                start_day = reset_period.start_day
+                end_month=reset_period.end_month
+                end_day=reset_period.end_day
+                financial_year_start_date = date(current_year, start_month, start_day)
+                financial_year_end_date = date(current_year+1, end_month, end_day)
+
+            if financial_year_start_date <= leave_request.start_date <= financial_year_end_date:
+                pass
+            else:
+                current_year-=1
+            emp_leave_details, created = LeaveDetails.objects.get_or_create(employee=employee,year=current_year)
             if leave_type == "Floating Leave":
-                employee.floating_holidays_used += leave_days
+                emp_leave_details.floating_holidays_used += leave_days
             elif leave_type == "Casual Leave":
-                employee.used_leaves += leave_days
-            employee.save()
+                emp_leave_details.casual_leaves_used += leave_days
+            emp_leave_details.save()
 
             send_mail(
                 subject="Leave Allocation Notification",
                 message=(
                     f"Dear {employee.first_name},\n\n"
                     f"Your manager {manager.first_name} {manager.last_name} "
-                    f"has allocated {leave_type} for you from {start_date} to {end_date}.\n\n"
+                    f"has allocated {leave_type} for you from {start_date.strftime('%B %d, %Y')} to {end_date.strftime('%B %d, %Y')}.\n\n"
                     f"Number of days: {leave_days}\n"
                     f"Reason: {reason}\n\n"
                     "Best regards,\nHR Team"

@@ -165,7 +165,8 @@ document.addEventListener("DOMContentLoaded", function () {
     // START DATE PICKER with onChange event
     const startDatePicker = flatpickr(startDateInput, {
         dateFormat: "Y-m-d",
-        
+        altInput: true,             // show formatted date
+        altFormat: "m-d-Y", 
         onDayCreate: flatpickrDayStyler,
         onChange: function(selectedDates, dateStr, instance) {
             if(dateStr) {
@@ -182,7 +183,8 @@ document.addEventListener("DOMContentLoaded", function () {
     // END DATE PICKER
     endDatePicker = flatpickr(endDateInput, {
         dateFormat: "Y-m-d",
-        
+        altInput: true,             // show formatted date
+        altFormat: "m-d-Y", 
         onDayCreate: flatpickrDayStyler
     });
 
@@ -212,8 +214,12 @@ document.addEventListener('DOMContentLoaded', function () {
         const tomorrow = new Date(today);
         tomorrow.setDate(today.getDate() + 1);
 
-        startInput.value = formatDate(today);
-        endInput.value = formatDate(tomorrow);
+        if (startInput._flatpickr) {
+            startInput._flatpickr.setDate(today, true); // true => triggers change
+        }
+        if (endInput._flatpickr) {
+            endInput._flatpickr.setDate(tomorrow, true);
+        }
     }
 
     function updateEndDateBasedOnStart() {

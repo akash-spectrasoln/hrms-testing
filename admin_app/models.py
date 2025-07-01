@@ -5,7 +5,8 @@ import json
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from encryption.encryption import encrypt_field, decrypt_field 
-
+from datetime import date
+from django.utils import timezone
 
 
 # Create your models here.
@@ -105,12 +106,12 @@ class Employees(models.Model):
     mobile_phone = models.TextField()
     office_phone = models.CharField(max_length=15, blank=True,null=True,)
     home_phone = models.TextField(blank=True,null=True,)
-    valid_from = models.DateField()
+    valid_from = models.TextField()
     valid_to = models.DateField()
     country = models.ForeignKey('Country', on_delete=models.CASCADE)
     state = models.ForeignKey('state', on_delete=models.CASCADE)
     address = models.TextField( blank=True,null=True,)
-    home_house = models.TextField(null=True)
+    house_name = models.TextField(null=True)# home_house
     home_post_office = models.TextField(null=True)
     home_city = models.TextField()
     pincode = models.TextField( blank=True,null=True,)
@@ -132,12 +133,12 @@ class Employees(models.Model):
     created_on = models.DateTimeField(auto_now_add=True, null=True)
     modified_on = models.DateTimeField(auto_now=True, null=True)
     is_deleted = models.BooleanField(default=False)
-    date_of_birth = models.DateField(null=True, blank=True, verbose_name="Date of Birth")
+    date_of_birth = models.TextField(null=True, blank=True, verbose_name="Date of Birth")
     # These two fields get dynamically assigned in save()
-    floating_holidays_balance = models.IntegerField(default=2)
-    floating_holidays_used = models.IntegerField(default=0)
-    total_leaves = models.PositiveIntegerField(default=15)
-    used_leaves = models.PositiveIntegerField(default=0)
+    # floating_holidays_balance = models.IntegerField(default=2)
+    # floating_holidays_used = models.IntegerField(default=0)
+    # total_leaves = models.PositiveIntegerField(default=15)
+    # used_leaves = models.PositiveIntegerField(default=0) 
 
     password = models.CharField(max_length=128, null=True, blank=True)
     resignation_date = models.DateField(null=True, blank=True)
@@ -236,6 +237,7 @@ class Employees(models.Model):
         self.save()
 
     def save(self, *args, **kwargs):
+        is_new = self.pk is None
         if not self.user:
             # Create the user without a password first
             self.user, created = User.objects.get_or_create(
@@ -254,53 +256,101 @@ class Employees(models.Model):
                 # Clear the password field (optional: prevents storing plain text)
                 self.password = None
 
-        today = date.today()
-        experience_years = 0
-        if self.created_on:
-            experience_years = (today - self.created_on.date()).days // 365
+        # today = date.today()
+        # experience_years = 0
+        # if self.created_on:
+        #     experience_years = (today - self.created_on.date()).days // 365
 
-        # --- Holiday policy lookup (for current year) ---
-        current_year = today.year
-        policy = HolidayPolicy.objects.filter(
-            year=current_year,
-            min_years_experience__lte=experience_years
-        ).order_by('-min_years_experience').first()
+        # # --- Holiday policy lookup (for current year) ---
+        # current_year = today.year
+        # policy = HolidayPolicy.objects.filter(
+        #     year=current_year,
+        #     min_years_experience__lte=experience_years
+        # ).order_by('-min_years_experience').first()
 
-        if policy:
-            self.total_leaves = policy.ordinary_holidays_count + policy.extra_holidays
-        else:
-            self.total_leaves = 0
+        # if policy:
+        #     self.total_leaves = policy.ordinary_holidays_count + policy.extra_holidays
+        # else:
+        #     self.total_leaves = 0
 
-        # --- Floating holiday policy lookup (current year) ---
-        floating_policy = FloatingHolidayPolicy.objects.filter(year=current_year).first()
-        if floating_policy:
-            self.floating_holidays_balance = floating_policy.allowed_floating_holidays
+        # # --- Floating holiday policy lookup (current year) ---
+        # floating_policy = FloatingHolidayPolicy.objects.filter(year=current_year).first()
+        # if floating_policy:
+        #     self.floating_holidays_balance = floating_policy.allowed_floating_holidays
 
         super().save(*args, **kwargs)
 
+        if is_new:
+            current_year = date.today().year
+            reset_period = HolidayResetPeriod.objects.filter(country=self.country).first()
+
+            if not reset_period:
+                raise Exception("Holiday reset period not configured for this country")
+
+            start_month = reset_period.start_month
+            start_day = reset_period.start_day
+
+            financial_year_start_date = date(current_year, start_month, start_day)
+            created_date = self.created_on or timezone.now()
+
+            year_to_use = current_year - 1 if created_date.date() < financial_year_start_date else current_year
+
+            LeaveDetails.objects.get_or_create(employee=self, year=year_to_use)
+
+
+            
+            # LeaveDetails.objects.create(employee=self)
+
     def __str__(self):
         return f"{self.employee_id} "
-    
 
 
 
+    # 
     @property
-    def enc_home_house(self):
-        """Decrypt and return the company name."""
-        return self._decrypt_field(self.home_house)
+    def enc_valid_from(self):
+        """Decrypt and return the valid_from."""
+        decrypted_str = self._decrypt_field(self.valid_from)
+        return datetime.strptime(decrypted_str, '%Y-%m-%d').date()
 
-    @enc_home_house.setter
-    def enc_home_house(self, value):
+    @enc_valid_from.setter
+    def enc_valid_from(self, value):
         if value is not None:
             if not hasattr(self, '_fields_to_encrypt'):
                 self._fields_to_encrypt = {}
-            self._fields_to_encrypt['home_house'] = value
+            self._fields_to_encrypt['valid_from'] = value
+# ----
+    @property
+    def enc_date_of_birth(self):
+        """Decrypt and return the date_of_birth."""
+        decrypted_str = self._decrypt_field(self.date_of_birth)
+        return datetime.strptime(decrypted_str, '%Y-%m-%d').date()
+
+    @enc_date_of_birth.setter
+    def enc_date_of_birth(self, value):
+        if value is not None:
+            if not hasattr(self, '_fields_to_encrypt'):
+                self._fields_to_encrypt = {}
+            self._fields_to_encrypt['date_of_birth'] = value
+
+
+    @property
+    def enc_house_name(self):
+        """Decrypt and return the house_name."""
+        return self._decrypt_field(self.house_name)
+
+    @enc_house_name.setter
+    def enc_house_name(self, value):
+        if value is not None:
+            if not hasattr(self, '_fields_to_encrypt'):
+                self._fields_to_encrypt = {}
+            self._fields_to_encrypt['house_name'] = value
 
 
 
     @property
     def enc_emergency_contact_relation(self):
-        """Decrypt and return the company name."""
+        """Decrypt and return the emergency_contact_relation."""
         return self._decrypt_field(self.emergency_contact_relation)
 
     @enc_emergency_contact_relation.setter
@@ -314,7 +364,7 @@ class Employees(models.Model):
 
     @property
     def enc_incentive(self):
-        """Decrypt and return the company name."""
+        """Decrypt and return the incentive."""
         return self._decrypt_field(self.incentive)
 
     @enc_incentive.setter
@@ -327,7 +377,7 @@ class Employees(models.Model):
 
     @property
     def enc_joining_bonus(self):
-        """Decrypt and return the company name."""
+        """Decrypt and return the joining_bonus."""
         return self._decrypt_field(self.joining_bonus)
 
     @enc_joining_bonus.setter
@@ -342,7 +392,7 @@ class Employees(models.Model):
 
     @property
     def enc_emergency_contact_relation(self):
-        """Decrypt and return the company name."""
+        """Decrypt and return the emergency_contact_relation."""
         return self._decrypt_field(self.emergency_contact_relation)
 
     @enc_emergency_contact_relation.setter
@@ -355,7 +405,7 @@ class Employees(models.Model):
 
     @property
     def enc_ifsc_code(self):
-        """Decrypt and return the company name."""
+        """Decrypt and return the ifsc_code."""
         return self._decrypt_field(self.ifsc_code)
 
     @enc_ifsc_code.setter
@@ -368,7 +418,7 @@ class Employees(models.Model):
 
     @property
     def enc_bank_account(self):
-        """Decrypt and return the company name."""
+        """Decrypt and return the bank_account."""
         return self._decrypt_field(self.bank_account)
 
     @enc_bank_account.setter
@@ -380,7 +430,7 @@ class Employees(models.Model):
 
     @property
     def enc_bank_branch_address(self):
-        """Decrypt and return the company name."""
+        """Decrypt and return the bank_branch_address."""
         return self._decrypt_field(self.bank_branch_address)
 
     @enc_bank_branch_address.setter
@@ -392,7 +442,7 @@ class Employees(models.Model):
 
     @property
     def enc_bank_branch(self):
-        """Decrypt and return the company name."""
+        """Decrypt and return the bank_branch."""
         return self._decrypt_field(self.bank_branch)
 
     @enc_bank_branch.setter
@@ -404,7 +454,7 @@ class Employees(models.Model):
 
     @property
     def enc_bank_name(self):
-        """Decrypt and return the company name."""
+        """Decrypt and return the bank_name."""
         return self._decrypt_field(self.bank_name)
 
     @enc_bank_name.setter
@@ -418,7 +468,7 @@ class Employees(models.Model):
 
     @property
     def enc_aadhaar(self):
-        """Decrypt and return the company name."""
+        """Decrypt and return the aadhaar."""
         return self._decrypt_field(self.aadhaar)
 
     @enc_aadhaar.setter
@@ -431,7 +481,7 @@ class Employees(models.Model):
 
     @property
     def enc_pan_card(self):
-        """Decrypt and return the company name."""
+        """Decrypt and return the pan_card."""
         return self._decrypt_field(self.pan_card)
 
     @enc_pan_card.setter
@@ -444,7 +494,7 @@ class Employees(models.Model):
 
     @property
     def enc_base_salary(self):
-        """Decrypt and return the company name."""
+        """Decrypt and return the base_salary."""
         return self._decrypt_field(self.base_salary)
 
     @enc_base_salary.setter
@@ -459,7 +509,7 @@ class Employees(models.Model):
 
     @property
     def enc_emergency_contact_phone(self):
-        """Decrypt and return the company name."""
+        """Decrypt and return the emergency_contact_phone."""
         return self._decrypt_field(self.emergency_contact_phone)
 
     @enc_emergency_contact_phone.setter
@@ -472,7 +522,7 @@ class Employees(models.Model):
     
     @property
     def enc_pincode(self):
-        """Decrypt and return the company name."""
+        """Decrypt and return the pincode."""
         return self._decrypt_field(self.pincode)
 
     @enc_pincode.setter
@@ -485,7 +535,7 @@ class Employees(models.Model):
     #
     @property
     def enc_address(self):
-        """Decrypt and return the company name."""
+        """Decrypt and return the address."""
         return self._decrypt_field(self.address)
 
     @enc_address.setter
@@ -498,7 +548,7 @@ class Employees(models.Model):
     #
     @property
     def enc_emergency_contact_name(self):
-        """Decrypt and return the company name."""
+        """Decrypt and return the emergency_contact_name."""
         return self._decrypt_field(self.emergency_contact_name)
 
     @enc_emergency_contact_name.setter
@@ -510,7 +560,7 @@ class Employees(models.Model):
     #
     @property
     def enc_home_phone(self):
-        """Decrypt and return the company name."""
+        """Decrypt and return the home_phone."""
         return self._decrypt_field(self.home_phone)
 
     @enc_home_phone.setter
@@ -522,7 +572,7 @@ class Employees(models.Model):
     #
     @property
     def enc_mobile_phone(self):
-        """Decrypt and return the company name."""
+        """Decrypt and return the mobile_phone."""
         return self._decrypt_field(self.mobile_phone)
 
     @enc_mobile_phone.setter
@@ -533,7 +583,7 @@ class Employees(models.Model):
 
     @property
     def enc_home_city(self):
-        """Decrypt and return the company name."""
+        """Decrypt and return the home_city."""
         return self._decrypt_field(self.home_city)
 
     @enc_home_city.setter
@@ -544,7 +594,7 @@ class Employees(models.Model):
 
     @property
     def enc_personal_email(self):
-        """Decrypt and return the company name."""
+        """Decrypt and return the personal_email."""
         return self._decrypt_field(self.personal_email)
 
     @enc_personal_email.setter
@@ -609,8 +659,12 @@ def encrypt_data(sender, instance, created, **kwargs):
 
 
 
-
-
+class LeaveDetails(models.Model):
+    employee=models.ForeignKey(Employees,on_delete=models.CASCADE,related_name="emp_leave_details")
+    floating_holidays_used = models.IntegerField(default=0)
+    casual_leaves_used = models.IntegerField(default=0)
+    year = models.IntegerField(null=True)
+    
 class Resume(models.Model):
     employee = models.ForeignKey(Employees, related_name='resumes', on_delete=models.CASCADE)
     file = models.FileField(upload_to='documents/resumes/')

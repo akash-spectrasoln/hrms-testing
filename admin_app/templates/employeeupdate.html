@@ -86,7 +86,7 @@ label {
                     </div>
                     <div class="form-group col">
                         <label for="valid_from" class="required">Valid From</label>
-                        <input type="date" name="valid_from" class="form-control" value="{{ form.instance.valid_from|date:'Y-m-d' }}" required>
+                        <input type="date" name="valid_from" class="form-control" value="{{ form.instance.enc_valid_from|date:'Y-m-d' }}" required>
                     </div>
                     <div class="form-group col">
                         <label for="valid_to" class="required">Valid To</label>
@@ -123,7 +123,7 @@ label {
                     </div>
                     <div class="form-group col-md-2">
                         <label for="date_of_birth" class="required">Date of Birth</label>
-                        <input type="date" name="date_of_birth" class="form-control" value="{{ form.instance.date_of_birth |date:'Y-m-d'}}" required>
+                        <input type="date" name="date_of_birth" class="form-control" value="{{ form.instance.enc_date_of_birth |date:'Y-m-d'}}" required>
                     </div>
                 </div> <!--  Row 1 Ends -->
                  <div class="form-row">
@@ -156,8 +156,8 @@ label {
                 </div>
                 <div class="form-row">
                     <div class="form-group col-md-4">
-                        <label for="home_house" >Home/Street</label>
-                        <input type="text" name="home_house"  class="form-control" value="{{ form.instance.enc_home_house }}">
+                        <label for="house_name" >Home/Street</label>
+                        <input type="text" name="house_name"  class="form-control" value="{{ form.instance.enc_house_name }}">
                     </div>
                     <div class="form-group col-md-4">
                         <label for="home_post_office" >Post Office</label>

@@ -32,7 +32,7 @@
         <div class="d-flex flex-column align-items-center mb-4">
           <img src="https://ui-avatars.com/api/?name={{ employee.first_name }}+{{ employee.last_name }}&size=220&background=4669b2&color=fff" class="profile-avatar mb-2" alt="Profile Picture">
           <h3 class="mb-0" style="font-weight: 600;">
-            {{ employee.salutation }} {{ employee.first_name }} {% if employee.middle_name %}{{ employee.middle_name }}{% endif %} {{ employee.last_name }}
+            {{ employee.salutation }} {{ employee.first_name }} {% if employee.middle_name and employee.middle_name != "None" %}{{ employee.middle_name }}{% endif %} {{ employee.last_name }}
           </h3>
           <span class="text-muted mt-0">{{ employee.designation }}</span>
           <span class="badge rounded-pill bg-primary mt-2">{{ employee.department }}</span>
@@ -59,12 +59,12 @@
               </tr>
               <tr>
                 <th><i class="bi bi-calendar-plus"></i>Start Date</th>
-                <td>{{ employee.valid_from }}</td>
+                <td>{{ employee.enc_valid_from }}</td>
               </tr>
               
               <tr>
                 <th><i class="bi bi-calendar2-heart"></i> Date of Birth</th>
-                <td>{{ employee.date_of_birth|default:"-" }}</td>
+                <td>{{ employee.enc_date_of_birth|default:"-" }}</td>
               </tr>
               <tr>
                 <th><i class="bi bi-diagram-3"></i> Manager</th>
@@ -83,14 +83,15 @@
               <div class="section-heading"><i class="bi bi-house-heart"></i> Address</div>
               <div class="text-muted small">
                 
-                {{ employee.enc_home_house }}, {{ employee.enc_home_post_office }}<br>
-                {{ employee.enc_home_city }}, {{ employee.state }}, {{ employee.country }} - {{ employee.enc_pincode }}
+                {%if employee.enc_house_name and employee.enc_house_name != 'None'%}{{ employee.enc_house_name }}{%endif%}, 
+                {%if employee.home_post_office and employee.home_post_office != 'None'%}{{ employee.home_post_office }}{%endif%}<br>
+                {{ employee.enc_home_city }}, {{ employee.state }}, {{ employee.country }} - {%if employee.enc_pincode and employee.enc_pincode != 'None'%}{{ employee.enc_pincode }}{%endif%}
               </div>
             </div>
             <div class="col-md-6">
               <div class="section-heading"><i class="bi bi-person-hearts"></i> Emergency Contact</div>
               <div class="text-muted small">
-                <strong>{{ employee.enc_emergency_contact_name }}</strong><br>
+                {{ employee.enc_emergency_contact_name }}<br>
                 {% if employee.enc_emergency_contact_relation %}({{ employee.enc_emergency_contact_relation }})<br>{% endif %}
                 {{ employee.enc_emergency_contact_phone }}<br>
                 {% if employee.enc_emergency_contact_email %}{{ employee.enc_emergency_contact_email }}{% endif %}

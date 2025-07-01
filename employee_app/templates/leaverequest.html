@@ -363,7 +363,7 @@
                 <label class="form-label" for="id_day_type">Leave Duration</label>
                 <select id="id_day_type" name="day_type" class="form-select" required>
                     <option value="one">One Day</option>
-                    <option value="multiple">More Than One Day</option>
+                    <option value="multiple">More Than One Day</option> 
                 </select>
             </div>
 
@@ -510,6 +510,8 @@ document.addEventListener("DOMContentLoaded", function () {
     // --- Flatpickr initialization ---
     const startDatePicker = flatpickr(startDateInput, {
         dateFormat: "Y-m-d",
+        altInput: true,                   
+        altFormat: "m-d-Y", 
         minDate: "today",
         appendTo: document.body,
         onChange: function(selectedDates, dateStr) {
@@ -535,6 +537,8 @@ document.addEventListener("DOMContentLoaded", function () {
 
     const endDatePicker = flatpickr(endDateInput, {
         dateFormat: "Y-m-d",
+        altInput: true,                   
+        altFormat: "m-d-Y",
         minDate: "today",
         appendTo: document.body,
         onDayCreate: function (dObj, dStr, fp, dayElem) {

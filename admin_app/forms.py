@@ -43,7 +43,7 @@ class EmployeeEditForm(forms.ModelForm):
         required=False,
         empty_label="Select a State"
     )
-    home_house = forms.CharField(required=False)
+    house_name = forms.CharField(required=False)
      # assuming you have STATUS_CHOICES constant
     middle_name = forms.CharField(required=False)
     office_phone = forms.CharField(required=False)
@@ -126,7 +126,7 @@ class EmployeeEditForm(forms.ModelForm):
             'department', 'role', 'manager','home_city','pincode','emergency_contact_name','emergency_contact_phone','emergency_contact_email',
              'emergency_contact_relation',
              'base_salary',#'employee_type',
-            'resignation_date', 'home_house', 'resumes', 'certificates', 'incentive', 'joining_bonus',
+            'resignation_date', 'house_name', 'resumes', 'certificates', 'incentive', 'joining_bonus',
             'date_of_birth','pm_email',
             # ADD THE NEW FIELDS BELOW
             'pan_card', 'aadhaar', 'bank_name', 'bank_branch', 'bank_branch_address', 'bank_account', 'ifsc_code'

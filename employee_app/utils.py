@@ -89,5 +89,23 @@ def calculate_leave_duration(start_date, end_date, employee):
 
     return leave_duration
 
+from .models import LeaveDetails , FloatingHolidayPolicy, HolidayPolicy
+from datetime import date
+def get_leave_policy_details(employee):
+    
+    #employee experience
+    experience=date.today().year - employee.enc_valid_from.year - ((date.today().month, date.today().day) < (employee.enc_valid_from.month, employee.enc_valid_from.day))
 
+    #floating
+    floating_holiday_policy= FloatingHolidayPolicy.objects.get(country=employee.country)
+    allowed_floating_holiday_policy = floating_holiday_policy.allowed_floating_holidays
 
+    #Casual
+    Holiday_policy = HolidayPolicy.objects.filter(country=employee.country,min_years_experience__lte=experience).order_by('-min_years_experience').first()
+    allowed_holiday_policy = Holiday_policy.ordinary_holidays_count + Holiday_policy.extra_holidays
+    
+
+    return {
+            "allowed_floating_holiday_policy":allowed_floating_holiday_policy,
+            "allowed_holiday_policy":allowed_holiday_policy,
+            }

@@ -105,6 +105,7 @@ def add_employee(request):
                 employee = form.save(commit=False) 
                 # employee.data=employee.company_email  # Save the form but don't commit to the database yet
                 employee.enc_home_city=employee.home_city
+                employee.enc_date_of_birth=employee.date_of_birth
                 employee.enc_personal_email=employee.personal_email 
                 employee.enc_mobile_phone=employee.mobile_phone 
                 employee.enc_home_phone=employee.home_phone  
@@ -122,8 +123,8 @@ def add_employee(request):
                 employee.enc_ifsc_code=employee.ifsc_code 
                 employee.enc_emergency_contact_relation=employee.emergency_contact_relation 
                 employee.enc_incentive=employee.incentive 
-                employee.enc_home_house=employee.home_house
-                
+                employee.enc_house_name=employee.house_name   
+                employee.enc_valid_from=employee.valid_from
                 employee.enc_joining_bonus=employee.joining_bonus 
 
                 employee.save()  # Now save the employee instance
@@ -240,18 +241,18 @@ def export_employees_to_excel(request):
             employee.first_name,
             employee.middle_name,
             employee.last_name,
-            employee.date_of_birth,
+            employee.enc_date_of_birth,
             employee.company_email,  # This is encrypted but accessed directly
             employee.enc_personal_email,  # Using encrypted property
             employee.enc_mobile_phone,    # Using encrypted property
             employee.office_phone,
             employee.enc_home_phone,      # Using encrypted property
-            employee.valid_from,
+            employee.enc_valid_from,
             employee.valid_to,
             employee.country.country_name if employee.country else '',
             employee.state.name if employee.state else '',
             employee.enc_address,         # Using encrypted property
-            employee.enc_home_house,      # Using encrypted property
+            employee.enc_house_name,      # Using encrypted property
             employee.home_post_office,    # Not encrypted in your model
             employee.enc_home_city,       # Using encrypted property
             employee.enc_pincode,         # Using encrypted property
@@ -267,10 +268,10 @@ def export_employees_to_excel(request):
             created_on,
             modified_on,
             employee.is_deleted,
-            employee.floating_holidays_balance,
-            employee.floating_holidays_used,
-            employee.total_leaves,
-            employee.used_leaves,
+            # employee.floating_holidays_balance,
+            # employee.floating_holidays_used,
+            # employee.total_leaves,
+            # employee.used_leaves,
             employee.resignation_date,
             employee.enc_incentive,         # Using encrypted property
             employee.enc_joining_bonus,     # Using encrypted property
@@ -424,13 +425,13 @@ def delete_leave_request(request, leave_id):
     except Employees.DoesNotExist:
         emp_obj = None
 
-    if emp_obj:
-        if leave.leave_type == "Casual Leave":
-            emp_obj.used_leaves = max(emp_obj.used_leaves - leave_days, 0)
-            emp_obj.save()
-        elif leave.leave_type == "Floating Leave":
-            emp_obj.floating_holidays_used = max(emp_obj.floating_holidays_used - leave_days, 0)
-            emp_obj.save()
+    # if emp_obj:
+    #     if leave.leave_type == "Casual Leave":
+    #         emp_obj.used_leaves = max(emp_obj.used_leaves - leave_days, 0)
+    #         emp_obj.save()
+    #     elif leave.leave_type == "Floating Leave":
+    #         emp_obj.floating_holidays_used = max(emp_obj.floating_holidays_used - leave_days, 0)
+    #         emp_obj.save()
         # ...handle other leave types as needed
 
     # Soft delete instead of hard delete
@@ -540,6 +541,7 @@ class EmployeeUpdateView(UpdateView):
             employee.enc_home_city=employee.home_city
             employee.enc_personal_email=employee.personal_email 
             employee.enc_mobile_phone=employee.mobile_phone 
+            employee.enc_date_of_birth=employee.date_of_birth
             employee.enc_home_phone=employee.home_phone  
             employee.enc_address=employee.address  
             employee.enc_pincode=employee.pincode  
@@ -555,8 +557,8 @@ class EmployeeUpdateView(UpdateView):
             employee.enc_ifsc_code=employee.ifsc_code 
             employee.enc_emergency_contact_relation=employee.emergency_contact_relation 
             employee.enc_incentive=employee.incentive 
-            employee.enc_home_house=employee.home_house
-            
+            employee.enc_house_name=employee.house_name
+            employee.enc_valid_from=employee.valid_from
             employee.enc_joining_bonus=employee.joining_bonus 
 
             employee.save() 
@@ -694,10 +696,10 @@ class EmployeeExcelCreateView(View):
         required_fields = [
             'Employee Type',  'Salutation ID', 'First Name', 'Last Name',
             'Company Email', 'Personal Email', 'Mobile Phone',
-            'Valid From', 'Valid To', 'Country Code', 'State Code',
-            'Home City','State Code','Date Of Birth',
+            'Valid From(mm/dd/yyyy)', 'Valid To(mm/dd/yyyy)', 'Country Code', 'State Code',
+            'Home City','State Code','Date Of Birth(mm/dd/yyyy)',
             'Department ID',
-            'Bank Name', 'Bank Branch', 'Bank Account', 'IFSC Code'
+            'Bank Name', 'Bank Account', 'IFSC Code'
         ]
 
         try:
@@ -790,13 +792,22 @@ class EmployeeExcelCreateView(View):
                         if pd.isnull(val): return None
                         if isinstance(val, str) and val.strip().lower() == 'nan': return None
                         return val
-                    def parse_decimal(val):
-                        try: return float(val)
-                        except: return 0.0
+
+                    # def parse_decimal(val):
+                    #     try: return float(val)
+                    #     except: return 0.0
                     def parse_date_field(val):
                         if pd.isnull(val) or not val: return None
                         if isinstance(val, (pd.Timestamp, datetime)): return val.date()
                         return parse_date(str(val))
+
+                    def ensure_date_str(val): # this is used for validfrom and dateofbirth to convert it to string for encryption
+                        if pd.isnull(val) or not val:
+                            return None
+                        if isinstance(val, (pd.Timestamp, datetime)):
+                            return val.strftime('%Y-%m-%d')  # ✅ converts datetime to string
+                        return str(val)  # ✅ if already string, just returns it again
+
 
                     try:
                         print(f"[DEBUG] Row {excel_row_num}: Creating Employee object")
@@ -812,28 +823,29 @@ class EmployeeExcelCreateView(View):
                                 last_name=parse(row['Last Name']),
                                 company_email=parse(row['Company Email']),  # This is stored encrypted but no property exists
                                 office_phone=str(parse(row['Office Phone'])) if 'Office Phone' in row else '',
-                                valid_from=parse_date_field(row['Valid From']),
-                                valid_to=parse_date_field(row['Valid To']),
+                                
+                                valid_to=parse_date_field(row['Valid To(mm/dd/yyyy)']),
                                 country=country,
                                 state=state_obj,
                                 home_post_office=parse(row['Home Post Office']),
                                 department=department,
                                 role=role_obj,
                                 manager=manager,
-                                date_of_birth=parse_date_field(row['Date Of Birth']) if 'Date Of Birth' in row else None,
                                 resignation_date=parse_date_field(row['Resignation Date']) if 'Resignation Date' in row else None,
                                 emergency_contact_email=parse(row['Emergency Contact Email']) if 'Emergency Contact Email' in row else None,
                             )
                             
                             # Set encrypted fields using the properties
-                            # Personal information
+                            # Personal information valid_from
                             employee.enc_personal_email = parse(row['Personal Email'])
+                            employee.enc_valid_from = ensure_date_str(row['Valid From(mm/dd/yyyy)'])
+                            employee.enc_date_of_birth = ensure_date_str(row['Date Of Birth(mm/dd/yyyy)'])
                             employee.enc_mobile_phone = str(parse(row['Mobile Phone']))
                             employee.enc_home_phone = str(parse(row['Home Phone'])) if 'Home Phone' in row else ''
                             
                             # Address information
                             employee.enc_address = parse(row['Address']) if 'Address' in row else ''
-                            employee.enc_home_house = parse(row['Home House'])
+                            employee.enc_house_name = parse(row['House Name'])
                             employee.enc_home_city = parse(row['Home City'])
                             employee.enc_pincode = str(parse(row['Pincode'])) if 'Pincode' in row else ''
                             
@@ -951,7 +963,7 @@ class HolidayExcelCreateView(View):
                                 year=year,
                                 country=country
                             )
-                            success_rows.append({'name':name,'type':'Counrty'})
+                            success_rows.append({'name':name,'type':'Country'})
                         else:
                             failed_rows.append({'name':name})
 
@@ -1037,7 +1049,7 @@ class EmployeeExcelUpdateView(View):
                     employee.home_phone = row.get('home_phone', employee.home_phone)
                     employee.home_city = row.get('home_city', employee.home_city)
                     employee.home_post_office = row.get('home_post_office', employee.home_post_office)
-                    employee.home_house = row.get('home_house', employee.home_house)
+                    employee.house_name = row.get('house_name', employee.house_name)
                     employee.pincode = row.get('pincode', employee.pincode)
                     employee.department_id = row.get('department_id', employee.department_id)
                     employee.designation = row.get('designation', employee.designation)
@@ -1199,31 +1211,57 @@ from django.http import HttpResponse
 from django.contrib import messages
 from datetime import timedelta
 from .models import LeaveRequest, Employees
-from employee_app.models import Holiday, FloatingHoliday
+from employee_app.models import Holiday, FloatingHoliday, LeaveDetails, HolidayResetPeriod
 
 from django.shortcuts import get_object_or_404, redirect
 from django.contrib import messages
 from django.core.mail import send_mail
 from django.conf import settings
 from datetime import timedelta
+from employee_app.utils import get_leave_policy_details
 @signin_required
 def accept_leave_request(request, leave_request_id):
+    
     if request.method == "POST":
         leave_request = get_object_or_404(LeaveRequest, id=leave_request_id)
         employee = leave_request.employee_master
 
+        leave_details=get_leave_policy_details(employee)
+        floating_holiday_policy = leave_details['allowed_floating_holiday_policy']
+        holiday_policy = leave_details['allowed_holiday_policy']
+
+        #choosing emp details
+        current_year=date.today().year
+        reset_period = HolidayResetPeriod.objects.filter(country=employee.country).first()
+        if reset_period:
+            start_month = reset_period.start_month
+            start_day = reset_period.start_day
+            end_month=reset_period.end_month
+            end_day=reset_period.end_day
+            financial_year_start_date = date(current_year, start_month, start_day)
+            financial_year_end_date = date(current_year+1, end_month, end_day)
+
+        if financial_year_start_date <= leave_request.start_date <= financial_year_end_date:
+            pass
+        else:
+            current_year-=1
+
+        # emp_leave_details = LeaveDetails.objects.get(employee=employee,year=current_year)
+        emp_leave_details, created = LeaveDetails.objects.get_or_create(employee=employee,year=current_year)
+
+        print(leave_details,"++++++++++++++++++++++++++++++++++++++++++++++++++++++++++=")
+
         # Fetch policy for floating holidays
-        floating_entitlement = getattr(employee, 'floating_holidays_balance', 2)  # Or from policy table if relevant
+        floating_entitlement = floating_holiday_policy
 
         # Get all holiday/floating dates for efficiency
         holiday_dates = set(Holiday.objects.values_list('date', flat=True))
         floating_dates = set(FloatingHoliday.objects.values_list('date', flat=True))
 
-        casual_days = 0
+        casual_days = 0 
         floating_days = 0
 
-        floating_h_used = employee.floating_holidays_used  # initial used
-
+        floating_h_used = emp_leave_details.floating_holidays_used# initial used
         current_date = leave_request.start_date
         while current_date <= leave_request.end_date:
             if current_date.weekday() in [5, 6]:  # weekend
@@ -1238,19 +1276,18 @@ def accept_leave_request(request, leave_request_id):
                 continue
             casual_days += 1
             current_date += timedelta(days=1)
-
         # Check employee has enough balance
-        if employee.used_leaves + casual_days > employee.total_leaves:
-            messages.error(request, "Employee cannot exceed the allowed casual leave days.")
-            return redirect('leave_request_display')
-        if employee.floating_holidays_used + floating_days > employee.floating_holidays_balance:
-            messages.error(request, "Employee cannot exceed the allowed floating holidays.")
-            return redirect('leave_request_display')
+        # if employee.used_leaves + casual_days > employee.total_leaves:
+        #     messages.error(request, "Employee cannot exceed the allowed casual leave days.")
+        #     return redirect('leave_request_display')
+        # if employee.floating_holidays_used + floating_days > employee.floating_holidays_balance:
+        #     messages.error(request, "Employee cannot exceed the allowed floating holidays.")
+        #     return redirect('leave_request_display')
 
         # Update leave usage
-        employee.used_leaves += casual_days
-        employee.floating_holidays_used += floating_days
-        employee.save()
+        emp_leave_details.casual_leaves_used += casual_days
+        emp_leave_details.floating_holidays_used += floating_days
+        emp_leave_details.save()
 
         # Update leave request (status, approver, leave_days)
         leave_request.status = "Approved"
@@ -1263,7 +1300,7 @@ def accept_leave_request(request, leave_request_id):
         employee_subject = "Leave Request Approved"
         employee_message = (
             f"Dear {employee.first_name},\n\n"
-            f"Your leave request from {leave_request.start_date} to {leave_request.end_date} has been approved.\n"
+            f"Your leave request from {leave_request.start_date.strftime('%B %d, %Y')} to {leave_request.end_date.strftime('%B %d, %Y')} has been approved.\n"
             f"Status: Approved\n"
             f"Casual Leave Days: {casual_days}\n"
             f"Floating Holiday Days: {floating_days}\n"
@@ -1282,7 +1319,7 @@ def accept_leave_request(request, leave_request_id):
                 f"Dear Project Manager,\n\n"
                 f"{employee.first_name} {employee.last_name}'s leave request has been approved.\n\n"
                 f"Employee ID: {employee.employee_id}\n"
-                f"Leave Period: {leave_request.start_date} to {leave_request.end_date}\n"
+                f"Leave Period: {leave_request.start_date.strftime('%B %d, %Y')} to {leave_request.end_date.strftime('%B %d, %Y')}\n"
                 f"Casual Leave Days: {casual_days}\n"
                 f"Floating Holiday Days: {floating_days}\n"
                 f"Total Leave Days: {casual_days + floating_days}\n"
@@ -1315,7 +1352,7 @@ def reject_leave_request(request, leave_request_id):
         employee_subject = "Leave Request Rejected"
         employee_message = (
             f"Dear {employee.first_name},\n\n"
-            f"Your leave request from {leave_request.start_date} to {leave_request.end_date} has been rejected.\n"
+            f"Your leave request from {leave_request.start_date.strftime('%B %d, %Y')} to {leave_request.end_date.strftime('%B %d, %Y')} has been rejected.\n"
             f"Status: Rejected\n"
             f"If you have any questions or would like to discuss this decision, please contact HR.\n\n"
             f"Best Regards,\nYour Leave Management System"
@@ -1331,7 +1368,7 @@ def reject_leave_request(request, leave_request_id):
                 f"Dear Project Manager,\n\n"
                 f"{employee.first_name} {employee.last_name}'s leave request has been rejected.\n\n"
                 f"Employee ID: {employee.employee_id}\n"
-                f"Leave Period: {leave_request.start_date} to {leave_request.end_date}\n"
+                f"Leave Period: {leave_request.start_date.strftime('%B %d, %Y')} to {leave_request.end_date.strftime('%B %d, %Y')}\n"
                 f"Reason for Leave: {leave_request.reason}\n"
                 f"Status: Rejected\n\n"
                 f"The employee has been notified of this decision.\n\n"
@@ -1500,7 +1537,7 @@ def filter_holidays_by_year(request, year):
         country_holidays = Holiday.objects.filter(**filter_kwargs).order_by('date') # Country Holidays are stored in Holiday model
         holidays.extend([{
             'name': holiday.name,
-            'date': holiday.date.strftime('%Y-%m-%d'),
+            'date': holiday.date.strftime('%m-%d-%Y'),
             'type':'Country',
             'region': holiday.country.country_name
         } for holiday in country_holidays])
@@ -1510,7 +1547,7 @@ def filter_holidays_by_year(request, year):
         floating_holidays = FloatingHoliday.objects.filter(**filter_kwargs).order_by('date')
         holidays.extend([{
             'name': holiday.name,
-            'date': holiday.date.strftime('%Y-%m-%d'),
+            'date': holiday.date.strftime('%m-%d-%Y'),
             'type': 'Floating',
             'region': holiday.country.country_name
         } for holiday in floating_holidays])
@@ -1520,7 +1557,7 @@ def filter_holidays_by_year(request, year):
         state_holidays = StateHoliday.objects.filter(**filter_kwargs).order_by('date')
         holidays.extend([{
             'name': holiday.name,
-            'date': holiday.date.strftime('%Y-%m-%d'),
+            'date': holiday.date.strftime('%m-%d-%Y'),
             'type': 'State',
             'region': holiday.state.name
         } for holiday in state_holidays])
