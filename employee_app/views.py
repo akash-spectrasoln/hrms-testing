@@ -1020,6 +1020,7 @@ def request_leave(request):
                     message=(
                         f"Dear {manager.first_name},\n\n"
                         f"Employee {employee.first_name} {employee.last_name} has submitted a leave request.\n\n"
+                        
                         f"Employee ID: {employee.employee_id}\n"
                         f"Leave Type: {leave_request.leave_type}\n"
                         f"Leave Period: {leave_request.start_date.strftime('%B %d, %Y')} to {leave_request.end_date.strftime('%B %d, %Y')}\n"
@@ -1615,35 +1616,52 @@ def holiday_list(request):
             pass  # If no employee record is found, keep is_manager as False
 
     # Filter holidays and floating holidays for the current year
+
+    #get financial year
+    reset_period=HolidayResetPeriod.objects.filter(country=employee.country).first()
+    if reset_period:
+        start_month = reset_period.start_month
+        start_day = reset_period.start_day
+        end_month=reset_period.end_month
+        end_day=reset_period.end_day
+        if date.today().month < 4:
+            current_year=date.today().year-1
+        else:
+            current_year=date.today().year
+        financial_year_start_date = date(current_year, start_month, start_day)
+        financial_year_end_date = date(current_year+2, end_month, end_day)
     
-    country_holidays = Holiday.objects.filter(country=employee.country,year=current_year).order_by('date')
-    state_holidays=StateHoliday.objects.filter(country=employee.country,state=employee.state,year=current_year).order_by('date')
+    country_holidays = Holiday.objects.filter(country=employee.country).order_by('date')
+    state_holidays=StateHoliday.objects.filter(country=employee.country,state=employee.state).order_by('date')
     holidays=[]
     holidays.extend([{
             'name': holiday.name,
             'date': holiday.date
-        } for holiday in country_holidays])
+        } for holiday in country_holidays if financial_year_start_date <= holiday.date <= financial_year_end_date])
     holidays.extend([{
             'name': holiday.name,
             'date': holiday.date
-        } for holiday in state_holidays])
+        } for holiday in state_holidays if financial_year_start_date <= holiday.date <= financial_year_end_date])
 
     holidays.sort(key=lambda x:x['date'])
     
 
-    floating_holidays1 = FloatingHoliday.objects.filter(country=employee.country,year=current_year).order_by('date')
-    floating_holidays2 = StateHoliday.objects.filter(country=employee.country,year=current_year).exclude(state=employee.state).order_by('date')
+    floating_holidays1 = FloatingHoliday.objects.filter(country=employee.country).order_by('date')
+    floating_holidays2 = StateHoliday.objects.filter(country=employee.country).exclude(state=employee.state).order_by('date')
 
     floating_holidays=[]
     floating_holidays.extend([{
         'name': holiday.name,
-        'date': holiday.date
-    } for holiday in floating_holidays1])
+        'date': holiday.date    
+    } for holiday in floating_holidays1 if (financial_year_start_date <= holiday.date <= financial_year_end_date) and {'name': holiday.name, 'date': holiday.date} not in holidays ])
     floating_holidays.extend([{
         'name': holiday.name,
         'date': holiday.date
-    } for holiday in floating_holidays2 if {'name': holiday.name, 'date': holiday.date} not in floating_holidays])
+    } for holiday in floating_holidays2 if {'name': holiday.name, 'date': holiday.date} not in floating_holidays and
+                                           (financial_year_start_date <= holiday.date <= financial_year_end_date)
+                                           and {'name': holiday.name, 'date': holiday.date} not in holidays])
 
+    floating_holidays.sort(key=lambda x:x['date'])
 
     # Check if the logged-in user is a manager
     
@@ -1871,20 +1889,36 @@ def manage_leave_request(request, leave_request_id):
         current_date = start_date
         holidays = set(Holiday.objects.values_list('date', flat=True))
         floating_holidays = set(FloatingHoliday.objects.values_list('date', flat=True))
-        while current_date <= end_date:
-            if current_date.weekday() in [5, 6]:
-                current_date += timedelta(days=1)
-                continue
-            if current_date in holidays:
-                current_date += timedelta(days=1)
-                continue
-            if current_date in floating_holidays:
-                if floating_holidays_used < max_floating_holidays:
-                    floating_holidays_used += 1
+        if leave_request.leave_type == 'Floating Leave':
+            while current_date <= end_date:
+                if current_date.weekday() in [5, 6]:
                     current_date += timedelta(days=1)
                     continue
-            leave_duration += 1
-            current_date += timedelta(days=1)
+                if current_date in holidays:
+                    current_date += timedelta(days=1)
+                    continue
+                if current_date in floating_holidays:
+                    if floating_holidays_used < max_floating_holidays:
+                        floating_holidays_used += 1
+                        current_date += timedelta(days=1)
+                        continue
+                leave_duration += 1
+                current_date += timedelta(days=1)
+        else:
+            while current_date <= end_date:
+                if current_date.weekday() in [5, 6]:
+                    current_date += timedelta(days=1)
+                    continue
+                if current_date in holidays:
+                    current_date += timedelta(days=1)
+                    continue
+                # if current_date in floating_holidays:
+                #     if floating_holidays_used < max_floating_holidays:
+                #         floating_holidays_used += 1
+                #         current_date += timedelta(days=1)
+                #         continue
+                leave_duration += 1
+                current_date += timedelta(days=1)
 
         if action == 'accept':
             leave_request.status = 'Approved'

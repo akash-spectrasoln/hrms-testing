@@ -168,7 +168,7 @@ def add_employee(request):
         'roles': Role.objects.all(),
         'departments': Department.objects.all(),
         'states': state.objects.all(),
-        'countries': Country.objects.all(),
+        'countries': Country.objects.all().order_by('code'),
         'salutations': Salutation.objects.all(),
         'employees': Employees.objects.all(),
         'default_valid_from': date.today(),
@@ -185,7 +185,7 @@ from .models import state  # Keep 'state' lowercase, as defined in your model
 def get_states(request):
     country_id = request.GET.get('country_id')  # Get country ID from the request
     if country_id:
-        states = state.objects.filter(country_id=country_id).values('id','name','code')  # Use 'state' lowercase
+        states = state.objects.filter(country_id=country_id).values('id','name','code').order_by('code') # Use 'state' lowercase
         print(states)  # Debugging line
         return JsonResponse(list(states), safe=False)  # Return states as JSON
     return JsonResponse({'error': 'Country not selected'}, status=400)
@@ -211,12 +211,12 @@ def export_employees_to_excel(request):
     headers = [
         'Employee ID', 'Salutation', 'First Name', 'Middle Name', 'Last Name',
         'Date of Birth', 'Company Email', 'Personal Email', 'Mobile Phone', 'Office Phone', 
-        'Home Phone', 'Valid From', 'Valid To', 'Country', 'State', 'Address', 
-        'Home House', 'Home Post Office', 'Home City', 'Pincode', 'Role', 'Department', 
+        'Home Phone', 'Valid From', 'Valid To', 'Country', 'State',
+        'Home Name', 'Home Post Office', 'Home City', 'Pincode', 'Role', 'Department', 
         'Manager', 'Employee Status', 'Emergency Contact Name', 'Emergency Contact Phone',
         'Emergency Contact Email', 'Emergency Contact Relation', 'Base Salary',
-        'Created On', 'Modified On', 'Is Deleted', 'Floating Holidays Balance', 
-        'Floating Holidays Used', 'Total Leaves', 'Used Leaves', 'Resignation Date',
+        'Created On', 'Modified On', 'Is Deleted', 
+        'Resignation Date',
         'Incentive', 'Joining Bonus', 'PAN Card', 'Aadhaar', 'Bank Name', 
         'Bank Branch', 'Bank Branch Address', 'Bank Account', 'IFSC Code'
     ]
@@ -251,7 +251,7 @@ def export_employees_to_excel(request):
             employee.valid_to,
             employee.country.country_name if employee.country else '',
             employee.state.name if employee.state else '',
-            employee.enc_address,         # Using encrypted property
+            # employee.enc_address,         # Using encrypted property
             employee.enc_house_name,      # Using encrypted property
             employee.home_post_office,    # Not encrypted in your model
             employee.enc_home_city,       # Using encrypted property
@@ -310,8 +310,6 @@ def export_employees_to_excel(request):
 from django.db.models import Q
 from django.utils import timezone
 
-
-
 from django.shortcuts import render
 from django.db.models import Q
 from django.utils import timezone
@@ -326,7 +324,7 @@ from datetime import date
 def list_employees(request):
     queryset = Employees.objects.filter(is_deleted=False).order_by('-modified_on')
     country_list = Country.objects.all().order_by('country_name')
-
+    
     # Get filter parameters
     emp_id = request.GET.get('employee_id', '').strip()
     name = request.GET.get('name', '').strip()
@@ -791,7 +789,10 @@ class EmployeeExcelCreateView(View):
                     def parse(val): 
                         if pd.isnull(val): return None
                         if isinstance(val, str) and val.strip().lower() == 'nan': return None
+                        if isinstance(val,float) and val.is_integer(): 
+                            return str(int(val))
                         return val
+                    
 
                     # def parse_decimal(val):
                     #     try: return float(val)
@@ -848,7 +849,7 @@ class EmployeeExcelCreateView(View):
                             employee.enc_house_name = parse(row['House Name'])
                             employee.enc_home_city = parse(row['Home City'])
                             employee.enc_pincode = str(parse(row['Pincode'])) if 'Pincode' in row else ''
-                            
+        
                             # Emergency contact
                             employee.enc_emergency_contact_name = parse(row['Emergency Contact Name']) if 'Emergency Contact Name' in row else None
                             employee.enc_emergency_contact_phone = str(parse(row['Emergency Contact Phone'])) if 'Emergency Contact Phone' in row else ''
@@ -867,7 +868,7 @@ class EmployeeExcelCreateView(View):
                             employee.enc_bank_name = parse(row['Bank Name']) if 'Bank Name' in row else ''
                             employee.enc_bank_branch = parse(row['Bank Branch']) if 'Bank Branch' in row else ''
                             employee.enc_bank_branch_address = parse(row['Bank Branch Address']) if 'Bank Branch Address' in row else ''
-                            employee.enc_bank_account = parse(row['Bank Account']) if 'Bank Account' in row else ''
+                            employee.enc_bank_account = str(parse(row['Bank Account'])) if 'Bank Account' in row else ''
                             employee.enc_ifsc_code = parse(row['IFSC Code']) if 'IFSC Code' in row else ''
                             
                             employee.save()
@@ -1263,19 +1264,34 @@ def accept_leave_request(request, leave_request_id):
 
         floating_h_used = emp_leave_details.floating_holidays_used# initial used
         current_date = leave_request.start_date
-        while current_date <= leave_request.end_date:
-            if current_date.weekday() in [5, 6]:  # weekend
+        if leave_request.leave_type == 'Floating Leave':
+            while current_date <= leave_request.end_date:
+                if current_date.weekday() in [5, 6]:  # weekend
+                    current_date += timedelta(days=1)
+                    continue
+                if current_date in holiday_dates:
+                    current_date += timedelta(days=1)
+                    continue
+                if current_date in floating_dates and floating_h_used + floating_days < floating_entitlement:
+                    floating_days += 1
+                    current_date += timedelta(days=1)
+                    continue
+                casual_days += 1
                 current_date += timedelta(days=1)
-                continue
-            if current_date in holiday_dates:
+        else:
+            while current_date <= leave_request.end_date:
+                if current_date.weekday() in [5, 6]:  # weekend
+                    current_date += timedelta(days=1)
+                    continue
+                if current_date in holiday_dates:
+                    current_date += timedelta(days=1)
+                    continue
+                # if current_date in floating_dates and floating_h_used + floating_days < floating_entitlement:
+                #     floating_days += 1
+                #     current_date += timedelta(days=1)
+                #     continue
+                casual_days += 1
                 current_date += timedelta(days=1)
-                continue
-            if current_date in floating_dates and floating_h_used + floating_days < floating_entitlement:
-                floating_days += 1
-                current_date += timedelta(days=1)
-                continue
-            casual_days += 1
-            current_date += timedelta(days=1)
         # Check employee has enough balance
         # if employee.used_leaves + casual_days > employee.total_leaves:
         #     messages.error(request, "Employee cannot exceed the allowed casual leave days.")

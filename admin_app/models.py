@@ -128,7 +128,6 @@ class Employees(models.Model):
     emergency_contact_phone = models.TextField(null=True,blank=True)
     emergency_contact_email = models.EmailField(null=True,blank=True)
     emergency_contact_relation = models.TextField(null=True,blank=True)
-    # base_salary = models.DecimalField(max_digits=10, decimal_places=2)
     base_salary = models.TextField(null=True, blank=True)
     created_on = models.DateTimeField(auto_now_add=True, null=True)
     modified_on = models.DateTimeField(auto_now=True, null=True)
@@ -419,7 +418,8 @@ class Employees(models.Model):
     @property
     def enc_bank_account(self):
         """Decrypt and return the bank_account."""
-        return self._decrypt_field(self.bank_account)
+        decrypted_data=self._decrypt_field(self.bank_account)
+        return decrypted_data
 
     @enc_bank_account.setter
     def enc_bank_account(self, value):
@@ -523,7 +523,8 @@ class Employees(models.Model):
     @property
     def enc_pincode(self):
         """Decrypt and return the pincode."""
-        return self._decrypt_field(self.pincode)
+        decrypted_data=self._decrypt_field(self.pincode)
+        return decrypted_data
 
     @enc_pincode.setter
     def enc_pincode(self, value):
@@ -532,18 +533,6 @@ class Employees(models.Model):
                 self._fields_to_encrypt = {}
             self._fields_to_encrypt['pincode'] = value  
     
-    #
-    @property
-    def enc_address(self):
-        """Decrypt and return the address."""
-        return self._decrypt_field(self.address)
-
-    @enc_address.setter
-    def enc_address(self, value):
-        if value is not None:
-            if not hasattr(self, '_fields_to_encrypt'):
-                self._fields_to_encrypt = {}
-            self._fields_to_encrypt['address'] = value    
     
     #
     @property
@@ -573,7 +562,8 @@ class Employees(models.Model):
     @property
     def enc_mobile_phone(self):
         """Decrypt and return the mobile_phone."""
-        return self._decrypt_field(self.mobile_phone)
+        decrypted_data=self._decrypt_field(self.mobile_phone)
+        return decrypted_data
 
     @enc_mobile_phone.setter
     def enc_mobile_phone(self, value):

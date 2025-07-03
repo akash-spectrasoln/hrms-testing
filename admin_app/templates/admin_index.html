@@ -146,7 +146,7 @@ Admin Portal
                 </div>
             </a>
             <!-- Download Employees Card -->
-            <a href="{% url 'export_employees' %}" class="card">
+            <a href="#" class="card" id="downloadEmployees">
                 <div class="card-content">
                     <span class="card-icon">⬇️</span>
                     <h3>Download Employees</h3>
@@ -176,4 +176,42 @@ Admin Portal
         </div>
     </div>
 </div>
+<script>
+document.getElementById('downloadEmployees').addEventListener('click', function (e) {
+    e.preventDefault();
+
+    const spinner = document.getElementById('spinner-overlay');
+    spinner.style.display = 'flex';
+
+    fetch("{% url 'export_employees' %}", {
+        method: 'GET',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
+        return response.blob();
+    })
+    .then(blob => {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = "employees.xlsx";
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        window.URL.revokeObjectURL(url);
+    })
+    .catch(error => {
+        console.error('Download failed:', error);
+        alert("Something went wrong during download.");
+    })
+    .finally(() => {
+        spinner.style.display = 'none';
+    });
+});
+</script>
 {% endblock content %}
