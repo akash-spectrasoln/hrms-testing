@@ -332,7 +332,7 @@ def employee_profile(request, employee_id):
             fin_year_end = next_fin_year_start - timedelta(days=1)
 
     # Experience calculation (defaults to 0)
-    experience_years = (today - employee.created_on.date()).days // 365 if employee.created_on else 0
+    experience_years = (today - employee.enc_valid_from).days // 365 if employee.enc_valid_from else 0
 
     # Get leave policies
     policy = HolidayPolicy.objects.filter(
@@ -800,7 +800,7 @@ def request_leave(request):
             return None, None, None, None, None
         fy_start, fy_end = get_financial_year_dates(request, employee)
         today = date.today()
-        experience_years = (today - employee.created_on.date()).days // 365 if employee.created_on else 0
+        experience_years = (today - employee.enc_valid_from).days // 365 if employee.enc_valid_from else 0
         reference_year = fy_start.year
         # Only 1 query for policy and 1 for floating
         policy = HolidayPolicy.objects.filter(
@@ -994,9 +994,7 @@ def request_leave(request):
                 fail_silently=False,
             )
 
-            leave_details=get_leave_policy_details(employee)
-            floating_holiday_policy = leave_details['allowed_floating_holiday_policy']
-            holiday_policy = leave_details['allowed_holiday_policy']
+          
 
             current_year=date.today().year
             reset_period = HolidayResetPeriod.objects.filter(country=employee.country).first()
@@ -1011,7 +1009,12 @@ def request_leave(request):
             else:
                 current_year-=1
 
-            emp_leave_details, created = LeaveDetails.objects.get_or_create(employee=employee,year=current_year)
+            leave_details=get_leave_policy_details(employee,current_year)
+            holiday_policy = leave_details['allowed_holiday_policy']
+            if not holiday_policy:
+                messages.error(request,f"No holiday policy configured for the year {current_year} . contact the manager")
+                return redirect('request_leave')
+            emp_leave_details, created = LeaveDetails.objects.get_or_create(employee=employee,year=current_year,defaults={"total_casual_leaves":holiday_policy})
 
         # Email to Manager
             if manager and getattr(manager, 'company_email', None):
@@ -1027,7 +1030,7 @@ def request_leave(request):
                         f"Total Days: {leave_request.leave_days} days\n"
                         
                         f"Reason: {leave_request.reason}\n"
-                        f"Employee's Leave Balance: {holiday_policy - emp_leave_details.casual_leaves_used} days remaining\n\n"
+                        f"Employee's Leave Balance: {emp_leave_details.total_casual_leaves - emp_leave_details.casual_leaves_used} days remaining\n\n"
                         f"Please review the request in the HR system.\n"
                         f"Login here: {approval_url}\n\n"
                         f"Best regards,\nHR Team"
@@ -1070,7 +1073,7 @@ def request_leave(request):
             return render(request, 'employee_app/error.html', {'message': 'Employee details not found.'})
         is_manager = Employees.objects.filter(manager=employee).exists()
         today = date.today()
-        experience_years = (today - employee.created_on.date()).days // 365 if employee.created_on else 0
+        experience_years = (today - employee.enc_valid_from).days // 365 if employee.enc_valid_from else 0
         fy_start, fy_end = get_financial_year_dates(request, employee)
         policy = HolidayPolicy.objects.filter(
             country=employee.country,
@@ -1081,7 +1084,18 @@ def request_leave(request):
             country=employee.country,
             year=fy_start.year
         ).first()
-        casual_leaves = (policy.ordinary_holidays_count if policy else 0) + (policy.extra_holidays if policy else 0)
+
+        
+
+        reset_period = HolidayResetPeriod.objects.filter(country=employee.country).first()
+    
+
+        year_to_use= date.today().year-1 if date.today().month < reset_period.start_month else date.today().year
+        employee_leaves=LeaveDetails.objects.filter(employee=employee,year=year_to_use).first()
+        if employee_leaves:
+            casual_leaves=employee_leaves.total_casual_leaves
+        else:
+            casual_leaves = (policy.ordinary_holidays_count if policy else 0) + (policy.extra_holidays if policy else 0)
         floating_leaves = floating_policy.allowed_floating_holidays if floating_policy else 0
         holidays, floating_holidays = get_holidays(employee, fy_start, fy_end)
 
@@ -1391,7 +1405,7 @@ def my_leave_history(request):
 
     # Is manager & experience years
     is_manager = getattr(employee, 'employees_managed', Employees.objects.none()).exists() if employee else False
-    experience_years = (today - employee.created_on.date()).days // 365 if employee and employee.created_on else 0
+    experience_years = (today - employee.enc_valid_from).days // 365 if employee and employee.enc_valid_from else 0
 
     # Batch get policies and all holidays, reusing them
     policy = None
@@ -1466,9 +1480,16 @@ def my_leave_history(request):
         if leave_type_lower == "ordinary":
             total_leaves = policy.ordinary_holidays_count if policy else 0
         elif leave_type_lower == "casual leave":
-            total_leaves = (
-                (policy.ordinary_holidays_count if policy else 0) +
-                (policy.extra_holidays if policy else 0)
+
+            year_to_use= date.today().year-1 if date.today().month < reset_period.start_month else date.today().year
+            employee_leaves=LeaveDetails.objects.filter(employee=employee,year=year_to_use).first()
+            if employee_leaves:
+                total_leaves=employee_leaves.total_casual_leaves
+            else:
+                
+                total_leaves = (
+                    (policy.ordinary_holidays_count if policy else 0) +
+                    (policy.extra_holidays if policy else 0)
             )
         elif leave_type_lower == "floating leave":
             total_leaves = floating_policy.allowed_floating_holidays if floating_policy else 0
@@ -1878,9 +1899,9 @@ def manage_leave_request(request, leave_request_id):
         else:
             current_year-=1
 
-        emp_leave_details, created = LeaveDetails.objects.get_or_create(employee=employee,year=current_year)
+        emp_leave_details = LeaveDetails.objects.get(employee=employee,year=current_year)
 
-        leave_details=get_leave_policy_details(employee)
+        leave_details=get_leave_policy_details(employee,current_year)
         floating_holiday_policy = leave_details['allowed_floating_holiday_policy']
         leave_duration = 0
         floating_holidays_used = emp_leave_details.floating_holidays_used
@@ -2105,6 +2126,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.contrib import messages
 from django.core.mail import send_mail
 from django.db.models import Sum
+from .utils import get_leave_policy_details
 
 
 
@@ -2155,11 +2177,20 @@ def allocate_leave(request, employee_id):
     financial_year_start, financial_year_end = get_financial_year_dates(request, employee, reference_date=today)
 
     # --- Calculate LEAVE POLICY ---
-    experience_years = (today - employee.created_on.date()).days // 365 if employee.created_on else 0
+    experience_years = (today - employee.enc_valid_from).days // 365 if employee.enc_valid_from else 0
 
-    policy = HolidayPolicy.objects.filter(country=employee.country, year=current_year, min_years_experience__lte=experience_years).order_by('-min_years_experience').first()
-    floating_policy = FloatingHolidayPolicy.objects.filter(country=employee.country, year=current_year).first()
-    casual_leaves = (policy.ordinary_holidays_count if policy else 0) + (policy.extra_holidays if policy else 0)
+
+    reset_period = HolidayResetPeriod.objects.filter(country=employee.country).first()
+    year_to_use= date.today().year-1 if date.today().month < reset_period.start_month else date.today().year
+    policy = HolidayPolicy.objects.filter(country=employee.country, year=year_to_use, min_years_experience__lte=experience_years).order_by('-min_years_experience').first()
+    floating_policy = FloatingHolidayPolicy.objects.filter(country=employee.country, year=year_to_use).first()
+
+    employee_leaves=LeaveDetails.objects.filter(employee=employee,year=year_to_use).first()
+    if employee_leaves:
+        casual_leaves=employee_leaves.total_casual_leaves
+    else:
+        casual_leaves = (policy.ordinary_holidays_count if policy else 0) + (policy.extra_holidays if policy else 0)
+
     floating_leaves = floating_policy.allowed_floating_holidays if floating_policy else 0
     print(casual_leaves)
     print(floating_leaves)
@@ -2294,6 +2325,7 @@ def allocate_leave(request, employee_id):
                 approved_by=request.user,
                 created_by=request.user
             )
+           
             current_year=date.today().year
             reset_period = HolidayResetPeriod.objects.filter(country=employee.country).first()
             if reset_period:
@@ -2308,7 +2340,12 @@ def allocate_leave(request, employee_id):
                 pass
             else:
                 current_year-=1
-            emp_leave_details, created = LeaveDetails.objects.get_or_create(employee=employee,year=current_year)
+            leave_details=get_leave_policy_details(employee,current_year)
+            holiday_policy = leave_details['allowed_holiday_policy']
+            if not holiday_policy:
+                messages.error(request,f"No holiday policy configured for the year {current_year} . contact the manager")
+                return redirect('request_leave')
+            emp_leave_details, created = LeaveDetails.objects.get_or_create(employee=employee,year=current_year,defaults={'total_casual_leaves':holiday_policy})
             if leave_type == "Floating Leave":
                 emp_leave_details.floating_holidays_used += leave_days
             elif leave_type == "Casual Leave":

@@ -1226,10 +1226,7 @@ def accept_leave_request(request, leave_request_id):
     if request.method == "POST":
         leave_request = get_object_or_404(LeaveRequest, id=leave_request_id)
         employee = leave_request.employee_master
-
-        leave_details=get_leave_policy_details(employee)
-        floating_holiday_policy = leave_details['allowed_floating_holiday_policy']
-        holiday_policy = leave_details['allowed_holiday_policy']
+        
 
         #choosing emp details
         current_year=date.today().year
@@ -1247,8 +1244,11 @@ def accept_leave_request(request, leave_request_id):
         else:
             current_year-=1
 
+        leave_details=get_leave_policy_details(employee,current_year)
+        floating_holiday_policy = leave_details['allowed_floating_holiday_policy']
+
         # emp_leave_details = LeaveDetails.objects.get(employee=employee,year=current_year)
-        emp_leave_details, created = LeaveDetails.objects.get_or_create(employee=employee,year=current_year)
+        emp_leave_details = LeaveDetails.objects.get(employee=employee,year=current_year)
 
         print(leave_details,"++++++++++++++++++++++++++++++++++++++++++++++++++++++++++=")
 

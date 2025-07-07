@@ -294,7 +294,7 @@ class Employees(models.Model):
 
             year_to_use = current_year - 1 if created_date.date() < financial_year_start_date else current_year
 
-            LeaveDetails.objects.get_or_create(employee=self, year=year_to_use)
+            LeaveDetails.objects.create(employee=self, year=year_to_use)
 
 
             
@@ -654,6 +654,7 @@ class LeaveDetails(models.Model):
     floating_holidays_used = models.IntegerField(default=0)
     casual_leaves_used = models.IntegerField(default=0)
     year = models.IntegerField(null=True)
+    total_casual_leaves=models.IntegerField(null=True , default=12)
     
 class Resume(models.Model):
     employee = models.ForeignKey(Employees, related_name='resumes', on_delete=models.CASCADE)
