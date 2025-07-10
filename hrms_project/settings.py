@@ -12,6 +12,11 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 import os
 from pathlib import Path
 
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
+
 
 #google recaptcha
 RECAPTCHA_PUBLIC_KEY = '6Leh9VYrAAAAAHx03L847AT7KPXQKmhEHL3RYzzF'
@@ -104,11 +109,12 @@ STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',  # or 'django.db.backends.mysql' for MySQL
-        'NAME': 'postgres',
-        'USER': 'postgres',
-        'PASSWORD': 'Hrms@123',
-        'HOST': '34.29.190.19',  # or 'localhost' if using Cloud SQL Proxy
+        'NAME': os.getenv('HRMS_DB_NAME'),
+        'USER': os.getenv('HRMS_USER'),
+        'PASSWORD': os.getenv('HRMS_PASSWORD'),
+        'HOST': os.getenv('HRMS_HOST'),  # or 'localhost' if using Cloud SQL Proxy
         'PORT': '5432',  # PostgreSQL default port, or '3306' for MySQL
+        
     }
 }
 

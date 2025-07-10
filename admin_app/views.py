@@ -1105,39 +1105,6 @@ def delete_file(request):
     return JsonResponse({'success': False})
 
 
-#
-# from django.http import JsonResponse
-# from .models import state
-#
-# def get_states(request):
-#     country_id = request.GET.get('country_id')
-#     states = state.objects.filter(country_id=country_id).values('id', 'name')
-#     return JsonResponse({'states': list(states)})
-
-
-
-
-# from django.views.generic import DeleteView
-# from .models import Employees
-#
-# class EmployeeDeleteView(DeleteView):
-#     model = Employees
-#     template_name = 'delete_employee.html'
-#     context_object_name = 'data'
-#     success_url = reverse_lazy('employee_list')  # Redirect after delete
-#
-#     #soft delete logic mentioned below
-#
-#     def delete(self, request, *args, **kwargs):
-#         """Mark the employee as deleted instead of deleting from the database."""
-#         self.object = self.get_object()
-#         self.object.delete()  # Call the soft delete method in the model
-#
-#
-#         return redirect(self.success_url)
-
-
-
 
 
 from django.urls import reverse_lazy
@@ -1244,10 +1211,9 @@ def accept_leave_request(request, leave_request_id):
         else:
             current_year-=1
 
+
         leave_details=get_leave_policy_details(employee,current_year)
         floating_holiday_policy = leave_details['allowed_floating_holiday_policy']
-
-        # emp_leave_details = LeaveDetails.objects.get(employee=employee,year=current_year)
         emp_leave_details = LeaveDetails.objects.get(employee=employee,year=current_year)
 
         print(leave_details,"++++++++++++++++++++++++++++++++++++++++++++++++++++++++++=")
@@ -1286,19 +1252,9 @@ def accept_leave_request(request, leave_request_id):
                 if current_date in holiday_dates:
                     current_date += timedelta(days=1)
                     continue
-                # if current_date in floating_dates and floating_h_used + floating_days < floating_entitlement:
-                #     floating_days += 1
-                #     current_date += timedelta(days=1)
-                #     continue
+
                 casual_days += 1
                 current_date += timedelta(days=1)
-        # Check employee has enough balance
-        # if employee.used_leaves + casual_days > employee.total_leaves:
-        #     messages.error(request, "Employee cannot exceed the allowed casual leave days.")
-        #     return redirect('leave_request_display')
-        # if employee.floating_holidays_used + floating_days > employee.floating_holidays_balance:
-        #     messages.error(request, "Employee cannot exceed the allowed floating holidays.")
-        #     return redirect('leave_request_display')
 
         # Update leave usage
         emp_leave_details.casual_leaves_used += casual_days

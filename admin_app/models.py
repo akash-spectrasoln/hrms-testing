@@ -133,11 +133,7 @@ class Employees(models.Model):
     modified_on = models.DateTimeField(auto_now=True, null=True)
     is_deleted = models.BooleanField(default=False)
     date_of_birth = models.TextField(null=True, blank=True, verbose_name="Date of Birth")
-    # These two fields get dynamically assigned in save()
-    # floating_holidays_balance = models.IntegerField(default=2)
-    # floating_holidays_used = models.IntegerField(default=0)
-    # total_leaves = models.PositiveIntegerField(default=15)
-    # used_leaves = models.PositiveIntegerField(default=0) 
+
 
     password = models.CharField(max_length=128, null=True, blank=True)
     resignation_date = models.DateField(null=True, blank=True)
@@ -184,50 +180,7 @@ class Employees(models.Model):
         blank=True, 
         verbose_name="IFSC Code"
     )
-    # @property
-    # def first_name(self):
-    #     return decrypt_employee_field(self.first_name_e, self.employee_id, self.created_on or date.today())
-
-    # @first_name.setter
-    # def first_name(self, value):
-    #     co = self.created_on or date.today()
-    #     self.first_name_e = encrypt_employee_field(value, self.employee_id, co)
-
-    # @property
-    # def last_name(self):
-    #     return decrypt_employee_field(self.last_name_e, self.employee_id, self.created_on or date.today())
-
-    # @last_name.setter
-    # def last_name(self, value):
-    #     co = self.created_on or date.today()
-    #     self.last_name_e = encrypt_employee_field(value, self.employee_id, co)
-
-    # @property
-    # def date_of_birth(self):
-    #     return decrypt_employee_field(self.date_of_birth_e, self.employee_id, self.created_on or date.today())
-
-    # @date_of_birth.setter
-    # def date_of_birth(self, value):
-    #     co = self.created_on or date.today()
-    #     self.date_of_birth_e = encrypt_employee_field(str(value), self.employee_id, co)
-
-    # @property
-    # def personal_email(self):
-    #     return decrypt_employee_field(self.personal_email_e, self.employee_id, self.created_on or date.today())
-
-    # @personal_email.setter
-    # def personal_email(self, value):
-    #     co = self.created_on or date.today()
-    #     self.personal_email_e = encrypt_employee_field(value, self.employee_id, co)
-
-    # @property
-    # def mobile_phone(self):
-    #     return decrypt_employee_field(self.mobile_phone_e, self.employee_id, self.created_on or date.today())
-
-    # @mobile_phone.setter
-    # def mobile_phone(self, value):
-    #     co = self.created_on or date.today()
-    #     self.mobile_phone_e = encrypt_employee_field(value, self.employee_id, co)
+  
     def available_leaves(self):
         return self.total_leaves - self.used_leaves
 
@@ -255,27 +208,7 @@ class Employees(models.Model):
                 # Clear the password field (optional: prevents storing plain text)
                 self.password = None
 
-        # today = date.today()
-        # experience_years = 0
-        # if self.created_on:
-        #     experience_years = (today - self.created_on.date()).days // 365
-
-        # # --- Holiday policy lookup (for current year) ---
-        # current_year = today.year
-        # policy = HolidayPolicy.objects.filter(
-        #     year=current_year,
-        #     min_years_experience__lte=experience_years
-        # ).order_by('-min_years_experience').first()
-
-        # if policy:
-        #     self.total_leaves = policy.ordinary_holidays_count + policy.extra_holidays
-        # else:
-        #     self.total_leaves = 0
-
-        # # --- Floating holiday policy lookup (current year) ---
-        # floating_policy = FloatingHolidayPolicy.objects.filter(year=current_year).first()
-        # if floating_policy:
-        #     self.floating_holidays_balance = floating_policy.allowed_floating_holidays
+      
 
         super().save(*args, **kwargs)
 
@@ -595,20 +528,7 @@ class Employees(models.Model):
 
     
 
-    # @property
-    # def enc_country(self):
-    #     """Decrypt and return the company name."""
-    #     return self._decrypt_field(self.country)
 
-    # @enc_country.setter
-    # def enc_country(self, value):
-
-    #     """Temporarily store `cmp_name` for encryption during save."""
-    #     if value is not None:
-    #         self._data_to_encrypt = value  # Store the raw value temporarily
-    #     else:
-    #         self._data_to_encrypt = None
-    #         self.country = None
 
     def _decrypt_field(self, encrypted_value):
         if encrypted_value:

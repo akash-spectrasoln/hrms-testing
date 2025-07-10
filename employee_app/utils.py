@@ -108,8 +108,6 @@ def get_leave_policy_details(employee, referenced_year=None):
     Holiday_policy = HolidayPolicy.objects.filter(country=employee.country,year=referenced_year,min_years_experience__lte=experience).order_by('-min_years_experience').first()
     
 
-    
-
     return {
             "allowed_floating_holiday_policy":floating_holiday_policy.allowed_floating_holidays if floating_holiday_policy else None,
             "allowed_holiday_policy":Holiday_policy.ordinary_holidays_count + Holiday_policy.extra_holidays if Holiday_policy else None,
