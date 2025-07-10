@@ -114,9 +114,10 @@ DATABASES = {
         'PASSWORD': os.getenv('HRMS_PASSWORD'),
         'HOST': os.getenv('HRMS_HOST'),  # or 'localhost' if using Cloud SQL Proxy
         'PORT': '5432',  # PostgreSQL default port, or '3306' for MySQL
-        
+
     }
 }
+
 
 
 # Password validation
