@@ -185,7 +185,7 @@ import os
 
 
 
-
+#setting.py
 AUTHENTICATION_BACKENDS = [
     'employee_app.backends.EmailBackend',  # Add your custom backend here
     'django.contrib.auth.backends.ModelBackend',  # Default backend (you can keep it as fallback)
