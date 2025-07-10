@@ -184,7 +184,7 @@ import os
 
 
 
-# settings.py
+
 
 AUTHENTICATION_BACKENDS = [
     'employee_app.backends.EmailBackend',  # Add your custom backend here
