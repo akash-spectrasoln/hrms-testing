@@ -63,7 +63,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    
+    'django_cron',
     'employee_app',
     'admin_app'
     
@@ -267,16 +267,7 @@ from pathlib import Path
 # Base directory of the project
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# # URL for serving static files
-# STATIC_URL = '/static/'
-#
-# # Static files directory (for development)
-# STATICFILES_DIRS = [
-#     BASE_DIR / "static",  # Ensure this points to the correct folder
-# ]
-#
-# # Directory where 'collectstatic' will collect static files (for production)
-# STATIC_ROOT = BASE_DIR / "staticfiles"
+
 
 
 
@@ -320,3 +311,8 @@ load_dotenv()
 ADMIN_USERNAME = os.getenv('ADMIN_USERNAME')
 ADMIN_EMAIL = os.getenv('ADMIN_EMAIL')
 ADMIN_PASSWORD = os.getenv('ADMIN_PASSWORD')
+
+
+CRON_CLASSES = [
+    'admin_app.cron.BirthdayEmailCronJob',
+]

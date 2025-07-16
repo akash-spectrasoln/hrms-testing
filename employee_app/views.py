@@ -109,7 +109,8 @@ def dashboard_view(request):
     try:
         employee = Employees.objects.get(company_email=request.user.username)
     except Employees.DoesNotExist:
-        return render(request, 'error.html', {'message': 'Employee not found.'})
+        messages.error(request, 'Users Employee record not found. Please contact admin.')
+        return redirect('login')
 
     return render(request, 'emp_dashboard.html', {
         'employee': employee,

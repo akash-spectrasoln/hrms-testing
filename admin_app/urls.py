@@ -77,6 +77,8 @@ path('filter-holidays/<int:year>/', filter_holidays_by_year, name='filter_holida
 path('delete-file/', delete_file, name='delete_file'),
 path('employees/upload/', EmployeeExcelCreateView.as_view(), name='employee_excel_create'),
 path('holiday/upload/',HolidayExcelCreateView.as_view(),name='holiday_excel_create'),
+path('employee_leaves',list_emp_leave_details,name="employee_leaves"),
+path('export-employees-leaves/',export_employees_leaves, name='export_employees_leaves'),
 ]
 
 

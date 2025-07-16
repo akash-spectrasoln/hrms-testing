@@ -1902,5 +1902,119 @@ from django.http import JsonResponse
 from .models import Holiday, FloatingHoliday
 
 from django.http import JsonResponse
-from .models import Holiday, FloatingHoliday
+from .models import Holiday, FloatingHoliday,LeaveDetails,Employees,state,HolidayResetPeriod
+
+
+def list_emp_leave_details(request):
+
+
+    country_list = Country.objects.all().order_by('country_name')
+    country_filter=request.GET.get('country_id', '').strip()
+    state_filter = request.GET.get('state_id', '').strip()
+    year_filter = request.GET.get('year', '').strip()
+
+    if not country_filter:
+        india = Country.objects.filter(country_name__iexact='India').first()
+        country_filter = str(india.id) if india else ''
+    elif not country_filter.isdigit():
+        country_filter = ''
+    
+    
+    #for calculating financial year
+    current_year=date.today().year
+    reset_period = HolidayResetPeriod.objects.filter(country=country_filter).first()
+    if reset_period:
+        start_month = reset_period.start_month
+        start_day = reset_period.start_day
+        end_month=reset_period.end_month
+        end_day=reset_period.end_day
+        financial_year_start_date = date(current_year, start_month, start_day)
+    
+        if date.today() < financial_year_start_date:
+            current_year-=1
+        
+    #making year_filter default to current year
+    if year_filter.isdigit():
+        year_filter = int(year_filter)
+    else:
+        year_filter = current_year
+
+    queryset=LeaveDetails.objects.filter(year=year_filter).order_by('-year')
+    states=state.objects.all()
+
+    #country filter
+    if country_filter.isdigit():
+        queryset = queryset.filter(employee__country=country_filter).order_by('-year')
+        states=state.objects.filter(country=country_filter).order_by('name')
+    
+
+    # Filter by state (optional)
+    if state_filter.isdigit():
+        queryset = queryset.filter(employee__state=state_filter).order_by('-year')
+
+
+
+
+    context={
+        "queryset":queryset,
+        "country_list":country_list,
+        "states":states,
+        'current_filters': {
+            'country_id': country_filter,
+            'state_id': state_filter,
+            'year': year_filter,
+        }
+    }
+    return render(request,"list_emp_leaves.html",context)
+
+
+
+import openpyxl
+from django.http import HttpResponse
+from .models import LeaveDetails, Country, state
+
+def export_employees_leaves(request):
+    country_filter = request.GET.get('country_id', '').strip()
+    year_filter = request.GET.get('year', '').strip()
+    state_filter = request.GET.get('state_id', '').strip()
+
+    queryset = LeaveDetails.objects.all()
+
+    if country_filter.isdigit():
+        queryset = queryset.filter(employee__country=country_filter)
+    if state_filter.isdigit():
+        queryset = queryset.filter(employee__state=state_filter)
+    if year_filter.isdigit():
+        queryset = queryset.filter(year=year_filter)
+
+    workbook = openpyxl.Workbook()
+    sheet = workbook.active
+    sheet.title = 'Employee Leave Summary'
+
+    # Header
+    headers = [
+        'Employee ID', 'First Name', 'Last Name',
+        'Total Casual Leaves', 'Used Casual Leaves',
+        'Used Floating Leaves', 'Year'
+    ]
+    sheet.append(headers)
+
+    # Data rows
+    for record in queryset:
+        sheet.append([
+            record.employee.employee_id,
+            record.employee.first_name,
+            record.employee.last_name,
+            record.total_casual_leaves,
+            record.casual_leaves_used,
+            record.floating_holidays_used,
+            record.year
+        ])
+
+    response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    filename = 'Filtered_Employee_Leave_Summary.xlsx'
+    response['Content-Disposition'] = f'attachment; filename={filename}'
+    workbook.save(response)
+    return response
+
 
