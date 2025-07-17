@@ -1244,6 +1244,11 @@ def accept_leave_request(request, leave_request_id):
                     continue
                 casual_days += 1
                 current_date += timedelta(days=1)
+
+            #update employee leavedetails record
+            emp_leave_details.pending_float -= floating_days
+            emp_leave_details.planned_float += floating_days
+            emp_leave_details.save()
         else:
             while current_date <= leave_request.end_date:
                 if current_date.weekday() in [5, 6]:  # weekend
@@ -1256,10 +1261,16 @@ def accept_leave_request(request, leave_request_id):
                 casual_days += 1
                 current_date += timedelta(days=1)
 
-        # Update leave usage
-        emp_leave_details.casual_leaves_used += casual_days
-        emp_leave_details.floating_holidays_used += floating_days
-        emp_leave_details.save()
+            #update employee leavedetails record
+            emp_leave_details.pending_casual -= casual_days
+            emp_leave_details.planned_casual += casual_days
+            emp_leave_details.save()
+
+        # # Update leave usage
+        # # emp_leave_details.casual_leaves_used += casual_days
+        # # emp_leave_details.floating_holidays_used += floating_days
+        # if leave_request.leave_type == 
+        # emp_leave_details.save()
 
         # Update leave request (status, approver, leave_days)
         leave_request.status = "Approved"
@@ -1312,13 +1323,42 @@ def accept_leave_request(request, leave_request_id):
 def reject_leave_request(request, leave_request_id):
     if request.method == "POST":
         leave_request = get_object_or_404(LeaveRequest, id=leave_request_id)
-        leave_request.status = "Rejected"
-        leave_request.approved_by = request.user  # Set who rejected
-        leave_request.save()
+
 
         # Get employee object
         employee = leave_request.employee_master
         employee_email = employee.user.email
+
+        #fetching the correct year record from leavedetails
+        current_year=date.today().year
+        reset_period = HolidayResetPeriod.objects.filter(country=employee.country).first()
+        if reset_period:
+            start_month = reset_period.start_month
+            start_day = reset_period.start_day
+            end_month=reset_period.end_month
+            end_day=reset_period.end_day
+            financial_year_start_date = date(current_year, start_month, start_day)
+            financial_year_end_date = date(current_year+1, end_month, end_day)
+
+        if financial_year_start_date <= leave_request.start_date <= financial_year_end_date:
+            pass
+        else:
+            current_year-=1
+
+        year=leave_request.start_date.year
+        emp_leave_details=get_object_or_404(LeaveDetails,employee=employee,year=current_year)
+
+        if leave_request.leave_type == 'Floating Leave':
+            emp_leave_details.pending_float -= leave_request.leave_days
+        else:
+            emp_leave_details.pending_casual -= leave_request.leave_days
+        emp_leave_details.save()
+
+        leave_request.status = "Rejected"
+        leave_request.approved_by = request.user  # Set who rejected
+        leave_request.save()
+
+
 
         # Email to Employee
         employee_subject = "Leave Request Rejected"
@@ -1932,7 +1972,8 @@ def list_emp_leave_details(request):
     
         if date.today() < financial_year_start_date:
             current_year-=1
-        
+    
+       
     #making year_filter default to current year
     if year_filter.isdigit():
         year_filter = int(year_filter)
@@ -1952,7 +1993,18 @@ def list_emp_leave_details(request):
     if state_filter.isdigit():
         queryset = queryset.filter(employee__state=state_filter).order_by('-year')
 
+   #fetch total floating leaves 
+    policy=FloatingHolidayPolicy.objects.filter(country=country_filter,year=year_filter).first()
+    total_float = policy.allowed_floating_holidays if policy else 0
 
+    #adding remaining leaves count on each record
+    for record in queryset:
+        total = record.total_casual_leaves or 0
+        used = record.casual_leaves_used or 0
+        planned = record.planned_casual or 0
+        record.remaining_casual = total - used - planned
+        record.total_float=total_float
+        record.remaining_float = (record.total_float or 0) - (record.floating_holidays_used or 0) - (record.planned_float or 0)
 
 
     context={
@@ -1970,22 +2022,32 @@ def list_emp_leave_details(request):
 
 
 import openpyxl
-from django.http import HttpResponse
+from django.http import HttpResponse, HttpResponseBadRequest
 from .models import LeaveDetails, Country, state
 
 def export_employees_leaves(request):
     country_filter = request.GET.get('country_id', '').strip()
-    year_filter = request.GET.get('year', '').strip()
     state_filter = request.GET.get('state_id', '').strip()
+    year_filter = request.GET.get('year', '').strip()
 
-    queryset = LeaveDetails.objects.all()
+    if not year_filter or not year_filter.isdigit():
+        return HttpResponseBadRequest("Year parameter is required.")
+
+    year_filter = int(year_filter)
+
+    queryset = LeaveDetails.objects.filter(year=year_filter)
 
     if country_filter.isdigit():
         queryset = queryset.filter(employee__country=country_filter)
+
     if state_filter.isdigit():
         queryset = queryset.filter(employee__state=state_filter)
-    if year_filter.isdigit():
-        queryset = queryset.filter(year=year_filter)
+
+    # Fetch total float for that country and year
+    total_float = 0
+    if country_filter.isdigit():
+        float_policy = FloatingHolidayPolicy.objects.filter(country=country_filter, year=year_filter).first()
+        total_float = float_policy.allowed_floating_holidays if float_policy else 0
 
     workbook = openpyxl.Workbook()
     sheet = workbook.active
@@ -1994,26 +2056,35 @@ def export_employees_leaves(request):
     # Header
     headers = [
         'Employee ID', 'First Name', 'Last Name',
-        'Total Casual Leaves', 'Used Casual Leaves',
-        'Used Floating Leaves', 'Year'
+        'Total Casual Leaves', 'Used Casual Leaves', 'Planned Casual Leaves', 'Available Casual Leaves',
+        'Used Floating Leaves', 'Planned Floating Leaves', 'Available Floating Leaves',
+        'Year'
     ]
     sheet.append(headers)
 
     # Data rows
     for record in queryset:
+        # Calculate and attach derived fields (same as list_emp_leave_details)
+        record.remaining_casual = (record.total_casual_leaves or 0) - (record.casual_leaves_used or 0) - (record.planned_casual or 0)
+        record.total_float = total_float
+        record.remaining_float = total_float - (record.floating_holidays_used or 0) - (record.planned_float or 0)
+
         sheet.append([
             record.employee.employee_id,
             record.employee.first_name,
             record.employee.last_name,
-            record.total_casual_leaves,
-            record.casual_leaves_used,
-            record.floating_holidays_used,
+            record.total_casual_leaves or 0,
+            record.casual_leaves_used or 0,
+            record.planned_casual or 0,
+            record.remaining_casual,
+            record.floating_holidays_used or 0,
+            record.planned_float or 0,
+            record.remaining_float,
             record.year
         ])
 
     response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-    filename = 'Filtered_Employee_Leave_Summary.xlsx'
-    response['Content-Disposition'] = f'attachment; filename={filename}'
+    response['Content-Disposition'] = 'attachment; filename=Filtered_Employee_Leave_Summary.xlsx'
     workbook.save(response)
     return response
 

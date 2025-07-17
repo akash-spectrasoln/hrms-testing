@@ -575,6 +575,10 @@ class LeaveDetails(models.Model):
     casual_leaves_used = models.IntegerField(default=0)
     year = models.IntegerField(null=True)
     total_casual_leaves=models.IntegerField(null=True , default=12)
+    planned_casual=models.IntegerField(null=True , default=0)
+    planned_float=models.IntegerField(null=True , default=0)
+    pending_casual=models.IntegerField(null=True , default=0)
+    pending_float=models.IntegerField(null=True , default=0)
     
 class Resume(models.Model):
     employee = models.ForeignKey(Employees, related_name='resumes', on_delete=models.CASCADE)

@@ -83,13 +83,14 @@
             
         </form>
 
-<!-- calling view for downloading employees leave details -->
-<div class="mb-3">
-    <a href="{% url 'export_employees_leaves' %}?country_id={{ current_filters.country_id }}&state_id={{ current_filters.state_id }}&year={{ current_filters.year }}"
-       class="btn btn-success btn-xs px-1 py-1">
-        <i class="fas fa-download"></i> Download Excel
-    </a>
-</div>
+        <!-- calling view for downloading employees leave details -->
+        <div class="mb-3">
+            <a href="{% if queryset %}{% url 'export_employees_leaves' %}?country_id={{ current_filters.country_id }}&state_id={{ current_filters.state_id }}&year={{ current_filters.year }}{% else %}#{% endif %}"
+            class="btn btn-success btn-xs px-1 py-1 {% if not queryset %}disabled{% endif %}"
+            {% if not queryset %}aria-disabled="true" onclick="return false;"{% endif %}>
+                <i class="fas fa-download"></i> Download Excel
+            </a>
+        </div>
 
         <!-- Leave Summary Table -->
         <div class="card">
@@ -102,7 +103,12 @@
                                 <th>Name</th>
                                 <th>Total Casual Leaves</th>
                                 <th>Used Casual Leaves</th>
+                                <th>planned Casual Leaves</th>
+                                <th>Available Casual Leaves</th>
+                                <th>Total Floating Leaves</th>
                                 <th>Used Floating Leaves</th>
+                                <th>Planned Floating Leaves</th>
+                                <th>Available Floating Leaves</th>
                                 <th>Year</th>
 
                             </tr>
@@ -115,7 +121,12 @@
                                     <td>{{record.employee.first_name}} {{record.employee.last_name}}</td>
                                     <td>{{record.total_casual_leaves}}</td>
                                     <td>{{record.casual_leaves_used}}</td>
+                                    <td>{{record.planned_casual}}</td>
+                                    <td>{{record.remaining_casual}}</td>
+                                    <td>{{record.total_float}}</td>
                                     <td>{{record.floating_holidays_used}}</td>
+                                    <td>{{record.planned_float}}</td>
+                                    <td>{{record.remaining_float}}</td>
                                     <td>{{record.year}}</td>
                                     
                                 </tr>
