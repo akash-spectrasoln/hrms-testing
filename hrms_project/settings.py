@@ -64,7 +64,6 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'django_celery_beat',
-    'django_cron',
     'employee_app',
     'admin_app'
     
@@ -152,23 +151,6 @@ USE_I18N = True
 USE_TZ = True
 
 
-# Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/5.1/howto/static-files/
-
-
-#
-# STATIC_URL = 'static/'
-
-# Add the following to make Django aware of your static files directory
-
-# STATICFILES_DIRS = [
-#     BASE_DIR / "static",
-# BASE_DIR / "employee_app/static",  # Path to employee app's static directory
-#
-# ]
-
-# Default primary key field type
-# https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
@@ -177,14 +159,6 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # media configuration
 
 import os
-
-# # MEDIA_URL and MEDIA_ROOT settings
-# MEDIA_URL = '/media/'  # URL prefix for serving media files
-# MEDIA_ROOT = os.path.join(BASE_DIR, 'media')  # Folder where media files are stored
-#
-
-
-
 
 
 #setting.py
@@ -231,11 +205,6 @@ ADMIN_EMAIL = os.getenv('ADMIN_EMAIL')
 ADMIN_PASSWORD = os.getenv('ADMIN_PASSWORD')
 
 
-CRON_CLASSES = [
-    'admin_app.cron.BirthdayEmailCronJob',
-]
-
-DJANGO_CRON_DELETE_LOGS_OLDER_THAN = 4
 
 
 CELERY_BROKER_URL = 'redis://default:R3e2Ldfwug7kz20OsBx6SCo32ifBdO88@redis-14395.crce179.ap-south-1-1.ec2.redns.redis-cloud.com:14395'
