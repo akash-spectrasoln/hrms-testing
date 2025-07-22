@@ -63,6 +63,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django_celery_beat',
     'django_cron',
     'employee_app',
     'admin_app'
@@ -205,58 +206,6 @@ EMAIL_USE_SSL = True  # Use SSL for secure email sending
 EMAIL_HOST_USER = 'lms@spectrasoln.com'
 EMAIL_HOST_PASSWORD = 'LMS@SpEctra'  # Make sure the password is set in your environment
 
-# Ensure you set the SUPPORTMAIL_PASSWORD environment variable in your system
-
-# EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
-
-
-
-# import os
-#
-# STATIC_URL = '/static/'
-# STATICFILES_DIRS = [
-#     os.path.join(BASE_DIR, 'static'),  # Ensure this exists
-# ]
-# STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')  # For collectstatic
-
-
-
-
-
-
-#
-# import os
-#
-# STATIC_URL = '/static/'
-#
-# # Collect static files from these directories
-# STATICFILES_DIRS = [
-#     os.path.join(BASE_DIR, 'admin_app/static'),
-#     os.path.join(BASE_DIR, 'employee_app/static'),
-# ]
-#
-# # This is where collectstatic will copy all static files
-# STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
-
-
-
-
-#
-# import os
-# from pathlib import Path
-#
-# BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-#
-# STATIC_URL = '/static/'
-#
-# # Centralized static folder (Remove per-app static directories)
-# STATICFILES_DIRS = [
-#     os.path.join(BASE_DIR, 'static'),  # Use only the main static folder
-# ]
-#
-# # Collectstatic will copy all static files here (used in production)
-# STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
-#
 
 
 
@@ -266,37 +215,6 @@ from pathlib import Path
 
 # Base directory of the project
 BASE_DIR = Path(__file__).resolve().parent.parent
-
-
-
-
-
-
-#
-# STATIC_URL = '/static/'
-#
-# # STATIC_ROOT = os.path.join(BASE_DIR, 'static')
-#
-# STATICFILES_DIRS = [
-#
-#     os.path.join(BASE_DIR, 'static'),
-#
-# ]
-#
-# STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
-#
-
-# # Optional: Ensure static files are correctly found in production
-# STATICFILES_FINDERS = [
-#     "django.contrib.staticfiles.finders.FileSystemFinder",
-#     "django.contrib.staticfiles.finders.AppDirectoriesFinder",
-# ]
-
-
-
-
-
-
 
 
 
@@ -316,3 +234,12 @@ ADMIN_PASSWORD = os.getenv('ADMIN_PASSWORD')
 CRON_CLASSES = [
     'admin_app.cron.BirthdayEmailCronJob',
 ]
+
+DJANGO_CRON_DELETE_LOGS_OLDER_THAN = 4
+
+
+CELERY_BROKER_URL = 'redis://default:R3e2Ldfwug7kz20OsBx6SCo32ifBdO88@redis-14395.crce179.ap-south-1-1.ec2.redns.redis-cloud.com:14395'
+CELERY_RESULT_BACKEND = CELERY_BROKER_URL
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers:DatabaseScheduler'

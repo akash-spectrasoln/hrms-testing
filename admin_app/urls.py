@@ -79,6 +79,9 @@ path('employees/upload/', EmployeeExcelCreateView.as_view(), name='employee_exce
 path('holiday/upload/',HolidayExcelCreateView.as_view(),name='holiday_excel_create'),
 path('employee_leaves',list_emp_leave_details,name="employee_leaves"),
 path('export-employees-leaves/',export_employees_leaves, name='export_employees_leaves'),
+path('employee-bank/',employeeBankDetails,name='employee-bank'),
+path('export-emp-bank/',export_employee_bank_details,name='export_employee_bank_details'),
+path('bank-details/',company_bank_details,name='company_bank_details')
 ]
 
 

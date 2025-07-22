@@ -155,31 +155,88 @@
         message.style.color = '#28a745'; // Green color for success
 
         // Display employee details in a table
-        const employeeList = document.getElementById('employeeList');
-        employeeList.innerHTML = `
-            <table class="table table-striped">
-                <thead>
-                    <tr>
-                        <th>#</th>
-                        <th>Employee ID</th>
-                        <th>Name</th>
-                    </tr>
-                </thead>
-                <tbody>
-                </tbody>
-            </table>
-        `;
-        const tbody = employeeList.querySelector('tbody');
-        data.created_employees.forEach((employee, index) => {
-            tbody.innerHTML += `
-                <tr>
-                    <td>${index + 1}</td>
-                    <td>${employee.employee_id}</td>
-                    <td>${employee.first_name} ${employee.last_name}</td>
-                </tr>
+    //     const employeeList = document.getElementById('employeeList');
+    //     employeeList.innerHTML = `
+    //         <table class="table table-striped">
+    //             <thead>
+    //                 <tr>
+    //                     <th>#</th>
+    //                     <th>Employee ID</th>
+    //                     <th>Name</th>
+    //                 </tr>
+    //             </thead>
+    //             <tbody>
+    //             </tbody>
+    //         </table>
+    //     `;
+    //     const tbody = employeeList.querySelector('tbody');
+    //     data.created_employees.forEach((employee, index) => {
+    //         tbody.innerHTML += `
+    //             <tr>
+    //                 <td>${index + 1}</td>
+    //                 <td>${employee.employee_id}</td>
+    //                 <td>${employee.first_name} ${employee.last_name}</td>
+    //             </tr>
+    //         `;
+    //     });
+    // })
+
+ const employeeList = document.getElementById('employeeList');
+        let html = '';
+
+        if (data.created_employees.length > 0) {
+            html += `
+                <h5 class="text-success"> Successfully Created Employees (${data.created_employees.length}):</h5>
+                <div style="max-width: 600px;">
+                <table class="table table-striped table-sm mt-2 small-table">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Employee ID</th>
+                            <th>Name</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${data.created_employees.map((employee, index) => `
+                            <tr>
+                                <td>${index + 1}</td>
+                                <td>${employee.employee_id}</td>
+                                <td>${employee.first_name} ${employee.last_name}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+                </div>
             `;
-        });
+        }
+
+        if (data.failed_rows.length > 0) {
+            html += `
+                <h5 class="text-danger mt-4">❌ Failed Rows (${data.failed_rows.length}):</h5>
+                <div style="max-width: 600px;">
+                <table class="table table-bordered table-sm mt-2 small-table">
+                    <thead>
+                        <tr>
+                            <th>Row #</th>
+                            <th>Error Message</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${data.failed_rows.map(failure => `
+                            <tr>
+                                <td>${failure.row}</td>
+                                <td>${failure.first_name}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+                </div>
+            `;
+        }
+
+        employeeList.innerHTML = html;
     })
+
     .catch(error => {
         console.error('Error:', error);
         document.querySelector('.loading-spinner').style.display = 'none';

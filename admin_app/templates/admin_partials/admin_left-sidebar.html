@@ -50,15 +50,32 @@
                                 <span data-key="t-dashboard"><strong>Manage Leaves</strong></span>
                             </a>
                         </li>
-                         <li>
-                            <a href="{% url 'employee_leaves' %}">
-                                <i data-feather="file-text"></i>
-                                <span data-key="t-dashboard"><strong>Employee Leaves</strong></span>
+                        <li >
+                            <a href="javascript: void(0);" class="has-arrow" style="width: 300px;">
+                                <i data-feather="bar-chart-2"></i>
+                                <span data-key="t-reports"><strong>Reports</strong></span>
                             </a>
+                            <ul class="sub-menu" aria-expanded="false" style="width: 230px;">
+                                <li>
+                                    <a href="{% url 'employee_leaves' %}">
+                                        <i data-feather="file-text"></i>
+                                        <span><strong>Employee Leaves</strong></span>
+                                    </a>
+                                </li>
+                                <li>
+                                    <a href="{% url 'employee-bank' %}">
+                                        <i data-feather="dollar-sign"></i>
+                                        <span><strong>Employee Bank Details</strong></span>
+                                    </a>
+                                </li>
+                                <li>
+                                    <a href="{% url 'company_bank_details' %}">
+                                        <i data-feather="credit-card"></i>
+                                        <span><strong>Company Bank Details</strong></span>
+                                    </a>
+                                </li>
+                            </ul>
                         </li>
-
-                        
-
 
 
 

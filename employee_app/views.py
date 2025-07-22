@@ -1352,6 +1352,14 @@ def delete_leave(request, leave_id):
                 emp_leave_details.planned_casual = max(0, emp_leave_details.planned_casual - (leave.leave_days or 0))
             emp_leave_details.save()
         
+        elif leave.status == "Pending":
+            if leave.leave_type == "Floating Leave":
+                emp_leave_details.pending_float = max(0, emp_leave_details.pending_float - (leave.leave_days or 0))
+            else:  # For "Casual Leave", 
+                emp_leave_details.pending_casual = max(0, emp_leave_details.pending_casual - (leave.leave_days or 0))
+            emp_leave_details.save()     
+            
+        
         # Soft delete
         leave.status = 'Deleted'
         leave.approved_by = leave.employee_user
@@ -1560,14 +1568,13 @@ def my_leave_history(request):
         pending_leaves = 0
 
         year_to_use = date.today().year - 1 if date.today().month < reset_period.start_month else date.today().year
-        employee_leaves = LeaveDetails.objects.filter(employee=employee, year=year_to_use).first()
+        leave_details=get_leave_policy_details(employee,year_to_use)
+        holiday_policy = leave_details['allowed_holiday_policy']
+        employee_leaves, created = LeaveDetails.objects.get_or_create(employee=employee, year=year_to_use,defaults={"total_casual_leaves":holiday_policy})
         lvs = leaves_by_type.get(leave_type, [])
 
         if leave_type_lower == "casual leave":
-            if employee_leaves:
-                total_leaves = employee_leaves.total_casual_leaves or 0
-                planned_leaves = employee_leaves.planned_casual or 0
-                pending_leaves = employee_leaves.pending_casual or 0
+
 
             updated_used = sum(
                 overlapping_leave_days(l.start_date, l.end_date, fin_year_start, fin_year_end, holidays_set)
@@ -1580,14 +1587,16 @@ def my_leave_history(request):
                 employee_leaves.planned_casual = max(0, (employee_leaves.planned_casual or 0) - diff)
                 employee_leaves.save()
 
-            used_leaves = updated_used
+            used_leaves = employee_leaves.casual_leaves_used
+
+            if employee_leaves:
+                total_leaves = employee_leaves.total_casual_leaves or 0
+                planned_leaves = employee_leaves.planned_casual or 0
+                pending_leaves = employee_leaves.pending_casual or 0 
 
         elif leave_type_lower == "floating leave":
             total_leaves = floating_policy.allowed_floating_holidays if floating_policy else 0
 
-            if employee_leaves:
-                planned_leaves = employee_leaves.planned_float or 0
-                pending_leaves = employee_leaves.pending_float or 0
 
             updated_used = sum(
                 overlapping_leave_days(l.start_date, l.end_date, fin_year_start, fin_year_end, holidays_set)
@@ -1600,7 +1609,11 @@ def my_leave_history(request):
                 employee_leaves.planned_float = max(0, (employee_leaves.planned_float or 0) - diff)
                 employee_leaves.save()
 
-            used_leaves = updated_used
+            used_leaves = employee_leaves.floating_holidays_used
+
+            if employee_leaves:
+                planned_leaves = employee_leaves.planned_float or 0
+                pending_leaves = employee_leaves.pending_float or 0
 
         elif leave_type_lower == "ordinary":
             total_leaves = policy.ordinary_holidays_count if policy else 0
@@ -2016,8 +2029,9 @@ def manage_leave_request(request, leave_request_id):
         leave_details=get_leave_policy_details(employee,current_year)
         floating_holiday_policy = leave_details['allowed_floating_holiday_policy']
         leave_duration = 0
+        floating_days = 0
         floating_holidays_used = emp_leave_details.floating_holidays_used
-        max_floating_holidays = floating_holiday_policy+emp_leave_details.floating_holidays_used
+        max_floating_holidays = floating_holiday_policy
 
         current_date = start_date
         holidays = set(Holiday.objects.values_list('date', flat=True))
@@ -2032,7 +2046,7 @@ def manage_leave_request(request, leave_request_id):
                     continue
                 if current_date in floating_holidays:
                     if floating_holidays_used < max_floating_holidays:
-                        floating_holidays_used += 1
+                        floating_days += 1
                         current_date += timedelta(days=1)
                         continue
                 leave_duration += 1
@@ -2045,26 +2059,32 @@ def manage_leave_request(request, leave_request_id):
                 if current_date in holidays:
                     current_date += timedelta(days=1)
                     continue
-                # if current_date in floating_holidays:
-                #     if floating_holidays_used < max_floating_holidays:
-                #         floating_holidays_used += 1
-                #         current_date += timedelta(days=1)
-                #         continue
+                
                 leave_duration += 1
                 current_date += timedelta(days=1)
 
         if action == 'accept':
             leave_request.status = 'Approved'
-            if emp_leave_details.planned_casual + leave_duration <= 15:
-                emp_leave_details.planned_casual += leave_duration
-                emp_leave_details.planned_float += floating_holidays_used
-
-                emp_leave_details.pending_casual -=leave_duration
-                emp_leave_details.pending_float -= floating_holidays_used
+            if leave_request.leave_type == 'Floating Leave':
+                emp_leave_details.planned_float += floating_days
+                emp_leave_details.pending_float -= floating_days
                 emp_leave_details.save()
+
             else:
-                messages.error(request, "Employee cannot exceed the allowed 15 total leave days.")
-                return redirect('manager_leave_requests')
+                emp_leave_details.planned_casual += leave_duration
+                emp_leave_details.pending_casual -=leave_duration
+                emp_leave_details.save()
+
+            # if emp_leave_details.planned_casual + leave_duration <= 15:
+            #     emp_leave_details.planned_casual += leave_duration
+            #     emp_leave_details.planned_float += floating_days
+
+            #     emp_leave_details.pending_casual -=leave_duration
+            #     emp_leave_details.pending_float -= floating_days
+            #     emp_leave_details.save()
+            # else:
+            #     messages.error(request, "Employee cannot exceed the allowed total leave days.")
+            #     return redirect('manager_leave_requests')
 
             # Email to employee: LEAVE APPROVED
             

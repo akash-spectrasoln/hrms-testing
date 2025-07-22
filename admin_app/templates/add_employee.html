@@ -367,14 +367,24 @@
 <!-- Row 9: Admin Checkbox -->
 <div class="section">
     <div class="form-row">
-        <div class="form-group col-md-12">
-            <div class="form-check pl-3">
+        <div class="form-group col-md-12 d-flex align-items-center pl-3">
+            <div class="form-check mr-4">
                 <input class="form-check-input" type="checkbox" name="is_admin" id="is_admin"
                     {% if form.instance.user.is_superuser %}checked{% endif %}>
                 <label class="form-check-label" for="is_admin">
                     Grant admin privileges (make this user an admin)
                 </label>
             </div>
+
+            <div class="form-check">
+                <input class="form-check-input" type="checkbox" name="hr_email_access" id="hr_email_access"
+                    {% if form.instance.hr_email_access %}checked{% endif %}
+                    {% if not form.instance.user.is_superuser %}disabled{% endif %}>
+                <label class="form-check-label" for="hr_email_access">
+                    Receive HR Notifications
+                </label>
+            </div>
+
         </div>
     </div>
 </div>
@@ -476,6 +486,16 @@
         $(document).on('click', '.remove-file', function() {
             $(this).closest('.file-input-wrapper').remove();
         });
+    });
+
+    // Enable/disable HR email checkbox based on Admin checkbox
+    $('#is_admin').on('change', function () {
+        const isChecked = $(this).is(':checked');
+        $('#hr_email_access').prop('disabled', !isChecked);
+
+        if (!isChecked) {
+            $('#hr_email_access').prop('checked', false);
+        }
     });
 </script>
 {% endblock content%}

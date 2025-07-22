@@ -423,6 +423,14 @@ label {
                     <label class="form-check-label" for="is_admin">Is Admin / Superuser</label>
                 </div>
 
+                <div class="form-group form-check mt-3">
+                    <input type="checkbox" class="form-check-input" id="hr_email_access" name="hr_email_access"
+                         {% if form.instance.hr_emails %}checked{% endif %}>
+                    <label class="form-check-label" for="hr_email_access">Receive HR Notifications</label>
+                </div>
+
+
+
                 </div>
                 
                 <!-- Documents Section -->
@@ -604,6 +612,26 @@ document.addEventListener('DOMContentLoaded', function () {
     statusEl.addEventListener('change', updateRowLayout);
     updateRowLayout(); // Trigger once on load
 });
+</script>
+
+<script>
+    const adminCheckbox = document.getElementById('is_admin');
+    const hrAccessCheckbox = document.getElementById('hr_email_access');
+
+    function toggleHrAccess() {
+        if (adminCheckbox.checked) {
+            hrAccessCheckbox.disabled = false;
+        } else {
+            hrAccessCheckbox.checked = false;
+            hrAccessCheckbox.disabled = true;
+        }
+    }
+
+    // Initial check on page load
+    toggleHrAccess();
+
+    // Watch for changes
+    adminCheckbox.addEventListener('change', toggleHrAccess);
 </script>
 
 {% endblock content %}

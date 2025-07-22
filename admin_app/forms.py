@@ -125,11 +125,11 @@ class EmployeeEditForm(forms.ModelForm):
             'home_phone', 'valid_from', 'valid_to', 'country', 'state', 
             'department', 'role', 'manager','home_city','pincode','emergency_contact_name','emergency_contact_phone','emergency_contact_email',
              'emergency_contact_relation',
-             'base_salary',#'employee_type',
+             'base_salary','employee_type',
             'resignation_date', 'house_name', 'resumes', 'certificates', 'incentive', 'joining_bonus',
             'date_of_birth','pm_email',
             # ADD THE NEW FIELDS BELOW
-            'pan_card', 'aadhaar', 'bank_name', 'bank_branch', 'bank_branch_address', 'bank_account', 'ifsc_code'
+            'pan_card', 'aadhaar', 'bank_name', 'bank_branch', 'bank_branch_address', 'bank_account', 'ifsc_code','hr_emails'
         ]
 
 
@@ -142,6 +142,7 @@ class EmployeeEditForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         self.request = kwargs.pop('request', None)
+        editing = kwargs.pop('editing', False)
         super().__init__(*args, **kwargs)
 
         # Populate state queryset based on selected country in form data or instance
@@ -159,6 +160,10 @@ class EmployeeEditForm(forms.ModelForm):
             self.fields['resignation_date'].required = True
         else:
             self.fields['resignation_date'].required = False
+
+        if editing:
+            # Remove employee_type field only in update mode
+            self.fields.pop('employee_type', None)
 
     def clean(self):
         cleaned_data = super().clean()

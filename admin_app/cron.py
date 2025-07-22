@@ -4,11 +4,11 @@ from datetime import datetime, timedelta
 from django.core.mail import send_mail
 from django.conf import settings
 from django.utils import timezone
-from .models import Employees,User
+from .models import Employees,User, Communication
 
 
 class BirthdayEmailCronJob(CronJobBase):
-    schedule = Schedule(run_every_mins=1)  # 🔁 Run every 5 minutes
+    schedule = Schedule(run_every_mins=1)  #  Run every 1 minutes
     code = 'admin_app.birthday_email_cron'
     def do(self):
 
@@ -21,7 +21,8 @@ class BirthdayEmailCronJob(CronJobBase):
         next_sunday=next_monday + timedelta(days=6)
         print(next_monday,next_sunday,"{{{{{{{{{{{{{{{{{}}}}}}}}}}}}}}}}}")
 
-        admin_employees = User.objects.filter(is_superuser=True)
+        admin_employees = Communication.objects.all()
+    
         employees=Employees.objects.all()
 
         
@@ -43,21 +44,22 @@ class BirthdayEmailCronJob(CronJobBase):
                 #making this bug free
                 pass
 
-        print(employees_with_birthday,"]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]")
         if employees_with_birthday :
             employees_with_birthday.sort(key=lambda x: x['birth_day_date'])
 
             for admin in admin_employees:
+
+                
                 subject = "🎉 Upcoming Employee Birthdays (Next Week)"
 
                 # Plain text fallback (still needed for compatibility)
-                plain_message = f"Hi {admin.first_name},\n\nPlease view this email in HTML format to see the birthday table.\n\nBest regards,\nYour Leave Management System"
+                plain_message = f"Hi {admin.user.first_name},\n\nPlease view this email in HTML format to see the birthday table.\n\nBest regards,\nYour Leave Management System"
 
                 # HTML content
                 html_message = f"""
                 <html>
                 <body style="font-family: Arial, sans-serif; color: #333;">
-                    <p>Hi {admin.first_name},</p>
+                    <p>Hi {admin.user.first_name},</p>
                     <p>The following employees have birthdays next week:</p>
                     
                     <table border="1" cellpadding="8" cellspacing="0" style="border-collapse: collapse; width: 80%;">
@@ -83,7 +85,7 @@ class BirthdayEmailCronJob(CronJobBase):
                         </tbody>
                     </table>
 
-                    <p style="margin-top: 20px;">Best regards,<br>Your Leave Management System</p>
+                    <p style="margin-top: 20px;">Best regards,<br>Your LMS</p>
                 </body>
                 </html>
                 """
@@ -92,7 +94,7 @@ class BirthdayEmailCronJob(CronJobBase):
                     subject=subject,
                     message=plain_message,  # fallback text
                     from_email=settings.DEFAULT_FROM_EMAIL,
-                    recipient_list=[admin.email],
+                    recipient_list=[admin.user.email],
                     html_message=html_message,
                     fail_silently=False
                 )

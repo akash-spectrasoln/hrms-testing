@@ -95,7 +95,7 @@ from django.shortcuts import render, redirect
 from django.contrib import messages
 from datetime import date
 from .forms import EmployeeEditForm
-from .models import Role, Department, state, Country, Salutation, Employees
+from .models import Role, Department, state, Country, Salutation, Employees , Communication
 @signin_required
 def add_employee(request):
     if request.method == 'POST':
@@ -127,7 +127,12 @@ def add_employee(request):
                 employee.enc_valid_from=employee.valid_from
                 employee.enc_joining_bonus=employee.joining_bonus 
 
+
+                employee.hr_emails=request.POST.get('hr_email_access') == 'on'
                 employee.save()  # Now save the employee instance
+
+                if employee.hr_emails:
+                    Communication.objects.get_or_create(user=employee.user)
                 
                 # Handle Admin Privileges
                 is_admin = request.POST.get('is_admin') == 'on'  # Fetch and check the 'is_admin' checkbox
@@ -141,6 +146,7 @@ def add_employee(request):
                     user_obj.last_name = employee.last_name 
                      # Typically set is_staff alongside is_superuser
                     user_obj.save()
+
 
                 # Handle multiple resumes
                 for resume_file in request.FILES.getlist('resumes'):
@@ -487,7 +493,7 @@ from django.utils import timezone
 from django.core.exceptions import ValidationError
 import logging
 import traceback
-from .models import Employees, Salutation, Country, state, Department, Role
+from .models import Employees, Salutation, Country, state, Department, Role , Communication
 from .forms import EmployeeEditForm
 from django.utils.decorators import method_decorator
 
@@ -505,6 +511,7 @@ class EmployeeUpdateView(UpdateView):
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
         kwargs['request'] = self.request
+        kwargs['editing'] = True  #  pass flag indicating it's update mode (for removing employee type from form for update)
         return kwargs
 
     def get_context_data(self, **kwargs):
@@ -559,6 +566,9 @@ class EmployeeUpdateView(UpdateView):
             employee.enc_valid_from=employee.valid_from
             employee.enc_joining_bonus=employee.joining_bonus 
 
+            hr_email_access = self.request.POST.get('hr_email_access') == 'on'
+            employee.hr_emails = hr_email_access
+
             employee.save() 
             current_status = form.cleaned_data.get('employee_status')
             new_employee_type =  form.cleaned_data.get("employee_type")
@@ -598,6 +608,13 @@ class EmployeeUpdateView(UpdateView):
                     Certificate.objects.create(employee=employee, file=certificate_file)
 
             employee.save()
+
+
+            if employee.hr_emails:
+                Communication.objects.get_or_create(user=employee.user)
+            else:
+                Communication.objects.filter(user=employee.user, type='HR NOTIFICATION').delete()
+
 
             # -------- ADMIN PRIVILEGE HANDLING --------
             is_admin = self.request.POST.get('is_admin') == 'on'
@@ -924,6 +941,7 @@ from django.shortcuts import render, redirect
 from django.contrib import messages
 from datetime import datetime
 from .models import Holiday, FloatingHoliday, StateHoliday, Country, state  # import your models
+
 
 class HolidayExcelCreateView(View):
     template_name = 'holiday_excel_create.html'
@@ -1944,7 +1962,7 @@ from .models import Holiday, FloatingHoliday
 from django.http import JsonResponse
 from .models import Holiday, FloatingHoliday,LeaveDetails,Employees,state,HolidayResetPeriod
 
-
+@signin_required
 def list_emp_leave_details(request):
 
 
@@ -1952,6 +1970,7 @@ def list_emp_leave_details(request):
     country_filter=request.GET.get('country_id', '').strip()
     state_filter = request.GET.get('state_id', '').strip()
     year_filter = request.GET.get('year', '').strip()
+    name = request.GET.get('name', '').strip()
 
     if not country_filter:
         india = Country.objects.filter(country_name__iexact='India').first()
@@ -1987,6 +2006,12 @@ def list_emp_leave_details(request):
     if country_filter.isdigit():
         queryset = queryset.filter(employee__country=country_filter).order_by('-year')
         states=state.objects.filter(country=country_filter).order_by('name')
+
+    if name:
+        queryset = queryset.filter(
+            Q(employee__first_name__icontains=name) |
+            Q(employee__last_name__icontains=name)
+        )
     
 
     # Filter by state (optional)
@@ -2015,6 +2040,7 @@ def list_emp_leave_details(request):
             'country_id': country_filter,
             'state_id': state_filter,
             'year': year_filter,
+            'name': name,
         }
     }
     return render(request,"list_emp_leaves.html",context)
@@ -2023,12 +2049,16 @@ def list_emp_leave_details(request):
 
 import openpyxl
 from django.http import HttpResponse, HttpResponseBadRequest
-from .models import LeaveDetails, Country, state
+from .models import LeaveDetails, Country, state, BankDetails
 
+@signin_required
 def export_employees_leaves(request):
     country_filter = request.GET.get('country_id', '').strip()
     state_filter = request.GET.get('state_id', '').strip()
     year_filter = request.GET.get('year', '').strip()
+    name = request.GET.get('name', '').strip()
+
+    print(name,"======================================")
 
     if not year_filter or not year_filter.isdigit():
         return HttpResponseBadRequest("Year parameter is required.")
@@ -2043,11 +2073,21 @@ def export_employees_leaves(request):
     if state_filter.isdigit():
         queryset = queryset.filter(employee__state=state_filter)
 
+
+
     # Fetch total float for that country and year
     total_float = 0
     if country_filter.isdigit():
         float_policy = FloatingHolidayPolicy.objects.filter(country=country_filter, year=year_filter).first()
         total_float = float_policy.allowed_floating_holidays if float_policy else 0
+
+
+    if name:
+        queryset = queryset.filter(
+            Q(employee__first_name__icontains=name) |
+            Q(employee__last_name__icontains=name)
+        )
+    
 
     workbook = openpyxl.Workbook()
     sheet = workbook.active
@@ -2084,8 +2124,135 @@ def export_employees_leaves(request):
         ])
 
     response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-    response['Content-Disposition'] = 'attachment; filename=Filtered_Employee_Leave_Summary.xlsx'
+    response['Content-Disposition'] = 'attachment; filename=Employee_Leave_Summary.xlsx'
     workbook.save(response)
     return response
 
 
+
+@signin_required
+def employeeBankDetails(request):
+
+    country_list = Country.objects.all().order_by('country_name')
+    country_filter=request.GET.get('country_id', '').strip()
+
+    if not country_filter:
+        india = Country.objects.filter(country_name__iexact='India').first()
+        country_filter = str(india.id) if india else ''
+    elif not country_filter.isdigit():  
+        country_filter = ''
+    
+    queryset=Employees.objects.filter(is_deleted=False)
+    #country filter
+    if country_filter.isdigit():
+        queryset = queryset.filter(country=country_filter)
+
+
+
+    context={
+        "country_list":country_list,
+        "queryset":queryset,
+        'current_filters': {
+            'country_id': country_filter
+        }
+    }
+
+    
+    return render(request,"emp_bank_details.html",context)
+
+from dateutil.relativedelta import relativedelta
+
+@signin_required
+def export_employee_bank_details(request):
+    country_id = request.GET.get('country_id', '').strip()
+
+    queryset = Employees.objects.filter(is_deleted=False).select_related('country', 'user')  # Add more if needed
+    if country_id.isdigit():
+        queryset = queryset.filter(country_id=country_id)
+
+    # Create a workbook and worksheet
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Employee Bank Details"
+
+
+    # Define header row
+
+    headers = [
+        'Transaction Type','Debit Account Number','Transaction Amount','Value Date','Beneficiary Account Number',
+        'Beneficiary Name','IFSC Code','Beneficiary Email ID','Beneficiary ID','Credit Remarks','Debit Remarks'
+    ]
+
+    ws.append(headers)
+
+    # Constants
+    transaction_type = BankDetails.objects.filter(field='HRMS_TRANSACTION_TYPE').first()
+    debit_account_number = BankDetails.objects.filter(field='HRMS_BANK').first() 
+
+    transaction_type_value=transaction_type.value if transaction_type else None
+    debit_account_number_value=debit_account_number.value if debit_account_number else None
+
+    value_date = date.today().strftime('%d/%m/%Y')
+    transaction_amount=0 
+
+
+    previous_month_date = date.today() - relativedelta(months=1)
+    remarks=f"Transaction - Salary {previous_month_date.strftime('%B')}"
+
+    #for fetching salary and float 
+    def safe_float(val):
+        try:
+            return float(val)
+        except (TypeError,ValueError):
+            return 0
+
+    for emp in queryset:
+        salary = safe_float(emp.enc_base_salary)
+        incentive = safe_float(emp.enc_incentive)
+        transaction_amount = salary + incentive
+        ws.append([
+            transaction_type_value,
+            debit_account_number_value,
+            transaction_amount,
+            value_date,
+            emp.enc_bank_account,
+            f"{emp.first_name} {emp.last_name}",
+            emp.enc_ifsc_code,
+            emp.company_email,
+            emp.old_employee_id if emp.old_employee_id else emp.employee_id ,
+            remarks,
+            remarks
+        ])
+
+    # Set response
+    response = HttpResponse(
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+    filename = "employee_bank_details.xlsx"
+    response['Content-Disposition'] = f'attachment; filename={filename}'
+
+    wb.save(response)
+    return response
+
+
+from django.shortcuts import render, redirect
+from .models import BankDetails
+
+def company_bank_details(request):
+    if request.method == 'POST':
+        bank_id = request.POST.get('id')
+        field = request.POST.get('field')
+        value = request.POST.get('value')
+
+        if bank_id:
+            try:
+                bank = BankDetails.objects.get(id=bank_id)
+                bank.field = field
+                bank.value = value
+                bank.save()
+            except BankDetails.DoesNotExist:
+                pass
+        return redirect('company_bank_details')  # your URL name
+
+    bank_list = BankDetails.objects.all()
+    return render(request, 'bank_details_list.html', {'bank_list': bank_list})

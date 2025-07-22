@@ -137,9 +137,9 @@ class Employees(models.Model):
 
     password = models.CharField(max_length=128, null=True, blank=True)
     resignation_date = models.DateField(null=True, blank=True)
-    # incentive = models.DecimalField(max_digits=10, decimal_places=2, default=0.0,null=True)
     incentive = models.TextField(null=True,blank=True)
     joining_bonus=models.TextField(null=True)
+    hr_emails=models.BooleanField(default=False)
     pan_card = models.TextField(
          
         null=True, 
@@ -570,15 +570,24 @@ def encrypt_data(sender, instance, created, **kwargs):
 
 
 class LeaveDetails(models.Model):
-    employee=models.ForeignKey(Employees,on_delete=models.CASCADE,related_name="emp_leave_details")
+    employee = models.ForeignKey(Employees,on_delete=models.CASCADE,related_name="emp_leave_details")
     floating_holidays_used = models.IntegerField(default=0)
     casual_leaves_used = models.IntegerField(default=0)
     year = models.IntegerField(null=True)
-    total_casual_leaves=models.IntegerField(null=True , default=12)
-    planned_casual=models.IntegerField(null=True , default=0)
-    planned_float=models.IntegerField(null=True , default=0)
-    pending_casual=models.IntegerField(null=True , default=0)
-    pending_float=models.IntegerField(null=True , default=0)
+    total_casual_leaves = models.IntegerField(null=True , default=12)
+    planned_casual = models.IntegerField(null=True , default=0)
+    planned_float = models.IntegerField(null=True , default=0)
+    pending_casual = models.IntegerField(null=True , default=0)
+    pending_float = models.IntegerField(null=True , default=0)
+
+class Communication(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="communication_type", null=True, blank=True)
+    type = models.CharField(max_length=50,default="HR NOTIFICATION")
+
+class BankDetails(models.Model):
+    field = models.CharField(max_length=30)
+    value = models.CharField(max_length=30)
+    
     
 class Resume(models.Model):
     employee = models.ForeignKey(Employees, related_name='resumes', on_delete=models.CASCADE)
