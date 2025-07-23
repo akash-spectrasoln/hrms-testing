@@ -18,9 +18,14 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
-#google recaptcha
-RECAPTCHA_PUBLIC_KEY = '6Leh9VYrAAAAAHx03L847AT7KPXQKmhEHL3RYzzF'
-RECAPTCHA_PRIVATE_KEY = '6Leh9VYrAAAAABJiXJD7AH6db5-ksN-mE7Pdfgdc'
+# #google recaptcha
+# RECAPTCHA_PUBLIC_KEY = '6Leh9VYrAAAAAHx03L847AT7KPXQKmhEHL3RYzzF'
+# RECAPTCHA_PRIVATE_KEY = '6Leh9VYrAAAAABJiXJD7AH6db5-ksN-mE7Pdfgdc'
+
+# #google recaptcha for testing 
+RECAPTCHA_PUBLIC_KEY = '6Lf471IrAAAAAFWj_6hXPoVU6wsqlqwk6uLFhSKc'
+RECAPTCHA_PRIVATE_KEY = '6Lf471IrAAAAAHRA0rHcweY24t2dCCZmtGZw38_L'
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
