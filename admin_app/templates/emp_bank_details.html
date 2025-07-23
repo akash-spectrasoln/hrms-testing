@@ -66,9 +66,10 @@
             </div>
             
         </form>
-
+ 
         <div class="">
-            <a href="{% url 'export_employee_bank_details' %}?country_id={{ current_filters.country_id }}"
+            <a id="downloadBtn"
+            href="{% url 'export_employee_bank_details' %}?country_id={{ current_filters.country_id }}"
             class="btn btn-success btn-sm px-2 py-1 {% if not queryset %}disabled{% endif %}"
             {% if not queryset %}aria-disabled="true" onclick="return false;"{% endif %}>
                 <i class="fas fa-download"></i> Download Excel
@@ -132,4 +133,50 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 </script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const downloadBtn = document.getElementById('downloadBtn');
+
+    if (downloadBtn && !downloadBtn.classList.contains('disabled')) {
+        downloadBtn.addEventListener('click', function (e) {
+            e.preventDefault();
+            const url = downloadBtn.href;
+
+            // Show spinner
+            const spinner = document.getElementById('spinner-overlay'); // inherited spinner
+            if (spinner) spinner.style.display = 'flex';
+
+            fetch(url, {
+                method: 'GET',
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not OK');
+                }
+                return response.blob();
+            })
+            .then(blob => {
+                const blobURL = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = blobURL;
+
+                // Optional: You can generate dynamic filename
+                a.download = "employee_bank_data.xlsx";
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                window.URL.revokeObjectURL(blobURL);
+            })
+            .catch(error => {
+                alert("Download failed: " + error.message);
+            })
+            .finally(() => {
+                // Hide spinner
+                if (spinner) spinner.style.display = 'none';
+            });
+        });
+    }
+});
+</script>
+
 {% endblock %}

@@ -584,7 +584,7 @@ class Communication(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="communication_type", null=True, blank=True)
     type = models.CharField(max_length=50,default="HR NOTIFICATION")
 
-class BankDetails(models.Model):
+class SetUpTable(models.Model):
     field = models.CharField(max_length=30)
     value = models.CharField(max_length=30)
     

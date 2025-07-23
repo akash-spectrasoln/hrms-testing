@@ -336,3 +336,17 @@ class AdminPasswordChangeForm(forms.ModelForm):
             raise forms.ValidationError("Passwords do not match.")
 
         return cleaned_data
+    
+
+from django import forms
+from .models import SetUpTable
+
+class SetUpTableForm(forms.ModelForm):
+    class Meta:
+        model = SetUpTable
+        fields = ['field', 'value']
+        widgets = {
+            'field': forms.TextInput(attrs={'class': 'form-control form-control-sm'}),
+            'value': forms.TextInput(attrs={'class': 'form-control form-control-sm'}),
+        }
+

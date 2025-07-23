@@ -2049,7 +2049,7 @@ def list_emp_leave_details(request):
 
 import openpyxl
 from django.http import HttpResponse, HttpResponseBadRequest
-from .models import LeaveDetails, Country, state, BankDetails
+from .models import LeaveDetails, Country, state, SetUpTable
 
 @signin_required
 def export_employees_leaves(request):
@@ -2058,7 +2058,7 @@ def export_employees_leaves(request):
     year_filter = request.GET.get('year', '').strip()
     name = request.GET.get('name', '').strip()
 
-    print(name,"======================================")
+
 
     if not year_filter or not year_filter.isdigit():
         return HttpResponseBadRequest("Year parameter is required.")
@@ -2186,8 +2186,8 @@ def export_employee_bank_details(request):
     ws.append(headers)
 
     # Constants
-    transaction_type = BankDetails.objects.filter(field='HRMS_TRANSACTION_TYPE').first()
-    debit_account_number = BankDetails.objects.filter(field='HRMS_BANK').first() 
+    transaction_type = SetUpTable.objects.filter(field='HRMS_TRANSACTION_TYPE').first()
+    debit_account_number = SetUpTable.objects.filter(field='HRMS_BANK').first() 
 
     transaction_type_value=transaction_type.value if transaction_type else None
     debit_account_number_value=debit_account_number.value if debit_account_number else None
@@ -2235,24 +2235,38 @@ def export_employee_bank_details(request):
     return response
 
 
-from django.shortcuts import render, redirect
-from .models import BankDetails
+from django.shortcuts import render, redirect, get_object_or_404
+from .models import SetUpTable
+from .forms import SetUpTableForm
 
-def company_bank_details(request):
+def setup_list_create_view(request):
     if request.method == 'POST':
-        bank_id = request.POST.get('id')
-        field = request.POST.get('field')
-        value = request.POST.get('value')
+        form = SetUpTableForm(request.POST)
+        if form.is_valid():
+            form.save()
+            return redirect('setup_list')
+    else:
+        form = SetUpTableForm()
 
-        if bank_id:
-            try:
-                bank = BankDetails.objects.get(id=bank_id)
-                bank.field = field
-                bank.value = value
-                bank.save()
-            except BankDetails.DoesNotExist:
-                pass
-        return redirect('company_bank_details')  # your URL name
+    setup_list = SetUpTable.objects.all()
+    return render(request, 'setup_list.html', {'form': form, 'setup_list': setup_list})
 
-    bank_list = BankDetails.objects.all()
-    return render(request, 'bank_details_list.html', {'bank_list': bank_list})
+
+def setup_edit_view(request, pk):
+    setup = get_object_or_404(SetUpTable, pk=pk)
+    if request.method == 'POST':
+        form = SetUpTableForm(request.POST, instance=setup)
+        if form.is_valid():
+            form.save()
+            return redirect('setup_list')
+    else:
+        form = SetUpTableForm(instance=setup)
+    return render(request, 'setup_edit.html', {'form': form, 'setup': setup})
+
+
+def setup_delete_view(request, pk):
+    setup = get_object_or_404(SetUpTable, pk=pk)
+    setup.delete()
+    return redirect('setup_list')
+
+
