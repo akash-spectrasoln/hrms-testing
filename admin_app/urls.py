@@ -81,9 +81,9 @@ path('employee_leaves',list_emp_leave_details,name="employee_leaves"),
 path('export-employees-leaves/',export_employees_leaves, name='export_employees_leaves'),
 path('employee-bank/',employeeBankDetails,name='employee-bank'),
 path('export-emp-bank/',export_employee_bank_details,name='export_employee_bank_details'),
-path('banks/', setup_list_create_view, name='setup_list'),
-path('banks/edit/<int:pk>/', setup_edit_view, name='setup_edit'),
-path('banks/delete/<int:pk>/', setup_delete_view, name='setup_delete'),
+path('setup/', setup_list_create_view, name='setup_list'),
+path('setup/edit/<int:pk>/', setup_edit_view, name='setup_edit'),
+path('setup/delete/<int:pk>/', setup_delete_view, name='setup_delete'),
 ]
 
 

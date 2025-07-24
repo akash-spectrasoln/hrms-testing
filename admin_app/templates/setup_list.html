@@ -1,9 +1,15 @@
 {% extends 'admin_partials/admin_base.html' %}
 {% load static %}
-
+{% block styles %}
+<style>
+    .table th{
+        background-color: #4683fd;
+    }
+</style>
+{% endblock %}
 {% block content %}
-<div class="container mt-4">
-    <div class="card mb-4">
+<div class="container mt-3">
+    <div class="card mb-2">
         <div class="card-body">
             <h5>Add SetUp Detail</h5>
             <form method="post">
@@ -17,8 +23,8 @@
                         <label for="">Value</label>
                         {{ form.value }}
                     </div>
-                    <div class="col-md-1 mt-4">
-                        <button type="submit" class="btn btn-success w-100">Add</button>
+                    <div class="col-md-1 mt-4 ">
+                        <button type="submit" class="btn btn-success w-100 p-1" style="margin-top: 0.1rem;">Add</button>
                     </div>
                 </div>
             </form>
@@ -28,7 +34,7 @@
     <div class="card">
         <div class="card-body">
             <h5>SetUp Details</h5>
-            <table class="table table-bordered">
+            <table class="table table-bordered" >
                 <thead>
                     <tr>
                         <th>Field</th>
