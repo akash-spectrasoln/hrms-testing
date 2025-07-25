@@ -1,0 +1,104 @@
+from django.core.management.base import BaseCommand
+from admin_app.models import Employees, LeaveRequest, LeaveDetails , Holiday, FloatingHoliday
+from datetime import date , timedelta
+from django.utils.timezone import now
+
+
+class Command(BaseCommand):
+
+    help="syncing the data in production"
+
+    def handle(self, *args, **options):
+
+        today = now().date()
+        fin_year_start = date(2025, 1, 1)
+        fin_year_end = date(2026, 12, 31)
+        
+        employees=Employees.objects.all()
+
+
+        
+        for employee in employees:
+
+            holidays = list(
+            Holiday.objects.filter(
+                country=employee.country,
+                date__range=(fin_year_start, fin_year_end)
+            ).values_list('date', flat=True)
+            )
+            floating_holidays = list(
+                FloatingHoliday.objects.filter(
+                country=employee.country,
+                date__range=(fin_year_start, fin_year_end)
+            ).values_list('date', flat=True)
+            )
+
+            holidays_set = set(holidays)
+            floating_holidays_set = set(floating_holidays)
+
+            # --- PRELOAD all relevant leaves for the financial year (used in *all* stats) ---
+            leaves_qs = LeaveRequest.objects.filter(
+                employee_master=employee,
+                start_date__lte=fin_year_end,
+                end_date__gte=fin_year_start
+            ).only("leave_type", "status", "start_date", "end_date")
+
+            # Pre-slice all leaves into buckets for fast sum in the summary
+            leaves_by_type = {k: [] for k, _ in LeaveRequest.LEAVE_TYPES}
+            for leave in leaves_qs:
+                leaves_by_type.setdefault(leave.leave_type, []).append(leave)
+
+            # Helper: count overlap days, skipping holidays if required
+            def overlapping_leave_days(start_date, end_date, fy_start, fy_end, skip_holidays=None):
+                if not start_date or not end_date:
+                    return 0
+                start = max(start_date, fy_start)
+                end = min(end_date, fy_end)
+                days = 0
+                d = start
+                while d <= end:
+                    if d.weekday() < 5:  # Monday-Friday are 0-4
+                        if not skip_holidays or d not in skip_holidays:
+                            days += 1
+                    d += timedelta(days=1)
+                return days if days > 0 else 0
+
+
+            for leave_type, description in LeaveRequest.LEAVE_TYPES:
+
+                employee_leaves=LeaveDetails.objects.filter(employee=employee,year=2025).first()
+
+                # get all leaves of this type (for summary)
+                lvs = leaves_by_type.get(leave_type, [])
+                # Fetch total allowed leaves efficiently
+                leave_type_lower = leave_type.lower()
+                used_leaves = sum(
+                    overlapping_leave_days(l.start_date, l.end_date, fin_year_start, fin_year_end, holidays_set)
+                    for l in lvs if l.status in ['Accepted', 'Approved'] and l.end_date < today
+                )
+                planned_leaves = sum(
+                    overlapping_leave_days(l.start_date, l.end_date, fin_year_start, fin_year_end, holidays_set)
+                    for l in lvs if l.status in ['Accepted', 'Approved'] and l.end_date >= today
+                )
+                pending_leaves = sum(
+                    overlapping_leave_days(l.start_date, l.end_date, fin_year_start, fin_year_end, holidays_set)
+                    for l in lvs if l.status.lower() == 'pending' and l.end_date >= today
+                )
+
+                if leave_type_lower == "floating leave":
+                    
+                    employee_leaves.floating_holidays_used = used_leaves
+                    employee_leaves.planned_float = planned_leaves
+                    employee_leaves.pending_float = pending_leaves
+                    employee_leaves.save()
+                
+                elif leave_type_lower == "casual leave":
+
+                    employee_leaves.casual_leaves_used = used_leaves
+                    employee_leaves.planned_casual = planned_leaves
+                    employee_leaves.pending_casual = pending_leaves
+                    employee_leaves.save()
+
+
+
+

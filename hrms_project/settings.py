@@ -212,7 +212,7 @@ ADMIN_PASSWORD = os.getenv('ADMIN_PASSWORD')
 
 
 
-CELERY_BROKER_URL = 'redis://default:R3e2Ldfwug7kz20OsBx6SCo32ifBdO88@redis-14395.crce179.ap-south-1-1.ec2.redns.redis-cloud.com:14395'
+CELERY_BROKER_URL =  'redis://redis:6379/0'
 CELERY_RESULT_BACKEND = CELERY_BROKER_URL
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
