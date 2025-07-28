@@ -233,7 +233,7 @@ def export_employees_to_excel(request):
         sheet[f'{col_letter}1'] = header
 
     # Query all employees
-    employees = Employees.objects.select_related('salutation', 'country', 'state', 'role', 'department', 'manager')
+    employees = Employees.objects.select_related('salutation', 'country', 'state', 'role', 'department', 'manager').order_by('employee_id')
 
     # Write employee data to the sheet
     for row_num, employee in enumerate(employees, 2):
@@ -728,6 +728,8 @@ class EmployeeExcelCreateView(View):
                     
                     excel_row_num = int(index) + 2
                     print(f"[DEBUG] Processing row {excel_row_num} ")
+
+                    first_name_display = str(row.get("First Name", "")).strip() or f"Row {excel_row_num}"
                     
                     # Check for missing required fields
                     missing_fields = [
@@ -737,7 +739,7 @@ class EmployeeExcelCreateView(View):
                     if missing_fields:
                         print(f"[DEBUG] Row {excel_row_num}: Missing fields: {missing_fields}")
                         failed_rows.append({
-                            "row": excel_row_num,
+                            "first_name": f"{excel_row_num} - {first_name_display}",
                             
                             "error": "Missing required fields: " + ", ".join(missing_fields)
                         })
@@ -764,7 +766,7 @@ class EmployeeExcelCreateView(View):
                     if type_errors:
                         print(f"[DEBUG] Row {excel_row_num}: Type errors: {type_errors}")
                         failed_rows.append({
-                            "row": excel_row_num,
+                            "first_name": f"{excel_row_num} - {first_name_display}",
                             
                             "error": "Invalid value(s): " + ", ".join(type_errors)
                         })
@@ -796,7 +798,7 @@ class EmployeeExcelCreateView(View):
                         debug_info = traceback.format_exc()
                         print(f"[DEBUG] Row {excel_row_num}: Foreign key error:\n{debug_info}")
                         failed_rows.append({
-                            "row": excel_row_num,
+                            "first_name": f"{excel_row_num} - {first_name_display}",
                             
                             "error": f"Foreign key lookup error: {e}"
                         })
@@ -823,8 +825,8 @@ class EmployeeExcelCreateView(View):
                         if pd.isnull(val) or not val:
                             return None
                         if isinstance(val, (pd.Timestamp, datetime)):
-                            return val.strftime('%Y-%m-%d')  # ✅ converts datetime to string
-                        return str(val)  # ✅ if already string, just returns it again
+                            return val.strftime('%Y-%m-%d')  #  converts datetime to string
+                        return str(val)  #  if already string, just returns it again
 
 
                     try:
@@ -913,7 +915,7 @@ class EmployeeExcelCreateView(View):
                         debug_info = traceback.format_exc()
                         print(f"[DEBUG] Row {excel_row_num}: Exception in model save:\n{debug_info}")
                         failed_rows.append({
-                            'row': excel_row_num,
+                            "first_name": f"{excel_row_num} - {first_name_display}",
                             
                             'error': f"Error on create/save: {e}"
                         })
@@ -922,7 +924,7 @@ class EmployeeExcelCreateView(View):
                     debug_info = traceback.format_exc()
                     print(f"[DEBUG] Fatal error for row {excel_row_num}:\n{debug_info}")
                     failed_rows.append({
-                        'row': excel_row_num,
+                        "first_name": f"{excel_row_num} - {first_name_display}",
                         
                         'error': f"Fatal row error: {row_e}"
                     })
@@ -1855,14 +1857,13 @@ def admin_login(request):
             return redirect('admin_login')
 
         #  Continue login if captcha passed
-        user = None
-        if '@' in identifier: 
-            try:
-                user = User.objects.get(email=identifier)
-                username = user.username
-            except User.DoesNotExist:
+        if '@' in identifier:
+            #makeing the username input case-insensitive
+            user = User.objects.filter(email__iexact=identifier).first()
+            if not user:
                 messages.error(request, 'Invalid email or username.')
                 return redirect('admin_login')
+            username = user.username
         else:
             username = identifier
 
@@ -2142,7 +2143,7 @@ def employeeBankDetails(request):
     elif not country_filter.isdigit():  
         country_filter = ''
     
-    queryset=Employees.objects.filter(is_deleted=False)
+    queryset=Employees.objects.filter(is_deleted=False).order_by('employee_id')
     #country filter
     if country_filter.isdigit():
         queryset = queryset.filter(country=country_filter)
@@ -2166,7 +2167,7 @@ from dateutil.relativedelta import relativedelta
 def export_employee_bank_details(request):
     country_id = request.GET.get('country_id', '').strip()
 
-    queryset = Employees.objects.filter(is_deleted=False).select_related('country', 'user')  # Add more if needed
+    queryset = Employees.objects.filter(is_deleted=False).select_related('country', 'user').order_by('employee_id')  # Add more if needed
     if country_id.isdigit():
         queryset = queryset.filter(country_id=country_id)
 

@@ -77,10 +77,15 @@ def employee_login(request):
         if not result.get('success'):
             messages.error(request, 'Invalid reCAPTCHA. Please try again.')
             return redirect('admin_login')
+        
+        user_obj = User.objects.filter(email__iexact=email).first()
+        if not user_obj:
+            messages.error(request, 'Invalid password.')
+            return redirect('login')
 
 
         # Authenticate with email as the username
-        user = authenticate(request, username=email, password=password)
+        user= authenticate(request, username=user_obj.email, password=password)
         print(user)
         if user is not None:
             login(request, user)  # Log the user in

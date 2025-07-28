@@ -167,6 +167,11 @@ document.addEventListener("DOMContentLoaded", function () {
         dateFormat: "Y-m-d",
         altInput: true,             // show formatted date
         altFormat: "m-d-Y", 
+        disable: [
+                function(date) {
+                    return date.getDay() === 0 || date.getDay() === 6;  // Disable Sat & Sun
+                }
+            ],
         onDayCreate: flatpickrDayStyler,
         onChange: function(selectedDates, dateStr, instance) {
             if(dateStr) {
@@ -185,6 +190,11 @@ document.addEventListener("DOMContentLoaded", function () {
         dateFormat: "Y-m-d",
         altInput: true,             // show formatted date
         altFormat: "m-d-Y", 
+        disable: [
+                function(date) {
+                    return date.getDay() === 0 || date.getDay() === 6;  // Disable Sat & Sun
+                }
+            ],
         onDayCreate: flatpickrDayStyler
     });
 

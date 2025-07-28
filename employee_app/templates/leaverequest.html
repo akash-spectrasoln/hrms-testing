@@ -514,6 +514,13 @@ document.addEventListener("DOMContentLoaded", function () {
         altFormat: "m-d-Y", 
         minDate: "today",
         appendTo: document.body,
+        disable: [
+            ...holidays,
+            function(date) {
+                return date.getDay() === 0 || date.getDay() === 6;
+            }
+        ],
+
         onChange: function(selectedDates, dateStr) {
             if (dayTypeSelect.value === "multiple") {
                 endDatePicker.jumpToDate(dateStr);
@@ -541,6 +548,12 @@ document.addEventListener("DOMContentLoaded", function () {
         altFormat: "m-d-Y",
         minDate: "today",
         appendTo: document.body,
+        disable: [
+                ...holidays,
+                function(date) {
+                    return date.getDay() === 0 || date.getDay() === 6;  // Disable Sat & Sun
+                }
+            ],
         onDayCreate: function (dObj, dStr, fp, dayElem) {
             const dayString = dayElem.dateObj.toLocaleDateString('en-CA');
             if (dayElem.dateObj.getDay() === 6 || dayElem.dateObj.getDay() === 0) {
