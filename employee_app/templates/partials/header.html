@@ -69,9 +69,6 @@
                             <!-- item-->
                             <a class="dropdown-item" href="{% url 'profile' employee.id%}"><i class="mdi mdi-face-profile font-size-16 align-middle me-1"></i> Profile</a>
 
-
-
-                            
                             <a class="dropdown-item" href="{%url 'emp_logout'%}"><i class="mdi mdi-logout font-size-16 align-middle me-1"></i> Logout</a>
 
                         </div>
@@ -93,7 +90,7 @@
                         {% endfor %}
                     {% endif %} -->
                     {% if messages %}
-                        <div class="toast-container position-fixed" style="z-index: 9996; top: 50%; left: 50%; transform: translate(-50%, -50%);">
+                        <div class="toast-container position-fixed top-0 end-0 p-3 " style="z-index: 9996; margin-top: 5rem;">
                             <div class="toast mb-2 position-relative" style="background-color: rgb(122, 176, 201);" role="alert" aria-live="assertive" aria-atomic="true" data-bs-autohide="false">
                                 <!-- Close button positioned at top right -->
                                 <button type="button" class="btn-close btn-close-white position-absolute top-0 end-0 mt-2 me-2" data-bs-dismiss="toast" aria-label="Close"></button>
