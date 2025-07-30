@@ -2000,7 +2000,7 @@ def list_emp_leave_details(request):
     else:
         year_filter = current_year
 
-    queryset=LeaveDetails.objects.filter(year=year_filter).order_by('-year')
+    queryset=LeaveDetails.objects.filter(year=year_filter)
     states=state.objects.all()
 
     #country filter
@@ -2023,6 +2023,7 @@ def list_emp_leave_details(request):
     policy=FloatingHolidayPolicy.objects.filter(country=country_filter,year=year_filter).first()
     total_float = policy.allowed_floating_holidays if policy else 0
 
+    
     #adding remaining leaves count on each record
     for record in queryset:
         total = record.total_casual_leaves or 0
@@ -2032,7 +2033,7 @@ def list_emp_leave_details(request):
         record.total_float=total_float
         record.remaining_float = (record.total_float or 0) - (record.floating_holidays_used or 0) - (record.planned_float or 0)
 
-
+    queryset=queryset.order_by('employee__employee_id')
     context={
         "queryset":queryset,
         "country_list":country_list,
@@ -2104,6 +2105,7 @@ def export_employees_leaves(request):
     sheet.append(headers)
 
     # Data rows
+    queryset=queryset.order_by('employee__employee_id')
     for record in queryset:
         # Calculate and attach derived fields (same as list_emp_leave_details)
         record.remaining_casual = (record.total_casual_leaves or 0) - (record.casual_leaves_used or 0) - (record.planned_casual or 0)
@@ -2167,7 +2169,7 @@ from dateutil.relativedelta import relativedelta
 def export_employee_bank_details(request):
     country_id = request.GET.get('country_id', '').strip()
 
-    queryset = Employees.objects.filter(is_deleted=False).select_related('country', 'user').order_by('employee_id')  # Add more if needed
+    queryset = Employees.objects.filter(is_deleted=False).select_related('country', 'user')  # Add more if needed
     if country_id.isdigit():
         queryset = queryset.filter(country_id=country_id)
 
@@ -2207,6 +2209,10 @@ def export_employee_bank_details(request):
         except (TypeError,ValueError):
             return 0
 
+    queryset = sorted(
+        queryset,
+        key=lambda emp: emp.old_employee_id if emp.old_employee_id else emp.employee_id
+    )
     for emp in queryset:
         salary = safe_float(emp.enc_base_salary)
         incentive = safe_float(emp.enc_incentive)
