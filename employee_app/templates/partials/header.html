@@ -120,7 +120,7 @@
                         document.addEventListener('DOMContentLoaded', function () {
                             var toastElements = document.querySelectorAll('.toast');
                             toastElements.forEach(function (toastElement) {
-                                var toast = new bootstrap.Toast(toastElement, { autohide: false });
+                                var toast = new bootstrap.Toast(toastElement, { autohide: true, delay: 10000 });
                                 toast.show();
                             });
 

@@ -2345,35 +2345,7 @@ def allocate_leave(request, employee_id):
         agg = qs.aggregate(total=Sum('leave_days'))
         return agg['total'] or 0
 
-    # --- Calculate used and pending leaves BASED ON FINANCIAL YEAR ---
-    # used_casual_leaves = leave_days_agg(LeaveRequest.objects.filter(
-    #     employee_user=employee.user,
-    #     leave_type='Casual Leave',
-    #     status='Approved',
-    #     start_date__lte=financial_year_end,
-    #     end_date__gte=financial_year_start,
-    # ))
-    # pending_casual_leaves = leave_days_agg(LeaveRequest.objects.filter(
-    #     employee_user=employee.user,
-    #     leave_type='Casual Leave',
-    #     status='Pending',
-    #     start_date__lte=financial_year_end,
-    #     end_date__gte=financial_year_start,
-    # ))
-    # used_floating_leaves = leave_days_agg(LeaveRequest.objects.filter(
-    #     employee_user=employee.user,
-    #     leave_type='Floating Leave',
-    #     status='Approved',
-    #     start_date__lte=financial_year_end,
-    #     end_date__gte=financial_year_start,
-    # ))
-    # pending_floating_leaves = leave_days_agg(LeaveRequest.objects.filter(
-    #     employee_user=employee.user,
-    #     leave_type='Floating Leave',
-    #     status='Pending',
-    #     start_date__lte=financial_year_end,
-    #     end_date__gte=financial_year_start,
-    # ))
+ 
 
     used_casual_leaves = employee_leaves.casual_leaves_used if employee_leaves else 0
     pending_casual_leaves = employee_leaves.pending_casual if employee_leaves else 0

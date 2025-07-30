@@ -85,6 +85,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     
 ]
+STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage" 
 
 ROOT_URLCONF = 'hrms_project.urls'
 
@@ -106,7 +107,7 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'hrms_project.wsgi.application'
 
-STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage" 
+
 
 
 # Database
