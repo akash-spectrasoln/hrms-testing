@@ -2022,7 +2022,9 @@ def list_emp_leave_details(request):
     policy=FloatingHolidayPolicy.objects.filter(country=country_filter,year=year_filter).first()
     total_float = policy.allowed_floating_holidays if policy else 0
 
-    
+    print(total_float,"================================")
+
+    queryset=queryset.order_by('employee__employee_id')
     #adding remaining leaves count on each record
     for record in queryset:
         total = record.total_casual_leaves or 0
@@ -2032,7 +2034,7 @@ def list_emp_leave_details(request):
         record.total_float=total_float
         record.remaining_float = (record.total_float or 0) - (record.floating_holidays_used or 0) - (record.planned_float or 0)
 
-    queryset=queryset.order_by('employee__employee_id')
+    
     context={
         "queryset":queryset,
         "country_list":country_list,
