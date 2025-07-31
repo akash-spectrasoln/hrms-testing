@@ -1034,7 +1034,6 @@ def request_leave(request):
                     
                     f"Reason: {leave_request.reason}\n"
                     f"Status: Pending Approval\n\n"
-                    f"You will be notified once your request is reviewed.\n\n"
                     f"Best regards,\nHR Team"
                 ),
                 from_email="lms@spectrasoln.com",
@@ -2100,7 +2099,7 @@ def manage_leave_request(request, leave_request_id):
                 message=(
                     f"Dear {employee.first_name},\n\n"
                     f"Your leave request from {leave_request.start_date.strftime('%B %d, %Y')} to {leave_request.end_date.strftime('%B %d, %Y')} ({leave_request.leave_type}) "
-                    "has been approved. Enjoy your time off!\n\n"
+                    "has been approved.\n\n"
                     "Best regards,\nHR Team"
                 ),
                 from_email="lms@spectrasoln.com",

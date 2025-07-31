@@ -10,7 +10,7 @@ class Command(BaseCommand):
         schedule, created = CrontabSchedule.objects.get_or_create(
             minute='1',
             hour='9',
-            day_of_week='4',  
+            day_of_week='1',  
             day_of_month='*',
             month_of_year='*',
         )

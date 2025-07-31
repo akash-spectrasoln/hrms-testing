@@ -1307,8 +1307,7 @@ def accept_leave_request(request, leave_request_id):
             f"Status: Approved\n"
             f"Casual Leave Days: {casual_days}\n"
             f"Floating Holiday Days: {floating_days}\n"
-            f"Total Leave Days: {casual_days + floating_days}\n"
-            f"Enjoy your leave!\n\n"
+            f"Total Leave Days: {casual_days + floating_days}\n\n"
             f"Best Regards,\nYour Leave Management System"
         )
         
