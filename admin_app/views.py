@@ -1236,7 +1236,7 @@ def accept_leave_request(request, leave_request_id):
         floating_holiday_policy = leave_details['allowed_floating_holiday_policy']
         emp_leave_details = LeaveDetails.objects.get(employee=employee,year=current_year)
 
-        print(leave_details,"++++++++++++++++++++++++++++++++++++++++++++++++++++++++++=")
+        
 
         # Fetch policy for floating holidays
         floating_entitlement = floating_holiday_policy
@@ -1893,7 +1893,7 @@ def generate_emp_id(request):
     """
     if request.method == "GET":
         employee_type_code = request.GET.get("employee_type", "").strip()
-        print(employee_type_code,"=================================================")
+        
         
 
         if not employee_type_code:
@@ -1917,7 +1917,7 @@ def generate_emp_id(request):
             new_number = 100000  # Start from 100000 if no employees found
 
         new_employee_id = f"{employee_type_code}{new_number}"
-        print(new_employee_id,"=============================================")
+        
 
         return JsonResponse({"employee_id": new_employee_id}) 
 
@@ -2022,7 +2022,7 @@ def list_emp_leave_details(request):
     policy=FloatingHolidayPolicy.objects.filter(country=country_filter,year=year_filter).first()
     total_float = policy.allowed_floating_holidays if policy else 0
 
-    print(total_float,"================================")
+    
 
     queryset=queryset.order_by('employee__employee_id')
     #adding remaining leaves count on each record
@@ -2100,7 +2100,7 @@ def export_employees_leaves(request):
     headers = [
         'Employee ID', 'First Name', 'Last Name',
         'Total Casual Leaves', 'Used Casual Leaves', 'Planned Casual Leaves', 'Available Casual Leaves',
-        'Used Floating Leaves', 'Planned Floating Leaves', 'Available Floating Leaves',
+        'Total Floating leaves','Used Floating Leaves', 'Planned Floating Leaves', 'Available Floating Leaves',
         'Year'
     ]
     sheet.append(headers)
@@ -2121,6 +2121,7 @@ def export_employees_leaves(request):
             record.casual_leaves_used or 0,
             record.planned_casual or 0,
             record.remaining_casual,
+            record.total_float,
             record.floating_holidays_used or 0,
             record.planned_float or 0,
             record.remaining_float,
