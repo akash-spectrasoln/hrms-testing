@@ -20,6 +20,8 @@ class Role(models.Model):
     def __str__(self):
         return self.role_name
 
+    class Meta:
+        db_table='role'
 
 
 
@@ -30,6 +32,8 @@ class Country(models.Model):
     def __str__(self):
         return self.country_name
 
+    class Meta:
+        db_table='country'
 
 #
 class state(models.Model):
@@ -39,6 +43,9 @@ class state(models.Model):
     
     def __str__(self):
         return self.name
+    
+    class Meta:
+        db_table='state'
 
 
 class Salutation(models.Model):
@@ -47,11 +54,18 @@ class Salutation(models.Model):
     def __str__(self):
         return self.sal_name
 
+    class Meta:
+        db_table='salutation'
+    
+
 class Department(models.Model):
     dep_name=models.CharField(max_length=100)
 
     def __str__(self):
         return self.dep_name
+    
+    class Meta:
+        db_table='department'
 
 
 
@@ -76,6 +90,11 @@ class EmployeeType(models.Model):
 
     def __str__(self):
         return self.name
+    
+    class Meta:
+        db_table='employeetype' # this is for storing model name in database without app(django app) label 
+
+
  # adjust if your policies are in a different file
 
 class Employees(models.Model):
@@ -549,6 +568,8 @@ class Employees(models.Model):
                 return None
         return None
 
+    class Meta:
+        db_table='employees' # this is for storing model name in database without app(django app) label 
     
 
 
@@ -580,13 +601,24 @@ class LeaveDetails(models.Model):
     pending_casual = models.IntegerField(null=True , default=0)
     pending_float = models.IntegerField(null=True , default=0)
 
+    class Meta:
+        db_table='leavedetails' # this is for storing model name in database without app(django app) label 
+    
+
+
 class Communication(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="communication_type", null=True, blank=True)
     type = models.CharField(max_length=50,default="HR NOTIFICATION")
 
+    class Meta:
+        db_table='communication'
+
 class SetUpTable(models.Model):
     field = models.CharField(max_length=30)
     value = models.CharField(max_length=30)
+
+    class Meta:
+        db_table='setuptable'
     
     
 class Resume(models.Model):
@@ -597,6 +629,10 @@ class Resume(models.Model):
     def __str__(self):
         return f"{self.file.name} for {self.employee.first_name} {self.employee.last_name}"
 
+    class Meta:
+        db_table='resume' # this is for storing model name in database without app(django app) label 
+    
+
 
 class Certificate(models.Model):
     employee = models.ForeignKey(Employees, related_name='certificates', on_delete=models.CASCADE)
@@ -605,6 +641,9 @@ class Certificate(models.Model):
 
     def __str__(self):
         return f"{self.file.name} for {self.employee.first_name} {self.employee.last_name}"
+
+    class Meta:
+        db_table='certificate'
 # leave management section
 
 from datetime import datetime
@@ -614,6 +653,9 @@ class Holiday(models.Model): # this is the country based holiday
     day=models.CharField(max_length=50,null=True)
     year = models.IntegerField(default=datetime.now().year)
     country = models.ForeignKey('Country', on_delete=models.CASCADE)
+
+    class Meta:
+        db_table='holiday'
 
 
 
@@ -626,6 +668,9 @@ class StateHoliday(models.Model): # this is the country based holiday
 
     def __str__(self):
         return self.name
+    
+    class Meta:
+        db_table='stateholiday'
 
 
 
@@ -705,6 +750,7 @@ class LeaveRequest(models.Model):
     class Meta:
         verbose_name = "Leave Request"
         verbose_name_plural = "Leave Requests"
+        db_table='leaverequest'
 
 
 #floating holiday model is implemented below
@@ -717,6 +763,9 @@ class FloatingHoliday(models.Model):
     country = models.ForeignKey('Country', on_delete=models.CASCADE)
     def __str__(self):
         return self.name
+
+    class Meta:
+        db_table='floatingholiday'
 
 
 class HolidayPolicy(models.Model):
@@ -732,6 +781,9 @@ class HolidayPolicy(models.Model):
     def __str__(self):
         return (f"{self.year}: {self.ordinary_holidays_count} ordinary, "
                 f"{self.min_years_experience}+ yrs = {self.extra_holidays} extra")
+    
+    class Meta:
+        db_table='holidaypolicy'
 
 class FloatingHolidayPolicy(models.Model):
     """
@@ -742,6 +794,9 @@ class FloatingHolidayPolicy(models.Model):
     country = models.ForeignKey('Country', on_delete=models.CASCADE)
     def __str__(self):
         return f"{self.year}: {self.allowed_floating_holidays} floating holidays allowed"
+    
+    class Meta:
+        db_table='floatingholidaypolicy'
 
 class HolidayResetPeriod(models.Model):
     country = models.OneToOneField(Country, on_delete=models.CASCADE, related_name="holiday_reset")
@@ -764,5 +819,9 @@ class HolidayResetPeriod(models.Model):
 
     def __str__(self):
         return f"Holiday reset for {self.country.country_name}: {self.start_month}/{self.start_day} to {self.end_month}/{self.end_day}"
+    
+
+    class Meta:
+        db_table='holidayresetperiod'
     
     
