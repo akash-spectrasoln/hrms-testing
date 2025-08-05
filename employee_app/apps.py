@@ -14,5 +14,4 @@ class EmployeeAppConfig(AppConfig):
     default_auto_field = 'django.db.models.BigAutoField'
     name = 'employee_app'  # Replace this with your app name if it's different
 
-    def ready(self):
-        import employee_app.signals  # Import the signals module
+

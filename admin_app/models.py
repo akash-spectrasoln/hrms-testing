@@ -21,7 +21,7 @@ class Role(models.Model):
         return self.role_name
 
     class Meta:
-        db_table='role'
+        db_table='role' # this is for storing model name in database without app(django app) label 
 
 
 
@@ -33,7 +33,7 @@ class Country(models.Model):
         return self.country_name
 
     class Meta:
-        db_table='country'
+        db_table='country' # this is for storing model name in database without app(django app) label 
 
 #
 class state(models.Model):
@@ -45,7 +45,7 @@ class state(models.Model):
         return self.name
     
     class Meta:
-        db_table='state'
+        db_table='state' # this is for storing model name in database without app(django app) label 
 
 
 class Salutation(models.Model):
@@ -55,7 +55,7 @@ class Salutation(models.Model):
         return self.sal_name
 
     class Meta:
-        db_table='salutation'
+        db_table='salutation' # this is for storing model name in database without app(django app) label 
     
 
 class Department(models.Model):
@@ -65,7 +65,7 @@ class Department(models.Model):
         return self.dep_name
     
     class Meta:
-        db_table='department'
+        db_table='department' # this is for storing model name in database without app(django app) label 
 
 
 
@@ -78,12 +78,8 @@ import re
 
 from django.contrib.auth.models import User
 from django.db import models
-from django.contrib.auth.models import User
-
-from django.db import models
-from django.contrib.auth.models import User
 from datetime import date
-from admin_app.utils import encrypt_employee_field,decrypt_employee_field
+
 class EmployeeType(models.Model):
     code = models.CharField(max_length=3, unique=True)
     name = models.CharField(max_length=100)
@@ -109,7 +105,6 @@ class Employees(models.Model):
         ('Intern to employee','Intern to employee')
     ]
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="employee_profile", null=True, blank=True)
-    # employee_type = models.CharField(max_length=3, choices=EMPLOYEE_TYPE_CHOICES, verbose_name="Employee Type", null=True)
     employee_type = models.ForeignKey(EmployeeType, on_delete=models.SET_NULL, null=True, blank=True)
     employee_id = models.CharField(max_length=10, unique=True)
     old_employee_id=models.CharField(max_length=10, unique=True, null=True, blank=True)
@@ -118,7 +113,6 @@ class Employees(models.Model):
     middle_name = models.CharField(max_length=50, verbose_name="Middle Name", blank=True,null=True,)
     last_name = models.CharField(max_length=50, verbose_name="Last Name")
     
-    # company_email = models.EmailField(unique=True, verbose_name="Company Email")
     company_email = models.TextField(unique=True, verbose_name="Encrypted Company Email")
     personal_email = models.TextField(verbose_name="Personal Email")
     pm_email = models.EmailField(blank=True,null=True ,verbose_name="PM Email")
@@ -199,9 +193,6 @@ class Employees(models.Model):
         blank=True, 
         verbose_name="IFSC Code"
     )
-  
-    def available_leaves(self):
-        return self.total_leaves - self.used_leaves
 
     def delete(self, *args, **kwargs):
         self.is_deleted = True
@@ -605,7 +596,7 @@ class LeaveDetails(models.Model):
         db_table='leavedetails' # this is for storing model name in database without app(django app) label 
     
 
-
+#used to store employees for speciall access (example: employees to recieve birthday emails)
 class Communication(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="communication_type", null=True, blank=True)
     type = models.CharField(max_length=50,default="HR NOTIFICATION")
@@ -613,6 +604,7 @@ class Communication(models.Model):
     class Meta:
         db_table='communication'
 
+# used to store company utility details (Bank acc, transaction type etc)
 class SetUpTable(models.Model):
     field = models.CharField(max_length=30)
     value = models.CharField(max_length=30)
@@ -644,7 +636,7 @@ class Certificate(models.Model):
 
     class Meta:
         db_table='certificate'
-# leave management section
+
 
 from datetime import datetime
 class Holiday(models.Model): # this is the country based holiday
@@ -680,18 +672,11 @@ class StateHoliday(models.Model): # this is the country based holiday
 from django.db import models
 from django.contrib.auth.models import User  # Assuming employee is a User model
 from .models import Holiday
-from .utils import calculate_leave_days  # Import the function from utils page
+
 
 
 class LeaveRequest(models.Model):
-    # LEAVE_TYPES = [
-    #     ('CL', 'Casual Leave'),
-    #     ('SL', 'Sick Leave'),
-    #     ('EL', 'Earned Leave'),
-    #     ('PL', 'Parental Leave'),
-    #     ('ML', 'Maternity Leave'),
-    #     ('UL', 'Unpaid Leave'),
-    # ]
+
 
     LEAVE_TYPES = [
         ('Floating Leave', 'Floating Leave'),
@@ -709,12 +694,7 @@ class LeaveRequest(models.Model):
     created_on = models.DateTimeField(auto_now_add=True, null=True)
     modified_on = models.DateTimeField(auto_now=True, null=True)
     created_by = models.ForeignKey(User,on_delete=models.SET_NULL,null=True,blank=True,related_name='leave_requests_created')
-    #this method calculates the total no of laeves for the request
-    # def available_leaves(self):
-    #     return self.emp_total_leaves - self.emp_used_leaves  # Calculate available leaves
 
-    def available_leaves(self):
-        return self.employee_master.emp_total_leaves - self.employee_master.emp_used_leaves
 
     def save(self, *args, **kwargs):
         print("Saving Leave Request...")  # Add a print statement to check if save method is called
@@ -729,13 +709,6 @@ class LeaveRequest(models.Model):
             print("Holidays: ", holidays)
             print("Floating Holidays: ", floating_holidays)
 
-            # Calculate leave days
-            self.leave_days = calculate_leave_days(
-                start_date=self.start_date,
-                end_date=self.end_date,
-                holidays=holidays,
-                floating_holidays=floating_holidays,
-            )
 
         super().save(*args, **kwargs)
 

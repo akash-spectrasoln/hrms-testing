@@ -4,7 +4,7 @@ from django.contrib.auth import views as auth_views
 # from admin_app.views import load_states  # Ensure correct function import
 from .views import *
 urlpatterns=[
-path('adminbase/',mainbase_view,name='adminbase'),
+
 path('admin_index/',admin_index,name='admin_index'),
 path('index/',index),
 path('admin_logout/',admin_logout,name='admin_logout'),
@@ -13,7 +13,7 @@ path('add_holidays/', add_holidays, name='add_holidays'),
 path('export-employees/', export_employees_to_excel, name='export_employees'),
 path('get-states/', get_states, name='get_states'),
 path('list_employees/',list_employees,name='employee_list'),
-# path('employee_update/<pk>', EmployeeUpdateView.as_view(), name='employee_update'),
+
 path('employee_delete/<pk>',EmployeeDeleteView.as_view(),name='employee_delete'),
 path('restore_employee/<int:pk>/', restore_employee, name='restore_employee'),
 path('deleted_employees/', DeletedEmployeeListView.as_view(), name='deleted_employees'),
@@ -21,16 +21,9 @@ path('leaverequestdisplay/',admin_leave_requests,name='leave_request_display'),
 path('accept_leave_request/<int:leave_request_id>/', accept_leave_request, name='accept_leave_request'),
 path('reject_leave_request/<int:leave_request_id>/', reject_leave_request, name='reject_leave_request'),
 path('delete-leave/<int:leave_id>/', delete_leave_request, name='delete_leave_request'),
-# path('employee/update/<int:pk>/', EmployeeUpdateView.as_view(), name='employee_update'),
+
 path('employee/<int:pk>/edit/', EmployeeUpdateView.as_view(), name='employee_edit'),
 path('ajax/load-states/', load_states, name='load_states'),  # This is for AJAX dynamic state loading
-
-
-#     path('register/', register_admin, name='register_admin'),  # URL for admin registration
-#     path('login/', login_admin, name='login_admin'),  # URL for admin login
-#     path('dashboard/', admin_dashboard, name='admin_dashboard'),  # Admin dashboard URL
-# path('logout/', logout_admin, name='logout_admin'),
-
 path('login/', admin_login, name='admin_login'),
 
 # Admin Dashboard (After successful login)
@@ -69,7 +62,6 @@ path('admin_password_reset_complete/',
      ),
      name='admin_password_reset_complete'),
 
-# path("leave-requests/", admin_leave_requests, name="admin_leave_requests"),
 path("filter-leave-requests/", filter_leave_requests, name="filter_leave_requests"),
 
 path('generate-emp-id/', generate_emp_id, name='generate_emp_id'),

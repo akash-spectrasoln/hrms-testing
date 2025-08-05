@@ -1,29 +1,12 @@
 from django.shortcuts import render
-
-# Create your views here.
-
-
-# views.py
-
-
-# views.py
-# employee_app/views.py
 from django.shortcuts import render, redirect
 from django.contrib.auth import authenticate, login
 from django.contrib import messages
-
 from django.shortcuts import render, redirect
 from django.contrib.auth import authenticate, login
 from django.conf import settings
-from django.utils import timezone
-from django.forms import formset_factory
-from django.db.models import Max,Min
-from django.utils.decorators import method_decorator
-from django.core.exceptions import ObjectDoesNotExist
 from functools import wraps
-from django.utils import timezone
 import datetime
-from django.db import IntegrityError
 import time
 from django.contrib.auth.decorators import login_required
 from .utils import get_leave_policy_details
@@ -90,10 +73,6 @@ def employee_login(request):
         if user is not None:
             login(request, user)  # Log the user in
 
-            #django initially takes password in a hashed format
-            # # Check if the user has set a password (not the default password)
-            # if user.password == 'defaultpassword':  # If password is default
-            #     return redirect('set_password')  # Redirect to the set password page
 
             if user.check_password("defaultpassword"):
                 return redirect('set_password')  # Redirect to the set password page
@@ -124,49 +103,6 @@ def dashboard_view(request):
         'emp_lname': employee.last_name,
         'emp_designation': employee.role.role_name,
     })
-
-
-
-
-# employee_app/views.py
-
-
-
-
-
-
-
-#
-# from django.contrib.auth.decorators import login_required
-# from django.contrib.auth import update_session_auth_hash
-# from django.contrib import messages
-# from django.shortcuts import render, redirect
-# from .forms import CustomPasswordChangeForm  # Import the custom form
-#
-# @login_required
-# def set_password(request):
-#     if request.method == 'POST':
-#         form = CustomPasswordChangeForm(request.user, request.POST)  # Use the custom form
-#
-#         if form.is_valid():
-#             form.save()
-#             update_session_auth_hash(request, form.user)  # Keep the user logged in
-#             messages.success(request, 'Your password has been updated!')
-#             return redirect('index')
-#         else:
-#             messages.error(request, 'Please correct the errors below.')
-#     else:
-#         form = CustomPasswordChangeForm(request.user)
-#
-#     # Clear messages before rendering the page
-#     storage = messages.get_messages(request)
-#     storage.used = True
-#
-#     return render(request, 'set_password.html', {'form': form})
-
-
-
-
 
 
 from django.contrib.auth import update_session_auth_hash
@@ -209,15 +145,6 @@ def set_password(request):
 
     return render(request, 'set_password.html', {'form': form})
 
-
-
-
-
-
-
-
-
-
 # employee_app/auth_backends.py
 
 from django.contrib.auth.backends import ModelBackend
@@ -234,81 +161,11 @@ class EmailBackend(ModelBackend):
             return None
 
 
-
-
-# employee_app/views.py
-#
-# from django.shortcuts import render, get_object_or_404
-# from .models import Employees
-#
-# def employee_dashboard(request):
-#     employee = get_object_or_404(Employees, emp_email=request.user.username)
-#     return render(request, 'emp_profile.html', {'employee': employee})
-
-
-
 from django.shortcuts import render, get_object_or_404
 from .models import Employees
-@signin_required
-def employee_dashboard(request):
-    # Fetch the logged-in employee
-    employee = get_object_or_404(Employees, emp_email=request.user.username)
-
-    # Check if the employee is a manager (i.e., has subordinates)
-    is_manager = Employees.objects.filter(employee_manager=employee).exists()
-
-    current_year = now().year  # Get current year
-    total_used_leaves = employee.emp_used_leaves # Fetch from the Employees model
-
-    return render(request, 'emp_profile.html', {
-        'employee': employee,
-        'is_manager': is_manager,
-        'emp_id': employee.emp_id,  # Employee ID
-        'emp_fname': employee.emp_fname,  # Employee first name
-        'emp_lname': employee.emp_lname,  # Employee last name
-        'emp_designation': employee.role.role_name  ,# Employee designation
-        'total_used_leaves' : total_used_leaves
-    })
-
-
-
-
-
-
-
-# employee_app/views.py
-
-# from django.shortcuts import render
-# from django.contrib.auth.decorators import login_required
-# from .models import Employees
-
-# from django.shortcuts import render
-# from django.contrib.auth.decorators import login_required
-# from .models import Employees
-#
-# @login_required
-# def employee_dashboard(request):
-#     # Fetch the logged-in employee details using the logged-in user's email
-#     employee = Employees.objects.get(emp_email=request.user.username)
-#
-#     # Pass the employee object to the template
-#     return render(request, 'emp_profile.html', {'employee': employee})
-#
-#     # Prevent caching
-#     response['Cache-Control'] = 'no-store'
-#     response['Pragma'] = 'no-cache'
-#     response['Expires'] = '0'
-#
-#     return response
-
-
-
-from django.shortcuts import render, get_object_or_404
-from .models import Employees
-
-
 from django.utils.timezone import now
 from datetime import date, timedelta
+
 @signin_required
 def employee_profile(request, employee_id):
     employee = get_object_or_404(Employees, pk=employee_id, is_deleted=False)
@@ -409,15 +266,12 @@ def employee_profile(request, employee_id):
 
     # Here you can sum the policies for a total quota, or decide on a per-type basis.
     # For total (ordinary + casual + floating):
-    print(floating_policy.allowed_floating_holidays)
     quota = (policy.ordinary_holidays_count if policy else 0) \
             + (policy.extra_holidays if policy else 0) \
             + (floating_policy.allowed_floating_holidays if floating_policy else 0)
-    print(quota)
-    print(used_leaves)
-    print(planned_leaves)
+
     available_leaves = max(0, quota - used_leaves - planned_leaves)
-    print(available_leaves)
+   
     is_manager = Employees.objects.filter(manager=employee, is_deleted=False).exists()
 
     return render(request, 'profile.html', {
@@ -430,14 +284,8 @@ def employee_profile(request, employee_id):
 from django.shortcuts import render
 from django.contrib.auth.models import User
 from django.http import HttpResponse
-from .models import Employees
-
 from django.shortcuts import render
-from django.http import HttpResponse
 from django.contrib.auth.decorators import login_required
-from .models import Employees
-import random
-import string
 
 # Function to generate a random password
 from django.contrib.auth.models import User
@@ -474,66 +322,13 @@ def update_employee_passwords(request):
 
 
 
-
-
-
 # views.py (in employee_app)
 
 from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
-from .forms import EmployeeEditForm
-from .models import Employees
-
-# @login_required
-# def edit_employee_profile(request):
-#     employee = Employees.objects.get(emp_email=request.user.username)
-#
-#     if request.method == 'POST':
-#         form = EmployeeEditForm(request.POST, instance=employee)
-#         if form.is_valid():
-#             form.save()  # Save the updated employee profile
-#             return redirect('profile')  # Redirect to the profile page after saving
-#     else:
-#         form = EmployeeEditForm(instance=employee)  # Initialize the form with the current employee data
-#
-#     return render(request, 'edit_profile.html', {'form': form})
-
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
-from .models import Employees, Country, state
-from .forms import EmployeeEditForm
-
-@signin_required
-def edit_employee_profile(request):
-    # Get the employee object based on the logged-in user
-    employee = get_object_or_404(Employees, emp_email=request.user.username)
-
-    if request.method == 'POST':
-        # Handle the form submission
-        form = EmployeeEditForm(request.POST, instance=employee)
-        if form.is_valid():
-            form.save()  # Save the updated employee profile
-            return redirect('profile')  # Redirect to the profile page after saving
-    else:
-        # Initialize the form with the current employee data
-        form = EmployeeEditForm(instance=employee)
-
-    # Get all countries for the country dropdown
-    countries = Country.objects.all()
-
-    # Prefetch states for the currently selected country in the employee profile
-    states = state.objects.filter(country=employee.country) if employee.country else state.objects.none()
-
-    # Render the template with the form, countries, and states
-    return render(request, 'edit_profile.html', {
-        'employee':employee,
-        'form': form,
-        'countries': countries,
-        'states': states,
-    })
-
-
-
+from .models import Employees
 # employee_app/views.py
 from django.shortcuts import redirect
 from django.contrib.auth import logout
@@ -545,65 +340,6 @@ def employee_logout(request):
 
 
 from django.http import JsonResponse
-# from admin_app.models import state
-
-# def get_states(request):
-#     country_id = request.GET.get('country_id')
-#     if country_id:
-#         states = state.objects.filter(country_id=country_id).values('id', 'name')
-#         return JsonResponse({'states': list(states)})
-#     return JsonResponse({'states': []})  # Return an empty list if no country is selected
-
-
-# from django.http import JsonResponse
-# from .models import state
-#
-# from django.http import JsonResponse
-# from .models import state
-#
-#
-#
-# def get_states(request):
-#     country_id = request.GET.get('country_id')  # Get country_id from the request
-#     if country_id:
-#         # Fetch states for the selected country
-#         states = state.objects.filter(country_id=country_id).values('id', 'name')
-#         return JsonResponse({'states': list(states)})  # Return states as JSON
-#     return JsonResponse({'states': []})  # Return empty list if no country selected
-
-
-
-
-# password change view
-
-# main password_change view
-
-# from .forms import *
-# from django.shortcuts import render, redirect
-# from django.contrib.auth.forms import PasswordChangeForm
-# from django.contrib.auth import update_session_auth_hash
-# from django.contrib import messages
-# from django.contrib.auth.decorators import login_required
-# from datetime import datetime
-#
-# @login_required
-# def change_password(request):
-#     if request.method == 'POST':
-#         form = PasswordChangeForm(user=request.user, data=request.POST)
-#         if form.is_valid():
-#             form.save()  # Save the new password
-#             update_session_auth_hash(request, form.user)  # Keep the user logged in after password change
-#             messages.success(request, 'Your password was successfully updated!')
-#             return redirect('index')  # Redirect to the profile or another page
-#         else:
-#             messages.error(request, 'Please correct the error below.')
-#     else:
-#         form = PasswordChangeForm(user=request.user)
-# #
-#     return render(request, 'change_password.html', {'form': form})
-
-
-
 from .forms import *
 from django.shortcuts import render, redirect
 from django.contrib.auth.forms import PasswordChangeForm
@@ -679,20 +415,10 @@ def daterange(start_date, end_date):
     for n in range(int((end_date - start_date).days) + 1):
         yield start_date + timedelta(n)
 
-def calculate_working_days(start_date, end_date, holidays, approved_dates):
-    working_days = 0
-    current_date = start_date
-    while current_date <= end_date:
-        if (current_date.weekday() not in [5, 6] and  # Exclude Saturday (5) and Sunday (6)
-            current_date not in holidays and
-            current_date not in approved_dates):
-            working_days += 1
-        current_date += timedelta(days=1)
-    return working_days
+
 from django.shortcuts import redirect
 from django.contrib.auth import logout
 from django.contrib.auth.decorators import login_required
-
 
 def emp_logout(request):
     logout(request)  # Logs out the admin user
@@ -770,7 +496,6 @@ def overlapping_leave_days(leave_start, leave_end, fy_start, fy_end, holidays=No
 
     return total_days
 
-
 def leave_days_agg_request(leave_qs, fy_start, fy_end, holidays=None):
     """
     Aggregate working leave days overlapping the financial year,
@@ -791,10 +516,8 @@ def leave_days_agg_request(leave_qs, fy_start, fy_end, holidays=None):
     return total_days
 
 
-
 @signin_required
 def request_leave(request):
-    print("hi")
     approval_path = reverse('login')
     approval_url = request.build_absolute_uri(approval_path)
 
@@ -857,7 +580,8 @@ def request_leave(request):
         ).values_list('date', flat=True)
         )
 
-        floating=floating_holidays | state_excluded
+        # Final floating = union of floating + excluded, minus holidays
+        floating = (floating_holidays | state_excluded) - holidays
         
 
         return holidays, floating
@@ -897,12 +621,7 @@ def request_leave(request):
 
             #financial year
             current_year=date.today().year
-            # reset_period = HolidayResetPeriod.objects.filter(country=employee.country).first()
-            # if reset_period:
-            #     start_month = reset_period.start_month
-            #     start_day = reset_period.start_day
-            #     financial_year_start_date = date(current_year, start_month, start_day)
-            #     financial_year_end_date = date(current_year+1, start_month, start_day)
+
 
             if fy_start <= leave_request.start_date <= fy_end:
                 pass
@@ -933,11 +652,6 @@ def request_leave(request):
             holidays, floating_holidays = get_holidays(employee, fy_start, fy_end)
             # Pre-batch all leaves once
             all_leaves = get_leave_requests(request.user, fy_start, fy_end)
-            # used_casual_leaves = agg_leave_days(all_leaves, "Casual Leave", ['Approved'], fy_start, fy_end, holidays)
-            # used_floating_leaves = agg_leave_days(all_leaves, "Floating Leave", ['Approved'], fy_start, fy_end, holidays)
-            # pending_casual_leaves = agg_leave_days(all_leaves, "Casual Leave", ['Pending'], fy_start, fy_end, holidays)
-            # pending_floating_leaves = agg_leave_days(all_leaves, "Floating Leave", ['Pending'], fy_start, fy_end, holidays)
-
             used_casual_leaves = emp_leave_details.casual_leaves_used if emp_leave_details else 0
             used_floating_leaves = emp_leave_details.floating_holidays_used if emp_leave_details else 0
             pending_casual_leaves = emp_leave_details.pending_casual if emp_leave_details else 0
@@ -1111,11 +825,8 @@ def request_leave(request):
             year=fy_start.year
         ).first()
 
-        
-
         reset_period = HolidayResetPeriod.objects.filter(country=employee.country).first()
     
-
         year_to_use= date.today().year-1 if date.today().month < reset_period.start_month else date.today().year
         employee_leaves=LeaveDetails.objects.filter(employee=employee,year=year_to_use).first()
         if employee_leaves:
@@ -1127,10 +838,6 @@ def request_leave(request):
 
         # Only call DB for all leaves ONCE!
         all_leaves = get_leave_requests(request.user, fy_start, fy_end)
-        # used_casual_leaves = agg_leave_days(all_leaves, "Casual Leave", ['Approved'], fy_start, fy_end, holidays)
-        # used_floating_leaves = agg_leave_days(all_leaves, "Floating Leave", ['Approved'], fy_start, fy_end, holidays)
-        # used_pending_casual_leaves = agg_leave_days(all_leaves, "Casual Leave", ['Pending'], fy_start, fy_end, holidays)
-        # used_pending_floating_leaves = agg_leave_days(all_leaves, "Floating Leave", ['Pending'], fy_start, fy_end, holidays)
 
         used_casual_leaves = employee_leaves.casual_leaves_used if employee_leaves else 0
         used_floating_leaves = employee_leaves.floating_holidays_used if employee_leaves else 0
@@ -1142,7 +849,7 @@ def request_leave(request):
         remaining_casual_leaves = (casual_leaves or 0) - (used_casual_leaves or 0) - (used_pending_casual_leaves or 0) - (planned_casual or 0)
         remaining_floating_leaves = (floating_leaves or 0) - (used_floating_leaves or 0) - (used_pending_floating_leaves or 0) - (planned_float or 0)
         # All leave dates (reduce ORM hits)
-        print(remaining_casual_leaves,"\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\")
+      
         approved_leave_dates = [
             d.strftime('%Y-%m-%d')
             for lr in all_leaves if lr['status'] == 'Approved'
@@ -1161,6 +868,8 @@ def request_leave(request):
                 weekends.append(day.strftime('%Y-%m-%d'))
             day += timedelta(days=1)
 
+        print(holidays,"============================")
+        print(floating_holidays,"====================")
         context = {
             'employee': employee,
             'form': form,
@@ -1190,18 +899,8 @@ def request_leave(request):
 from django.core.mail import send_mail
 from django.http import HttpResponse
 
-def test_email(request):
-    try:
-        send_mail(
-            subject='Test Email',
-            message='This is a test email from Django.',
-            from_email='lms@spectrasoln.com',
-            recipient_list=['akashaku32@gmail.com'],  # Add a valid recipient email
-            fail_silently=False,  # Set to False to catch exceptions
-        )
-        return HttpResponse('Email sent successfully.')
-    except Exception as e:
-        return HttpResponse(f'Error occurred: {e}')
+    
+
 @signin_required
 def check_floating_holidays(request):
     if request.method == 'POST':
@@ -1238,7 +937,6 @@ def check_floating_holidays(request):
 # view for debugging
 @signin_required
 def check_leave_conflicts(request):
-    print("he")
     if request.method == 'POST':
         start_date_str = request.POST.get('start_date')
         end_date_str = request.POST.get('end_date')
@@ -1277,6 +975,15 @@ def check_leave_conflicts(request):
             date__gte=fy_start_date,
             date__lte=fy_end_date
         ).values_list('date', flat=True))
+        state_excluded = set(
+        StateHoliday.objects.filter(
+            country=country
+        ).exclude(
+            state=employee_profile.state
+        ).values_list('date', flat=True)
+        )
+
+        floating_holidays |=state_excluded
 
         # Dates requested by user
         selected_dates = [start_date + timedelta(days=i) for i in range((end_date - start_date).days + 1)]
@@ -1297,35 +1004,6 @@ def check_leave_conflicts(request):
 from django.shortcuts import render
 from .models import Holiday, FloatingHoliday
 import json
-
-def calendar_view(request):
-    current_year = 2025  # Change this dynamically if needed
-
-    # Fetch holidays and floating holidays for the current year
-    holidays = list(Holiday.objects.filter(year=current_year).values_list('date', flat=True))
-    floating_holidays = list(FloatingHoliday.objects.filter(year=current_year).values_list('date', flat=True))
-
-    # Convert date format to string (YYYY-MM-DD)
-    holidays = [date.strftime('%Y-%m-%d') for date in holidays]
-    floating_holidays = [date.strftime('%Y-%m-%d') for date in floating_holidays]
-
-    print("Holidays from DB:", holidays)
-    print("Floating Holidays from DB:", floating_holidays)
-
-    return render(request, 'calendar.html', {
-        'holidays': json.dumps(holidays),
-        'floating_holidays': json.dumps(floating_holidays),
-    })
-
-
-
-
-
-
-
-# main leave history view
-
-
 from django.shortcuts import get_object_or_404, redirect
 from django.contrib import messages
 from .models import LeaveRequest
@@ -1376,17 +1054,11 @@ def delete_leave(request, leave_id):
 
 from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
-from .models import LeaveRequest,HolidayPolicy,FloatingHolidayPolicy
+from .models import LeaveRequest,HolidayPolicy,FloatingHolidayPolicy,Employees, LeaveRequest, HolidayPolicy, FloatingHolidayPolicy, HolidayResetPeriod
 from django.db.models import Sum, Q
 from django.utils.timezone import now
-
-
-
-from django.shortcuts import render
-from django.db.models import Q, Sum
-from django.utils.timezone import now
 from datetime import date, datetime, timedelta
-from .models import Employees, LeaveRequest, HolidayPolicy, FloatingHolidayPolicy, HolidayResetPeriod
+
 @signin_required
  
 def my_leave_history(request):
@@ -1455,9 +1127,7 @@ def my_leave_history(request):
     floating_policy = None
     holidays = []
     floating_holidays = []
-    print(experience_years)
-    print(fin_year_start.year)
-    print(employee.country)
+
     if employee:
         policy = HolidayPolicy.objects.filter(
             country=employee.country,
@@ -1470,18 +1140,29 @@ def my_leave_history(request):
             year=fin_year_start.year
         ).first()
 
-        holidays = list(
+        holidays = set(
             Holiday.objects.filter(
                 country=employee.country,
                 date__range=(fin_year_start, fin_year_end)
             ).values_list('date', flat=True)
         )
+        state_holiday_dates = set(
+            StateHoliday.objects.filter(
+                state=employee.state,
+                date__range=(fin_year_start, fin_year_end)
+            ).values_list('date', flat=True)
+        )
+        #combine both 
+        holidays |= state_holiday_dates
+
+        
         floating_holidays = list(
             FloatingHoliday.objects.filter(
                 country=employee.country,
                 date__range=(fin_year_start, fin_year_end)
             ).values_list('date', flat=True)
         )
+
 
     holidays_set = set(holidays)
     floating_holidays_set = set(floating_holidays)
@@ -1514,55 +1195,6 @@ def my_leave_history(request):
         return days if days > 0 else 0
 
     leave_summary_data = []
-
-    # for leave_type, description in LeaveRequest.LEAVE_TYPES:
-
-    #     year_to_use= date.today().year-1 if date.today().month < reset_period.start_month else date.today().year
-    #     employee_leaves=LeaveDetails.objects.filter(employee=employee,year=year_to_use).first()
-
-    #     # get all leaves of this type (for summary)
-    #     lvs = leaves_by_type.get(leave_type, [])
-    #     # Fetch total allowed leaves efficiently
-    #     leave_type_lower = leave_type.lower()
-    #     if leave_type_lower == "ordinary":
-    #         total_leaves = policy.ordinary_holidays_count if policy else 0
-    #     elif leave_type_lower == "casual leave":
-
-
-    #         if employee_leaves:
-    #             total_leaves=employee_leaves.total_casual_leaves
-    #         else:
-                
-    #             total_leaves = (
-    #                 (policy.ordinary_holidays_count if policy else 0) +
-    #                 (policy.extra_holidays if policy else 0)
-    #         )
-    #     elif leave_type_lower == "floating leave":
-    #         total_leaves = floating_policy.allowed_floating_holidays if floating_policy else 0
-    #     else:
-    #         total_leaves = 0
-    #     # Used, planned, pending leaves. Python filter for in-memory efficiency
-    #     used_leaves = sum(
-    #         overlapping_leave_days(l.start_date, l.end_date, fin_year_start, fin_year_end, holidays_set)
-    #         for l in lvs if l.status in ['Accepted', 'Approved'] and l.end_date < today
-    #     )
-    #     planned_leaves = sum(
-    #         overlapping_leave_days(l.start_date, l.end_date, fin_year_start, fin_year_end, holidays_set)
-    #         for l in lvs if l.status in ['Accepted', 'Approved'] and l.end_date >= today
-    #     )
-    #     pending_leaves = sum(
-    #         overlapping_leave_days(l.start_date, l.end_date, fin_year_start, fin_year_end, holidays_set)
-    #         for l in lvs if l.status.lower() == 'pending' and l.end_date >= today
-    #     )
-    #     leave_summary_data.append({
-    #         'leave_type': description,
-    #         'validity': validity_range,
-    #         'total': total_leaves,
-    #         'used': used_leaves,
-    #         'planned': planned_leaves,
-    #         'pending': pending_leaves,
-    #         'available': max(0, total_leaves - used_leaves - planned_leaves),
-    #     })
 
     for leave_type, description in LeaveRequest.LEAVE_TYPES:
         leave_type_lower = leave_type.lower()
@@ -1646,7 +1278,6 @@ def my_leave_history(request):
         })
 
 
-    print(total_leaves)
     total_used_leaves = sum(item['used'] for item in leave_summary_data)
 
     planned_leave_requests = LeaveRequest.objects.filter(
@@ -1693,8 +1324,7 @@ def emp_index(request):
 
     # Get total used leaves for the current year
     current_year = now().year  # Get current year
-    # emp_leave_details = LeaveDetails.objects.get(employee=employee)
-    # total_used_leaves = emp_leave_details.casual_leaves_used  # Fetch from the Leaveetails model
+
 
     return render(request, 'emp_index.html', {
         'employee': employee,
@@ -1732,23 +1362,7 @@ def get_total_leaves(employee, year=None):
 from django.shortcuts import render, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from .models import Employees  # Import Employees model
-
-@signin_required
-def total_leaves_view(request):
-    user = request.user
-    # Fetch the related Employees object
-    employee = get_object_or_404(Employees, user=user)  # Adjust based on the relationship in Employees
-
-    current_year = date.today().year
-    total_leaves = get_total_leaves(employee, year=current_year)
-
-    return render(request, 'total_leaves.html', {'employee':employee,'total_leaves': total_leaves, 'year': current_year})
-
-
-
-
 # to get all the holidays in a year
-
 from django.shortcuts import render
 from datetime import date
 from .models import Holiday, FloatingHoliday
@@ -1794,30 +1408,41 @@ def holiday_list(request):
         } for holiday in state_holidays if financial_year_start_date <= holiday.date <= financial_year_end_date])
 
     holidays.sort(key=lambda x:x['date'])
-    
+
 
     floating_holidays1 = FloatingHoliday.objects.filter(country=employee.country).order_by('date')
     floating_holidays2 = StateHoliday.objects.filter(country=employee.country).exclude(state=employee.state).order_by('date')
 
-    floating_holidays=[]
-    floating_holidays.extend([{
-        'name': holiday.name,
-        'date': holiday.date    
-    } for holiday in floating_holidays1 if (financial_year_start_date <= holiday.date <= financial_year_end_date) and {'name': holiday.name, 'date': holiday.date} not in holidays ])
-    floating_holidays.extend([{
-        'name': holiday.name,
-        'date': holiday.date
-    } for holiday in floating_holidays2 if {'name': holiday.name, 'date': holiday.date} not in floating_holidays and
-                                           (financial_year_start_date <= holiday.date <= financial_year_end_date)
-                                           and {'name': holiday.name, 'date': holiday.date} not in holidays])
+    # Build a set of (name, date) in holidays for quick comparison
+    holiday_name_date_set = set((h['name'], h['date']) for h in holidays)
+
+    floating_holidays = []
+    floating_name_date_set = set()  # To prevent duplicates in floating holidays
+
+    # Process floating_holidays1
+    for holiday in floating_holidays1:
+        entry = (holiday.name, holiday.date)
+        if (financial_year_start_date <= holiday.date <= financial_year_end_date and
+            entry not in holiday_name_date_set):
+            floating_holidays.append({'name': holiday.name, 'date': holiday.date})
+            floating_name_date_set.add(entry)
+
+    # Process floating_holidays2 (from other states), avoid duplicates
+    for holiday in floating_holidays2:
+        entry = (holiday.name, holiday.date)
+        if (financial_year_start_date <= holiday.date <= financial_year_end_date and
+            entry not in holiday_name_date_set and
+            entry not in floating_name_date_set):
+            floating_holidays.append({'name': holiday.name, 'date': holiday.date})
+            floating_name_date_set.add(entry)
+
 
     floating_holidays.sort(key=lambda x:x['date'])
 
     # Check if the logged-in user is a manager
     
     current_year = now().year  # Get current year
-    # emp_leave_details = LeaveDetails.objects.get(employee=employee)
-    # total_used_leaves = emp_leave_details.casual_leaves_used  # Fetch from the leavedetails model
+
 
     context = {
         'employee':employee,
@@ -1979,7 +1604,7 @@ def filter_manager_leave_requests(request):
 
 
 
-from employee_app.utils import calculate_leave_duration
+
 from datetime import datetime
 
 from django.core.mail import send_mail
@@ -2004,15 +1629,13 @@ def manage_leave_request(request, leave_request_id):
 
     is_manager = Employees.objects.filter(manager=logged_in_employee).exists()
     
-    # emp_leave_details = LeaveDetails.objects.get(employee=logged_in_employee)
-    # total_used_leaves = emp_leave_details.casual_leaves_used
-
     if request.method == 'POST':
         action = request.POST.get('action')
         start_date = leave_request.start_date
         end_date = leave_request.end_date
         employee = leave_request.employee_master
 
+        # picking the correct Financial year
         current_year=date.today().year
         reset_period = HolidayResetPeriod.objects.filter(country=employee.country).first()
         if reset_period:
@@ -2026,7 +1649,7 @@ def manage_leave_request(request, leave_request_id):
         if financial_year_start_date <= leave_request.start_date <= financial_year_end_date:
             pass
         else:
-            current_year-=1
+            current_year-=1 
 
         emp_leave_details = LeaveDetails.objects.get(employee=employee,year=current_year)
 
@@ -2038,8 +1661,29 @@ def manage_leave_request(request, leave_request_id):
         max_floating_holidays = floating_holiday_policy
 
         current_date = start_date
+
+
         holidays = set(Holiday.objects.values_list('date', flat=True))
+        state_holiday_dates = set(
+            StateHoliday.objects.filter(
+                state=employee.state
+            ).values_list('date', flat=True)
+        )
+        #combine both 
+        holidays |= state_holiday_dates
+
         floating_holidays = set(FloatingHoliday.objects.values_list('date', flat=True))
+        state_excluded = set(
+        StateHoliday.objects.filter(
+            country=employee.country
+        ).exclude(
+            state=employee.state
+        ).values_list('date', flat=True)
+        )
+        # contains both 
+        floating_holidays |= state_excluded
+
+
         if leave_request.leave_type == 'Floating Leave':
             while current_date <= end_date:
                 if current_date.weekday() in [5, 6]:
@@ -2079,18 +1723,7 @@ def manage_leave_request(request, leave_request_id):
                 emp_leave_details.pending_casual -=leave_duration
                 emp_leave_details.save()
 
-            # if emp_leave_details.planned_casual + leave_duration <= 15:
-            #     emp_leave_details.planned_casual += leave_duration
-            #     emp_leave_details.planned_float += floating_days
 
-            #     emp_leave_details.pending_casual -=leave_duration
-            #     emp_leave_details.pending_float -= floating_days
-            #     emp_leave_details.save()
-            # else:
-            #     messages.error(request, "Employee cannot exceed the allowed total leave days.")
-            #     return redirect('manager_leave_requests')
-
-            # Email to employee: LEAVE APPROVED
             
     
     # Email to employee: LEAVE APPROVED
@@ -2191,13 +1824,9 @@ def manage_leave_request(request, leave_request_id):
             'emp_id': logged_in_employee.employee_id,
             'emp_fname': logged_in_employee.first_name,
             'emp_lname': logged_in_employee.last_name,
-            # 'total_used_leaves': total_used_leaves
+         
         }
     )
-
-
-
-
 
 
 def test(request):
@@ -2226,8 +1855,7 @@ def view_subordinates(request):
     is_manager = subordinates.exists()  # If they have subordinates, they're a manager
 
     current_year = now().year  # Get current year
-    # manager_leave_details = LeaveDetails.objects.get(employee=manager)
-    # total_used_leaves = manager_leave_details.casual_leaves_used  # Fetch from the leavedetails model
+
 
     return render(request, 'view_subordinates.html', {
         'employee':manager,
@@ -2238,7 +1866,7 @@ def view_subordinates(request):
         'emp_fname' : manager.first_name,
         'emp_lname' : manager.last_name,
         'emp_designation' : manager.role.role_name,
-        # 'total_used_leaves' : total_used_leaves
+        
     })
 
 
@@ -2338,8 +1966,7 @@ def allocate_leave(request, employee_id):
         casual_leaves = (policy.ordinary_holidays_count if policy else 0) + (policy.extra_holidays if policy else 0)
 
     floating_leaves = floating_policy.allowed_floating_holidays if floating_policy else 0
-    print(casual_leaves)
-    print(floating_leaves)
+
     def leave_days_agg(qs):
         agg = qs.aggregate(total=Sum('leave_days'))
         return agg['total'] or 0
@@ -2515,21 +2142,4 @@ def allocate_leave(request, employee_id):
         'all_leaves': all_leaves,
     }
     return render(request, 'allocate_leave.html', context)
-def navbar(request):
-    employee=Employees.objects.get(user=request.user)
-    context={
-        'employee':employee
-    }
-    return render(request,'admin_partials/admin_header.html',context)
 
-
-def sidebar(request):
-    return render(request,'admin_partials/admin_left-sidebar.html')
-
-
-def base(request):
-    return render(request , 'admin_partials/admin_base.html')
-
-
-def parent_view(request):
-    return render(request,'partials/base.html')

@@ -63,14 +63,10 @@ def signin_required(fn):
 
     return wrapper
 
-
-#
 # index page view
 
 def index(request):
     return render(request,'index.html')
-
-
 
 def admin_index(request):
     return render(request,'admin_index.html')
@@ -197,11 +193,6 @@ def get_states(request):
     return JsonResponse({'error': 'Country not selected'}, status=400)
 
 
-
-
-
-
-
 import openpyxl
 from openpyxl.utils import get_column_letter
 from django.http import HttpResponse
@@ -257,7 +248,6 @@ def export_employees_to_excel(request):
             employee.valid_to,
             employee.country.country_name if employee.country else '',
             employee.state.name if employee.state else '',
-            # employee.enc_address,         # Using encrypted property
             employee.enc_house_name,      # Using encrypted property
             employee.home_post_office,    # Not encrypted in your model
             employee.enc_home_city,       # Using encrypted property
@@ -274,10 +264,7 @@ def export_employees_to_excel(request):
             created_on,
             modified_on,
             employee.is_deleted,
-            # employee.floating_holidays_balance,
-            # employee.floating_holidays_used,
-            # employee.total_leaves,
-            # employee.used_leaves,
+
             employee.resignation_date,
             employee.enc_incentive,         # Using encrypted property
             employee.enc_joining_bonus,     # Using encrypted property
@@ -337,7 +324,6 @@ def list_employees(request):
     status = request.GET.get('employee_status', 'employed')
     country_id = request.GET.get('country_id', '').strip()
     print(country_id)
-    # Default to India's id if no country selected
     # Default to India's id if no country is selected
     if not country_id:
         india = Country.objects.filter(country_name__iexact='India').first()
@@ -429,14 +415,6 @@ def delete_leave_request(request, leave_id):
     except Employees.DoesNotExist:
         emp_obj = None
 
-    # if emp_obj:
-    #     if leave.leave_type == "Casual Leave":
-    #         emp_obj.used_leaves = max(emp_obj.used_leaves - leave_days, 0)
-    #         emp_obj.save()
-    #     elif leave.leave_type == "Floating Leave":
-    #         emp_obj.floating_holidays_used = max(emp_obj.floating_holidays_used - leave_days, 0)
-    #         emp_obj.save()
-        # ...handle other leave types as needed
 
     # Soft delete instead of hard delete
     leave.status='Deleted'
@@ -813,9 +791,6 @@ class EmployeeExcelCreateView(View):
                         return val
                     
 
-                    # def parse_decimal(val):
-                    #     try: return float(val)
-                    #     except: return 0.0
                     def parse_date_field(val):
                         if pd.isnull(val) or not val: return None
                         if isinstance(val, (pd.Timestamp, datetime)): return val.date()
@@ -1241,9 +1216,27 @@ def accept_leave_request(request, leave_request_id):
         # Fetch policy for floating holidays
         floating_entitlement = floating_holiday_policy
 
-        # Get all holiday/floating dates for efficiency
+        # Get all holiday dates for efficiency
         holiday_dates = set(Holiday.objects.values_list('date', flat=True))
+        state_holiday_dates = set(
+            StateHoliday.objects.filter(
+                state=employee.state
+            ).values_list('date', flat=True)
+        )
+        #combine both 
+        holiday_dates |= state_holiday_dates
+
         floating_dates = set(FloatingHoliday.objects.values_list('date', flat=True))
+        state_excluded = set(
+        StateHoliday.objects.filter(
+            country=employee.country
+        ).exclude(
+            state=employee.state
+        ).values_list('date', flat=True)
+        )
+        # contains both 
+        floating_dates |= state_excluded
+
 
         casual_days = 0 
         floating_days = 0
@@ -1286,11 +1279,7 @@ def accept_leave_request(request, leave_request_id):
             emp_leave_details.planned_casual += casual_days
             emp_leave_details.save()
 
-        # # Update leave usage
-        # # emp_leave_details.casual_leaves_used += casual_days
-        # # emp_leave_details.floating_holidays_used += floating_days
-        # if leave_request.leave_type == 
-        # emp_leave_details.save()
+
 
         # Update leave request (status, approver, leave_days)
         leave_request.status = "Approved"
@@ -1622,21 +1611,6 @@ def change_password(request):
 
 
 
-
-
-def mainbase_view(request):
-    return render(request,'admin_partials/admin_base.html')
-
-
-# from django.http import JsonResponse
-# from .models import state  # ✅ Ensure correct import
-#
-# def get_states_by_country(request):
-#     country_id = request.GET.get('country_id')
-#     if country_id:
-#         states = state.objects.filter(country_id=country_id).values('id', 'name')
-#         return JsonResponse({'states': list(states)})
-#     return JsonResponse({'states': []})
 
 
 from django.http import JsonResponse

@@ -59,12 +59,7 @@ class EmployeeEditForm(forms.ModelForm):
         required=False,
         empty_label="None"
     )
-    # Changed employee_type from ChoiceField to ModelChoiceField for FK relation
-    # employee_type = forms.ModelChoiceField(
-    #     queryset=EmployeeType.objects.all(),
-    #     required=True,
-    #     widget=forms.Select(attrs={'class': 'form-control'})
-    # )
+
     resignation_date = forms.DateField(
         required=False,
         widget=forms.DateInput(attrs={'type': 'date', 'class': 'form-control'})

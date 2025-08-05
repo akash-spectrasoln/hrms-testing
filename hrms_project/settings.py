@@ -180,12 +180,12 @@ DEFAULT_FROM_EMAIL='lms@spectrasoln.com'
 # settings.py
 import os
 
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = 'mail.spectrasoln.com'  # Updated from 'smtp.spectrasoln.com'
-EMAIL_PORT = 465  # Updated to use the SSL port as specified
-EMAIL_USE_SSL = True  # Use SSL for secure email sending
-EMAIL_HOST_USER = 'lms@spectrasoln.com'
-EMAIL_HOST_PASSWORD = 'LMS@SpEctra'  # Make sure the password is set in your environment
+EMAIL_BACKEND = os.getenv('EMAIL_BACKEND')
+EMAIL_HOST = os.getenv('EMAIL_HOST')  # Updated from 'smtp.spectrasoln.com'
+EMAIL_PORT = os.getenv('EMAIL_PORT') # Updated to use the SSL port as specified
+EMAIL_USE_SSL = os.getenv('EMAIL_USE_SSL')  # Use SSL for secure email sending
+EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER')
+EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')  # Make sure the password is set in your environment
 
 
 
@@ -197,7 +197,7 @@ from pathlib import Path
 # Base directory of the project
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-
+ 
 
 
 import os
