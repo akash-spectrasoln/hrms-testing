@@ -1,0 +1,200 @@
+/* ------------------- Login Style---------------------
+
+.login-body {
+    background-color: whitesmoke;
+}
+
+.login-box {
+    margin-top: 100px;
+    margin-bottom: 100px;
+    background-color: white;
+    padding: 40px;
+    border-radius: 15px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    max-width: 350px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.login-box h1 {
+    font-size: 2.5rem;
+    font-weight: bold;
+    margin-bottom: 30px;
+    text-align: center;
+    color: #444;
+}
+
+.login-box form {
+    display: flex;
+    flex-direction: column;
+}
+
+.login-box label {
+    font-size: 1.1rem;
+    font-weight: bold;
+    margin-bottom: 5px;
+    color: #444;
+}
+
+.login-box input[type="email"],
+.login-box input[type="password"] {
+    height: 30px;
+    padding: 1px 5px;
+    border-radius: 5px;
+    border: 1px solid #ccc;
+    font-size: 1.1rem;
+    margin-bottom: 20px;
+}
+
+.login-box button {
+    height: 37px;
+    padding: 10px 15px;
+    border-radius: 5px;
+    border: none;
+    background-color: #0d6efd;
+    color: #fff;
+    font-size: 1.1rem;
+    cursor: pointer;
+}
+
+
+.google-sign-in {
+    margin-top: 20px;
+    text-align: center;
+}
+
+.forgot-password {
+    margin-top: 20px;
+    text-align: center;
+    font-size: 1rem;
+    color: #444;
+}
+.no-account{
+    margin-top: 20px;
+    text-align: center;
+    font-size: 1rem;
+    color: #444;
+} */
+
+
+
+
+
+
+
+ /* Default input style with a thin black border */
+ .form-control {
+    border: 1px solid #a3a2a2; /* Thin black border */
+    border-radius: 0; /* Remove any rounding on the corners */
+    box-shadow: none; /* Remove any default shadow */
+}
+
+/* Focused input style with a thin blue border */
+.form-control:focus {
+    border: 1px solid #0d6efd; /* Thin blue border on focus */
+    outline: none; /* Remove the default outline */
+    box-shadow: none; /* Ensure no additional shadow is applied */
+}
+
+
+
+
+
+
+.headline {
+    
+    padding: 10px; /* Add padding for better visual appearance */
+    text-align: center;
+    font-size: 2rem;
+    font-weight: bold;
+    
+
+
+}
+
+
+
+
+
+body{
+    background-color:whitesmoke;
+}
+
+ /* Custom styles for the col-3 section */
+ .col-3,.col-4,.col-6{
+      
+    color: rgb(65, 61, 61);
+    padding-top: 20px; /* Add top padding */
+     /* Set height to full viewport height */
+     height: auto;
+    overflow-y: auto; /* Enable vertical scrolling */
+  }
+  
+
+  
+
+  .nav-link {
+    color: rgb(65, 61, 61);
+    font-weight: bold;
+  }
+
+  .nav-link:hover {
+    color: #0d6efd; /* Change color on hover */
+  }
+
+  #navside {
+    border-right: 1px solid #ddd;
+    height: 100vh; /* Set height to full viewport height */
+    overflow-y: auto; /* Enable vertical scrolling if needed */
+  }
+
+  .nav-item {
+    margin-bottom: 10px; /* Add margin between list items */
+  }
+
+  table.table thead th {
+    font-weight: normal;
+    border: none;
+    }
+
+    .logo {
+  max-width: 40px; /* Adjust the max-width to your desired size */
+  max-height: 45px; /* Adjust the max-height to your desired size */
+  margin-right: 5px; /* Optional: Add some spacing between the logo and the text */
+          }
+    .empty_img{
+        max-width: 40px; /* Adjust the max-width to your desired size */
+        max-height: 45px; /* Adjust the max-height to your desired size */
+        margin-right: 5px;
+
+    }
+
+ /* Loading spinner styles */
+ .loading-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(255, 255, 255, 0.5); /* Semi-transparent white background */
+    z-index: 9999; /* Ensure the spinner appears above other content */
+}
+
+.loading-spinner {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    border: 5px solid #f3f3f3; /* Light grey border */
+    border-top: 5px solid #0d6efd; /* Blue border on top */
+    border-radius: 50%;
+    width: 50px;
+    height: 50px;
+    animation: spin 1s linear infinite; /* Spin animation */
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
