@@ -11,7 +11,8 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
 
         today = now().date()
-        fin_year_start = date(2025, 1, 1)
+        # change year based on time . this logic need to be checked for future use 
+        fin_year_start = date(2025, 4, 1)
         fin_year_end = date(2026, 3, 31)
         
         employees=Employees.objects.all()

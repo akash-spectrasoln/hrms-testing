@@ -156,12 +156,6 @@ class EmployeeEditForm(forms.ModelForm):
         else:
             self.fields['employee_status'].required = False 
 
-        # # Set resignation date required if employee_status is 'resigned'
-        # if self.instance and self.instance.employee_status == 'resigned':
-        #     self.fields['resignation_date'].required = True
-        # else:
-        #     self.fields['resignation_date'].required = False
-
         if editing:
             # Remove employee_type field only in update mode
             self.fields.pop('employee_type', None)
