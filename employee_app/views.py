@@ -1388,7 +1388,7 @@ def holiday_list(request):
         start_day = reset_period.start_day
         end_month=reset_period.end_month
         end_day=reset_period.end_day
-        if date.today().month < 4:
+        if date.today().month < start_month:
             current_year=date.today().year-1
         else:
             current_year=date.today().year

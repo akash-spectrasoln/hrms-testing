@@ -32,7 +32,7 @@ from .models import Employees, Country, state, EmployeeType  # Adjust imports ac
 
 
 class EmployeeEditForm(forms.ModelForm):
-    
+     
     country = forms.ModelChoiceField(
         queryset=Country.objects.all(),
         required=False,
@@ -120,7 +120,7 @@ class EmployeeEditForm(forms.ModelForm):
             'home_phone', 'valid_from', 'valid_to', 'country', 'state', 
             'department', 'role', 'manager','home_city','pincode','emergency_contact_name','emergency_contact_phone','emergency_contact_email',
              'emergency_contact_relation',
-             'base_salary','employee_type',
+             'base_salary','employee_type','employee_status',
             'resignation_date', 'house_name', 'resumes', 'certificates', 'incentive', 'joining_bonus',
             'date_of_birth','pm_email',
             # ADD THE NEW FIELDS BELOW
@@ -150,11 +150,17 @@ class EmployeeEditForm(forms.ModelForm):
         elif self.instance.pk and self.instance.country:
             self.fields['state'].queryset = state.objects.filter(country=self.instance.country).order_by('name')
 
-        # Set resignation date required if employee_status is 'resigned'
-        if self.instance and self.instance.employee_status == 'resigned':
-            self.fields['resignation_date'].required = True
+        # Check if we're updating (instance exists and has a primary key)
+        if self.instance and self.instance.pk:
+            self.fields['employee_status'].required = True  # Required during update
         else:
-            self.fields['resignation_date'].required = False
+            self.fields['employee_status'].required = False 
+
+        # # Set resignation date required if employee_status is 'resigned'
+        # if self.instance and self.instance.employee_status == 'resigned':
+        #     self.fields['resignation_date'].required = True
+        # else:
+        #     self.fields['resignation_date'].required = False
 
         if editing:
             # Remove employee_type field only in update mode
@@ -243,12 +249,6 @@ class AdminRegistrationForm(forms.ModelForm):
         if commit:
             user.save()
         return user
-
-
-
-
-
-
 
 
 class Holiday_Form(forms.Form):

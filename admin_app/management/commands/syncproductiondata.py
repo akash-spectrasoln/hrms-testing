@@ -1,5 +1,5 @@
 from django.core.management.base import BaseCommand
-from admin_app.models import Employees, LeaveRequest, LeaveDetails , Holiday, FloatingHoliday
+from admin_app.models import Employees, LeaveRequest, LeaveDetails , Holiday, FloatingHoliday , HolidayResetPeriod , StateHoliday
 from datetime import date , timedelta
 from django.utils.timezone import now
 
@@ -12,20 +12,44 @@ class Command(BaseCommand):
 
         today = now().date()
         fin_year_start = date(2025, 1, 1)
-        fin_year_end = date(2026, 12, 31)
+        fin_year_end = date(2026, 3, 31)
         
         employees=Employees.objects.all()
 
-
-        
         for employee in employees:
 
-            holidays = list(
+            current_year=date.today().year
+            reset_period = HolidayResetPeriod.objects.filter(country=employee.country).first()
+            if reset_period:
+                start_month = reset_period.start_month
+                start_day = reset_period.start_day
+                end_month=reset_period.end_month
+                end_day=reset_period.end_day
+
+                if date.today().month < start_month:
+                    current_year-=1
+                    fin_year_start = date(current_year, start_month, start_day)
+                    fin_year_end = date(current_year+1, end_month, end_day)
+                else:
+                    fin_year_start = date(current_year, start_month, start_day)
+                    fin_year_end = date(current_year+1, end_month, end_day)
+
+            # fixed holidays includes both country holidays and corresponding state holiday
+            holidays = set(
             Holiday.objects.filter(
                 country=employee.country,
                 date__range=(fin_year_start, fin_year_end)
             ).values_list('date', flat=True)
             )
+            state_holiday_dates = set(
+            StateHoliday.objects.filter(
+                country=employee.country,
+                state=employee.state
+            ).values_list('date', flat=True)
+            )
+            #combine both 
+            holidays |= state_holiday_dates
+
             floating_holidays = list(
                 FloatingHoliday.objects.filter(
                 country=employee.country,
@@ -66,7 +90,7 @@ class Command(BaseCommand):
 
             for leave_type, description in LeaveRequest.LEAVE_TYPES:
 
-                employee_leaves=LeaveDetails.objects.filter(employee=employee,year=2025).first()
+                employee_leaves=LeaveDetails.objects.filter(employee=employee,year=current_year).first()
 
                 # get all leaves of this type (for summary)
                 lvs = leaves_by_type.get(leave_type, [])
