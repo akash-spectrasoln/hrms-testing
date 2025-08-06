@@ -868,8 +868,6 @@ def request_leave(request):
                 weekends.append(day.strftime('%Y-%m-%d'))
             day += timedelta(days=1)
 
-        print(holidays,"============================")
-        print(floating_holidays,"====================")
         context = {
             'employee': employee,
             'form': form,
