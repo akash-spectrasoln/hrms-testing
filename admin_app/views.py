@@ -500,7 +500,7 @@ class EmployeeUpdateView(UpdateView):
             context['roles'] = Role.objects.all()
             context['departments'] = Department.objects.all()
             context['managers'] = Employees.objects.filter(employees_managed__isnull=False).distinct()
-            context['employees'] = Employees.objects.all()
+            context['employees'] = Employees.objects.all().order_by('first_name')
             employee = self.object
             context['countries'] = Country.objects.all()
             context['selected_country'] = employee.country if employee.country else None
