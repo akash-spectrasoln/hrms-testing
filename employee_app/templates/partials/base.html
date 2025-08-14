@@ -212,7 +212,7 @@
     }
 
     document.addEventListener('DOMContentLoaded', () => {
-        // ✅ STOP spinner even if view renders same template (after error)
+        //  STOP spinner even if view renders same template (after error)
         hideSpinnerAndEnableButtons();
 
         // Spinner on form submit
@@ -227,7 +227,7 @@
         window.addEventListener('beforeunload', showSpinnerAndDisableButtons);
     });
 
-    // ✅ Extra safety: stop spinner on full load too
+    //  Extra safety: stop spinner on full load too
     window.addEventListener('load', hideSpinnerAndEnableButtons);
 </script>
 

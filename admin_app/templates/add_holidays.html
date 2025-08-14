@@ -133,21 +133,21 @@
                     <div class="page-header">
                         <h2 class="page-title">Holidays for <span id="selected-year">{{ filter_year|default:current_year }}</span></h2>
                         <div class="d-flex align-items-center mb-3">
-                            <label for="country-filter" class="form-label mt-2 me-2">Country</label>
-                            <select id="country-filter" class="form-select form-select-sm" style="width: auto;">
+                            <label for="country-filter" class="form-label mt-2 ">Country</label>
+                            <select id="country-filter" class="form-select form-select-sm" style="width: 120px;">
                                 <option value="" {% if not filter_country %}selected{% endif %}>All Countries</option>
                                 {% for country in form.fields.country.queryset %}
                                     <option value="{{ country.id }}" {% if filter_country|stringformat:"s" == country.id|stringformat:"s" %}selected{% endif %}>{{ country.country_name }}</option>
                                 {% endfor %}
                             </select>
-                            <label for="year-filter" class="form-label mt-2 me-2">Select Year</label>
-                            <select id="year-filter" class="form-select form-select-sm" style="width: auto; margin-right: 10px;">
+                            <label for="year-filter" class="form-label mt-2 ">Select Year</label>
+                            <select id="year-filter" class="form-select form-select-sm" style="width: 70px; margin-right: 10px;">
                                 {% for year in years %}
                                     <option value="{{ year }}" {% if year|stringformat:"s" == filter_year|stringformat:"s" %}selected{% endif %}>{{ year }}</option>
                                 {% endfor %}
                             </select>
                             <label for="type-filter" class="form-label mt-2 me-2">Type</label>
-                            <select id="type-filter" class="form-select form-select-sm" style="width: auto; margin-right: 10px;">
+                            <select id="type-filter" class="form-select form-select-sm" style="width: 140px; margin-right: 10px;">
                                 <option value="country" {% if filter_leave_type == 'country' %}selected{% endif %}>Country Holiday</option>
                                 <option value="floating" {% if filter_leave_type == 'floating' %}selected{% endif %}>Floating Holiday</option>
                                 <option value="state" {% if filter_leave_type == 'state' %}selected{% endif %}>State Holiday</option>

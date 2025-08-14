@@ -29,16 +29,24 @@
             height: auto;
             overflow-y: auto;
         }
-        .vertical-menu {
+    .vertical-menu {
     width: 70px !important;
     min-width: 70px !important;
     max-width: 70px !important;
     transition: width 0.3s;
-}
-.content-wrapper {
-    margin-left: 70px !important;
-    transition: margin-left 0.3s;
-}
+    z-index: 9999 !important;
+
+    }
+
+    #side-menu li a:hover {
+        min-width: 280px;
+        position: relative;
+    }
+
+    .content-wrapper {
+        margin-left: 70px !important;
+        transition: margin-left 0.3s;
+    }
         table.table thead th { font-weight: normal; border: none; }
         .logo { max-width: 60px; max-height: 50px; margin-right: 5px; }
         .active-button { border: 1px solid green; padding: 5px 10px; display: inline-block; border-radius: 5px; color: aquamarine; }
@@ -149,7 +157,7 @@
    {% block extra_js %}{% endblock extra_js %}
 <script src="{% static 'js/app.js' %}"></script>
 
-<!-- ✅ Search Table Filtering (unchanged) -->
+<!-- Search Table Filtering (unchanged) -->
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         var searchForm = document.querySelector('.app-search');

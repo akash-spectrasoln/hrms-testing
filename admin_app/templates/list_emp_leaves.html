@@ -62,7 +62,7 @@
         <form method="GET" action="" class="form-inline mb-3" id="leaveFilterForm">
             <!-- Country Filter -->
             <div class="form-group mr-2">
-                <select name="country_id" class="form-control form-control-sm" id="countrySelect">
+                <select name="country_id" class="form-control form-control-sm form-select" id="countrySelect">
                     <option value="">All Countries</option>
                     {% for country in country_list %}
                         <option value="{{ country.id }}"
@@ -75,7 +75,7 @@
             </div>
             <!-- State Filter -->
             <div class="form-group mr-2">
-                <select name="state_id" class="form-control form-control-sm" id="stateSelect">
+                <select name="state_id" class="form-control form-control-sm form-select" id="stateSelect">
                     <option value="">All States</option>
                     {% for state in states %}
                         <option value="{{ state.id }}"
@@ -133,7 +133,7 @@
                                 {%for record in queryset%}
                                 <tr>
                                     <td>{{record.employee.employee_id}}</td>
-                                    <td>{{record.employee.first_name}} {{record.employee.last_name}}</td>
+                                    <td style="text-align: left !important;">{{record.employee.first_name}} {{record.employee.last_name}}</td>
                                     <td>{{record.total_casual_leaves}}</td>
                                     <td>{{record.casual_leaves_used}}</td>
                                     <td>{{record.planned_casual}}</td>

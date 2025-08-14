@@ -145,29 +145,43 @@
             justify-content: center;
         }
 
-.g-recaptcha {
-    transform: scale(1);
-    transform-origin: top center;
-    -webkit-transform: scale(1);
-    width: 304px;
-    height: 78px;
-}
+        .g-recaptcha {
+            transform: scale(1);
+            transform-origin: top center;
+            -webkit-transform: scale(1);
+            width: 304px;
+            height: 78px;
+        }
 
-@media (max-width: 400px) {
-    .g-recaptcha {
-        transform: scale(0.85);
-        -webkit-transform: scale(0.85);
-    }
-}
+        @media (max-width: 400px) {
+            .g-recaptcha {
+                transform: scale(0.85);
+                -webkit-transform: scale(0.85);
+            }
+        }
 
-@media (max-width: 320px) {
-    .g-recaptcha {
-        transform: scale(0.7);
-        -webkit-transform: scale(0.7);
-    }
-}
+        @media (max-width: 320px) {
+            .g-recaptcha {
+                transform: scale(0.7);
+                -webkit-transform: scale(0.7);
+            }
+        }
 
+        .field-icon {
+        float: right;
+        margin-top: -30px;
+        margin-right: 12px;
+        position: relative;
+
+        }
+
+        input::-ms-reveal,
+        input::-ms-clear {
+        display: none;
+        }
     </style>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+
 </head>
 <body>
     <div class="login-container">
@@ -198,6 +212,8 @@
                     required
                     autocomplete="current-password"
                 >
+                <span toggle="#password" class="field-icon toggle-password">
+                    <i class="bi bi-eye-slash"></i></span>
             </div>
 
             <div class="forgot-password">
@@ -205,7 +221,7 @@
             </div>
 
             <div class="captcha-wrapper">
-                <div class="g-recaptcha" data-sitekey="6Leh9VYrAAAAAHx03L847AT7KPXQKmhEHL3RYzzF"></div> 
+                <div class="g-recaptcha" data-sitekey="{{ recaptcha_site_key }}"></div> 
             </div>
             <button type="submit">Login</button>
         </form>
@@ -219,5 +235,20 @@
         {% endif %}
     </div>
 </body>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://www.google.com/recaptcha/api.js" async defer></script>
+<script>
+$(".toggle-password").click(function() {
+  let input = $($(this).attr("toggle"));
+  let icon = $(this).find("i");
+
+  if (input.attr("type") === "password") {
+    input.attr("type", "text");
+    icon.removeClass("bi-eye-slash").addClass("bi-eye");
+  } else {
+    input.attr("type", "password");
+    icon.removeClass("bi-eye").addClass("bi-eye-slash");
+  }
+});
+</script>
 </html>

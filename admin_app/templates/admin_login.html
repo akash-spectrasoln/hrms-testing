@@ -103,12 +103,13 @@
             font-size: 14px;
         }
 
-        /* .first-letter-underline {
-            text-decoration: underline;
-            text-decoration-color: #1a73e8;
-            text-decoration-thickness: 2px;
-            text-underline-offset: 3px;
-        } */
+.field-icon {
+  float: right;
+  margin-top: -30px;
+  margin-right: 12px;
+  position: relative;
+
+}
 
         .forgot-password-container {
             text-align: center;
@@ -146,68 +147,70 @@
             justify-content: center;
         }
 
-.g-recaptcha {
-    transform: scale(1);
-    transform-origin: top center;
-    -webkit-transform: scale(1);
-    width: 304px;
-    height: 78px;
-}
 
-@media (max-width: 400px) {
-    .g-recaptcha {
-        transform: scale(0.85);
-        -webkit-transform: scale(0.85);
-    }
-}
 
-@media (max-width: 320px) {
-    .g-recaptcha {
-        transform: scale(0.7);
-        -webkit-transform: scale(0.7);
-    }
+        .g-recaptcha {
+            transform: scale(1);
+            transform-origin: top center;
+            -webkit-transform: scale(1);
+            width: 304px;
+            height: 78px;
+        }
+
+        @media (max-width: 400px) {
+            .g-recaptcha {
+                transform: scale(0.85);
+                -webkit-transform: scale(0.85);
+            }
+        }
+
+        @media (max-width: 320px) {
+            .g-recaptcha {
+                transform: scale(0.7);
+                -webkit-transform: scale(0.7);
+            }
+        }
+
+input::-ms-reveal,
+input::-ms-clear {
+  display: none;
 }
 
     </style>
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+
 </head>
 <body>
 <div class="login-container">
-    {% if show_otp_form %}
-        <h2>Enter the OTP sent to you</h2>
-        <form method="post" action="{% url 'verify-otp' %}">
-            {% csrf_token %}
-            <div class="input-container">
-                <label for="otp">OTP Code:</label>
-                <input type="text" id="otp" name="otp" placeholder="6-digit code" required />
-            </div>
-            <button type="submit" class="otp-btn">Verify OTP</button>
-        </form>
-    {% else %}
-        <h2>Admin Login</h2>
-        <form method="POST" action="{% url 'admin_login' %}">
-            {% csrf_token %}
-            <div class="input-container">
-                <label for="username"><span class="first-letter-underline">U</span>sername:</label>
-                <input type="text" id="username" name="username" required>
-            </div>
 
-            <div class="input-container">
-                <label for="password"><span class="first-letter-underline">P</span>assword:</label>
-                <input type="password" id="password" name="password" required>
-            </div>
+    <h2>Admin Login</h2>
+    <form method="POST" action="{% url 'admin_login' %}">
+        {% csrf_token %}
+        <div class="input-container">
+            <label for="username"><span class="first-letter-underline">U</span>sername:</label>
+            <input type="text" id="username" name="username" required>
+        </div>
 
-            <div class="forgot-password-container">
-                Forgot Password? <a href="{% url 'admin_password_reset' %}" class="forgot-password-link">Reset Now</a>
-            </div>
+        <div class="input-container">
+            <label for="password"><span class="first-letter-underline">P</span>assword:</label>
+            <input type="password" id="password" name="password" required>
+            <span toggle="#password" class="field-icon toggle-password"><i class="bi bi-eye-slash"></i></span>          
+            
+        </div>
 
-            <div class="captcha-wrapper">
-                <div class="g-recaptcha" data-sitekey="6Leh9VYrAAAAAHx03L847AT7KPXQKmhEHL3RYzzF"></div> 
+        <div class="forgot-password-container">
+            Forgot Password? <a href="{% url 'admin_password_reset' %}" class="forgot-password-link">Reset Now</a>
+        </div>
 
-            </div>
+        <div class="captcha-wrapper">
+            <div class="g-recaptcha" data-sitekey="{{ recaptcha_site_key }}"></div> 
+            
+        </div>
 
-            <button type="submit" class="login-btn">Login</button>
-        </form>
-    {% endif %}
+        <button type="submit" class="login-btn">Login</button>
+    </form>
+
 
     {% if messages %}
         <ul class="error-messages">
@@ -217,8 +220,23 @@
         </ul>
     {% endif %}
 </div>
-
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://www.google.com/recaptcha/api.js" async defer></script>
+<script>
+$(".toggle-password").click(function() {
+  let input = $($(this).attr("toggle"));
+  let icon = $(this).find("i");
+
+  if (input.attr("type") === "password") {
+    input.attr("type", "text");
+    icon.removeClass("bi-eye-slash").addClass("bi-eye");
+  } else {
+    input.attr("type", "password");
+    icon.removeClass("bi-eye").addClass("bi-eye-slash");
+  }
+});
+</script>
+
 
 </body>
 </html>

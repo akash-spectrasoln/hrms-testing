@@ -25,6 +25,10 @@ thead th {
     font-weight: 600 !important; /* Make text bold */
 }
 
+#employeeFilterForm .form-select {
+    min-width: 130px;  /* Increase this value if you want it bigger */
+}
+
 </style>
 {% endblock %}
 
@@ -35,10 +39,10 @@ thead th {
         <form method="GET" action="{% url 'employee_list' %}" class="form-inline mb-3" id="employeeFilterForm">
             <!-- Country Filter -->
             <div class="form-group mr-2">
-                <select name="country_id" class="form-control form-control-sm" id="countrySelect">
+                <select name="country_id" class="form-control form-control-sm form-select" id="countrySelect">
                     <option value="">All Countries</option>
                     {% for country in country_list %}
-                        <option value="{{ country.id }}"
+                        <option value="{{ country.id }}" 
                                 {% if current_filters.country_id|stringformat:"s" == country.id|stringformat:"s" %}selected{% endif %}>
                             {{ country.country_name }}
                         </option>
@@ -57,7 +61,7 @@ thead th {
             </div>
             <!-- Status Filter -->
             <div class="form-group mr-2">
-                <select name="employee_status" class="form-control form-control-sm" id="statusSelect">
+                <select name="employee_status" class="form-control form-control-sm form-select" id="statusSelect">
                     <option value="all" {% if current_filters.status == 'all' %}selected{% endif %}>All Statuses</option>
                     <option value="employed" {% if current_filters.status == 'employed' %}selected{% endif %}>Employed</option>
                     <option value="resigned" {% if current_filters.status == 'resigned' %}selected{% endif %}>Resigned</option>
@@ -107,7 +111,7 @@ thead th {
                                         {% endif %}
                                     </td>
                                     <td>
-                                        <div class="btn-group mr-2" role="group">
+                                        <div class="d-flex gap-2 mr-2" role="group">
                                             <a href="{% url 'employee_edit' employee.pk %}" class="btn btn-primary btn-sm">
                                                 <i class="fas fa-edit"></i>
                                             </a>
@@ -153,7 +157,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function debounceSubmit() {
         clearTimeout(debounceTimer);
-        debounceTimer = setTimeout(submitForm, 500); // 500ms delay
+        debounceTimer = setTimeout(submitForm, 800); // 500ms delay
     }
 
     empIdInput.addEventListener('input', debounceSubmit);

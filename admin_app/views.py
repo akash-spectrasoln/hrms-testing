@@ -47,7 +47,7 @@ def signin_required(fn):
             return redirect("admin_login")
         
         # Check if the session has timed out due to inactivity
-        current_time = time.time()
+        current_time = int(time.time())
         last_activity = request.session.get('last_activity', current_time)
 
         if current_time - last_activity > TIMEOUT_DURATION:
@@ -172,7 +172,7 @@ def add_employee(request):
         'states': state.objects.all(),
         'countries': Country.objects.all().order_by('code'),
         'salutations': Salutation.objects.all(),
-        'employees': Employees.objects.all(),
+        'employees': Employees.objects.all().order_by('first_name'),
         'default_valid_from': date.today(),
         'default_valid_to': date(9999, 12, 31),
         'employee_types' : EmployeeType.objects.all().order_by('id')
@@ -1844,11 +1844,15 @@ def admin_login(request):
 
         if user is not None and (user.is_staff or user.is_superuser):
             login(request, user)
+
+            # to initialize session activity tracking
+            request.session['last_activity'] = int(time.time())
+            
             return redirect('admin_index')  # Replace with your actual dashboard route
         else:
             messages.error(request, 'Invalid credentials or insufficient permissions.')
 
-    return render(request, 'admin_login.html')  # Render login page
+    return render(request, 'admin_login.html',{'recaptcha_site_key': settings.RECAPTCHA_PUBLIC_KEY})  # Render login page
 
 
 

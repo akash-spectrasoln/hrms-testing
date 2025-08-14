@@ -21,7 +21,7 @@ def signin_required(fn):
             return redirect("login")
         
         # Check if the session has timed out due to inactivity
-        current_time = time.time()
+        current_time = int(time.time())
         last_activity = request.session.get('last_activity', current_time)
 
         if current_time - last_activity > TIMEOUT_DURATION:
@@ -41,6 +41,7 @@ def signin_required(fn):
 from django.contrib.auth import authenticate, login
 from django.contrib import messages
 import requests
+import time
 
 def employee_login(request):
     if request.method == 'POST':
@@ -59,7 +60,7 @@ def employee_login(request):
 
         if not result.get('success'):
             messages.error(request, 'Invalid reCAPTCHA. Please try again.')
-            return redirect('admin_login')
+            return redirect('login')
         
         user_obj = User.objects.filter(email__iexact=email).first()
         if not user_obj:
@@ -73,6 +74,8 @@ def employee_login(request):
         if user is not None:
             login(request, user)  # Log the user in
 
+            # to initialize session activity tracking
+            request.session['last_activity'] = int(time.time())
 
             if user.check_password("defaultpassword"):
                 return redirect('set_password')  # Redirect to the set password page
@@ -83,12 +86,12 @@ def employee_login(request):
             # return HttpResponse("invalid credentials")
             return redirect('login')  # Redirect back to login page
 
-    return render(request, 'emp_login.html')
+    return render(request, 'emp_login.html',{'recaptcha_site_key': settings.RECAPTCHA_PUBLIC_KEY})
 
 
 
 #dashboard view of employee
-login_required
+@signin_required
 def dashboard_view(request):
     try:
         employee = Employees.objects.get(company_email=request.user.username)

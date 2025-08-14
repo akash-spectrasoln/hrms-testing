@@ -19,8 +19,8 @@ load_dotenv()
 
 
 # #google recaptcha
-RECAPTCHA_PUBLIC_KEY = '6Leh9VYrAAAAAHx03L847AT7KPXQKmhEHL3RYzzF'
-RECAPTCHA_PRIVATE_KEY = '6Leh9VYrAAAAABJiXJD7AH6db5-ksN-mE7Pdfgdc'
+RECAPTCHA_PUBLIC_KEY = os.getenv('RECAPTCHA_PUBLIC_KEY')
+RECAPTCHA_PRIVATE_KEY = os.getenv('RECAPTCHA_PRIVATE_KEY')
 
 
 
@@ -83,7 +83,12 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     
 ]
+
+# whitenoise servers static files in production
 STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage" 
+
+
+SESSION_SAVE_EVERY_REQUEST = True
 
 ROOT_URLCONF = 'hrms_project.urls'
 

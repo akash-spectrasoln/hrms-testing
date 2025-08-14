@@ -796,5 +796,3 @@ class HolidayResetPeriod(models.Model):
 
     class Meta:
         db_table='holidayresetperiod'
-    
-    

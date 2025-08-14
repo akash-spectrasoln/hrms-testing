@@ -105,7 +105,7 @@
               <label for="statusFilter" class="form-label mb-1">Status</label>
               <select id="statusFilter" name="status" class="form-select">
                 <option value="">All Status</option>
-                <option value="Pending" {% if not current_status or current_status == "Pending" %}selected{% endif %}>Pending</option>
+                <option value="Pending" {% if current_status == "Pending" %}selected{% endif %}>Pending</option>
                 <option value="Approved" {% if current_status == "Approved" %}selected{% endif %}>Approved</option>
                 <option value="Rejected" {% if current_status == "Rejected" %}selected{% endif %}>Rejected</option>
               </select>
