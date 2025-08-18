@@ -84,7 +84,7 @@
               <div class="text-muted small">
                 
                 {%if employee.enc_house_name and employee.enc_house_name != 'None'%}{{ employee.enc_house_name }}{%endif%}, 
-                {%if employee.home_post_office and employee.home_post_office != 'None'%}{{ employee.home_post_office }}{%endif%}<br>
+                {%if employee.enc_home_post_office and employee.enc_home_post_office != 'None'%}{{ employee.enc_home_post_office }}{%endif%}<br>
                 {{ employee.enc_home_city }}, {{ employee.state }}, {{ employee.country }} - {%if employee.enc_pincode and employee.enc_pincode != 'None'%}{{ employee.enc_pincode }}{%endif%}
               </div>
             </div>

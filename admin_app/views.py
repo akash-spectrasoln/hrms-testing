@@ -122,7 +122,7 @@ def add_employee(request):
                 employee.enc_house_name=employee.house_name   
                 employee.enc_valid_from=employee.valid_from
                 employee.enc_joining_bonus=employee.joining_bonus 
-
+                employee.enc_home_post_office = employee.home_post_office
 
                 employee.hr_emails=request.POST.get('hr_email_access') == 'on'
                 employee.save()  # Now save the employee instance
@@ -249,7 +249,7 @@ def export_employees_to_excel(request):
             employee.country.country_name if employee.country else '',
             employee.state.name if employee.state else '',
             employee.enc_house_name,      # Using encrypted property
-            employee.home_post_office,    # Not encrypted in your model
+            employee.enc_home_post_office,    # Using encrypted property
             employee.enc_home_city,       # Using encrypted property
             employee.enc_pincode,         # Using encrypted property
             employee.role.role_name if employee.role else '',
@@ -506,7 +506,7 @@ class EmployeeUpdateView(UpdateView):
             context['selected_country'] = employee.country if employee.country else None
             context['states'] = state.objects.filter(country=employee.country) if employee.country else []
             context['selected_state'] = employee.state if employee.state else None
-            context['home_post_office'] = employee.home_post_office
+            context['home_post_office'] = employee.enc_home_post_office
             context['incentive'] = employee.enc_incentive
             context['joining_bonus'] = employee.enc_joining_bonus
             
@@ -543,6 +543,7 @@ class EmployeeUpdateView(UpdateView):
             employee.enc_house_name=employee.house_name
             employee.enc_valid_from=employee.valid_from
             employee.enc_joining_bonus=employee.joining_bonus 
+            employee.enc_home_post_office = employee.home_post_office
 
             hr_email_access = self.request.POST.get('hr_email_access') == 'on'
             employee.hr_emails = hr_email_access
@@ -822,7 +823,6 @@ class EmployeeExcelCreateView(View):
                                 valid_to=parse_date_field(row['Valid To(mm/dd/yyyy)']),
                                 country=country,
                                 state=state_obj,
-                                home_post_office=parse(row['Home Post Office']),
                                 department=department,
                                 role=role_obj,
                                 manager=manager,
@@ -837,7 +837,8 @@ class EmployeeExcelCreateView(View):
                             employee.enc_date_of_birth = ensure_date_str(row['Date Of Birth(mm/dd/yyyy)'])
                             employee.enc_mobile_phone = str(parse(row['Mobile Phone']))
                             employee.enc_home_phone = str(parse(row['Home Phone'])) if 'Home Phone' in row else ''
-                            
+                            employee.enc_home_post_office=parse(row['Home Post Office'])
+
                             # Address information
                             employee.enc_address = parse(row['Address']) if 'Address' in row else ''
                             employee.enc_house_name = parse(row['House Name'])

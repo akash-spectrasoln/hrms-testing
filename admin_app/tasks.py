@@ -99,3 +99,63 @@ def send_birthday_emails():
                 html_message=html_message,
                 fail_silently=False
             )
+
+
+@shared_task
+def send_anniversary_emails():
+    """
+    Send congratulatory emails to employees on their work anniversary.
+    Anniversary is based on the `valid_from` field in Employees model.
+    """
+    today = datetime.now().date()
+
+    # Get all employees
+    employees = Employees.objects.all()
+
+    for employee in employees:
+        try:
+            if employee.enc_valid_from:  # make sure the date is not None
+                # Check if today matches the employee's valid_from (ignoring year)
+                if employee.enc_valid_from.month == today.month and employee.enc_valid_from.day == today.day:
+
+                    subject = "Your Service"
+
+                    # Plain text fallback
+                    plain_message = (
+                        f"Dear {employee.first_name},\n\n"
+                        f"Congratulations on the anniversary of your first day at Spectra! "
+                        f"The dedication, innovative ideas, and great collaboration that you and your colleagues across Spectra show daily is truly inspiring. "
+                        f"Thank you for everything you do for Spectra!\n\n"
+                        f"All the best,\nDiana"
+                    )
+
+                    # HTML message
+                    html_message = f"""
+                    <html>
+                    <body style="font-family: Arial, sans-serif; color: #333;">
+                        <p>Dear {employee.first_name},</p>
+                        <p><span>Congratula&#173;tions</span> on the anniversary of your first day at Spectra!</p>
+                        <p>
+                            The dedication, innovative ideas, and great collaboration that you and your colleagues
+                            across Spectra show daily is truly inspiring.
+                        </p>
+                        <p>Thank you for everything you do for Spectra!</p>
+
+                        <p style="margin-top: 20px;">All the best,<br>Diana</p>
+                    </body>
+                    </html>
+                    """
+
+                    send_mail(
+                        subject=subject,
+                        message=plain_message,
+                        from_email=settings.DEFAULT_FROM_EMAIL,
+                        recipient_list=[employee.company_email],  # ensure Employees model has email field
+                        html_message=html_message,
+                        fail_silently=False
+                    )
+
+        except Exception as e:
+            # Skip employees with invalid data
+            print(f"Error processing employee {employee.id}: {e}")
+            continue

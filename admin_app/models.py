@@ -146,9 +146,6 @@ class Employees(models.Model):
     modified_on = models.DateTimeField(auto_now=True, null=True)
     is_deleted = models.BooleanField(default=False)
     date_of_birth = models.TextField(null=True, blank=True, verbose_name="Date of Birth")
-
-
-    password = models.CharField(max_length=128, null=True, blank=True)
     resignation_date = models.DateField(null=True, blank=True)
     incentive = models.TextField(null=True,blank=True)
     joining_bonus=models.TextField(null=True)
@@ -210,20 +207,15 @@ class Employees(models.Model):
                 # Set the hashed default password
                 self.user.set_password('defaultpassword')
                 self.user.save()
-        else:
-            # Optionally, if `password` field is set on Employees, allow user password update.
-            if self.password:
-                self.user.set_password(self.password)
-                self.user.save()
-                # Clear the password field (optional: prevents storing plain text)
-                self.password = None
 
-      
 
         super().save(*args, **kwargs)
 
         if is_new:
+            # creating leavedetails record
+
             current_year = date.today().year
+
             reset_period = HolidayResetPeriod.objects.filter(country=self.country).first()
 
             if not reset_period:
@@ -249,6 +241,22 @@ class Employees(models.Model):
 
 
     # 
+
+    @property
+    def enc_home_post_office(self):
+        """Decrypt and return the home_post_office."""
+        return self._decrypt_field(self.home_post_office)
+
+    @enc_home_post_office.setter
+    def enc_home_post_office(self, value):
+        if value not in [None,""]:
+            if not hasattr(self, '_fields_to_encrypt'):
+                self._fields_to_encrypt = {}
+            self._fields_to_encrypt['home_post_office'] = value
+
+
+
+
     @property
     def enc_valid_from(self):
         """Decrypt and return the valid_from."""
@@ -261,7 +269,7 @@ class Employees(models.Model):
             if not hasattr(self, '_fields_to_encrypt'):
                 self._fields_to_encrypt = {}
             self._fields_to_encrypt['valid_from'] = value
-# ----
+
     @property
     def enc_date_of_birth(self):
         """Decrypt and return the date_of_birth."""
