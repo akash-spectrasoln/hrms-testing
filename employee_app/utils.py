@@ -15,7 +15,7 @@ def get_leave_policy_details(employee, referenced_year=None):
 
     #floating
     floating_holiday_policy= FloatingHolidayPolicy.objects.filter(country=employee.country,year=referenced_year).first()
-    allowed_floating_holiday_policy = floating_holiday_policy.allowed_floating_holidays
+
 
 
     #Casual
