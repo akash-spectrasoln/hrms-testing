@@ -1,0 +1,207 @@
+{% extends 'admin_partials/admin_base.html' %}
+{% load static form_tags %}
+
+{% block styles %}
+<style>
+  .form-control, .form-select {
+    font-size: 0.8rem;
+    padding: 4px 8px;
+    height: 34px;
+  }
+
+  .form-label {
+    margin-bottom: 2px; /* tighter space between label and input */
+    font-weight: 500;
+    font-size: 0.8rem;
+  }
+
+  .card-header, .card-body {
+    padding: 0.8rem 1rem;
+  }
+
+  .card-body {
+    padding-bottom: 1.5rem !important; /* extra space at bottom */
+  }
+
+  .card {
+    font-size: 0.85rem;
+    max-width: 720px;
+    margin: 0 auto;
+    box-shadow: 0 0 6px rgba(0,0,0,0.1);
+  }
+
+  .btn {
+    font-size: 0.8rem;
+    padding: 4px 10px;
+  }
+
+  .form-text {
+    font-size: 0.75rem;
+    margin-top: 2px;
+  }
+
+  #project-validity {
+    font-size: 0.75rem;
+    margin-top: 0.25rem;
+  }
+
+  .content-wrapper {
+    margin-left: 250px;
+    padding: 30px 15px 15px;
+  }
+
+  @media (max-width: 768px) {
+    .content-wrapper {
+      margin-left: 0;
+      padding: 15px;
+    }
+  }
+</style>
+
+{% endblock %}
+
+{% block content %}
+<div class="content-wrapper">
+  <div class="container-fluid">
+    <div class="card mt-3">
+      <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center py-2">
+        <h6 class="mb-0 mx-auto">
+          {% if project %} Edit Project {% else %} Assign Project to Employee {% endif %}
+        </h6>
+      </div>
+
+      <div class="card-body pt-2 pb-1">
+        <form method="post" novalidate id="assign-form">
+          {% csrf_token %}
+          {{ form.non_field_errors }}
+
+          {% for field in form %}
+            {% if field.name != 'start_date' and field.name != 'end_date' %}
+              <div >
+                <label for="{{ field.id_for_label }}" class="form-label">{{ field.label }}</label>
+                {{ field|add_class:"form-control" }}
+                {% if field.help_text %}
+                  <small class="form-text text-muted">{{ field.help_text }}</small>
+                {% endif %}
+                {{ field.errors }}
+              </div>
+            {% endif %}
+          {% endfor %}
+
+          <div id="project-validity" class="text-dark d-none ">
+            <small>Project Validity: <span id="valid-from"></span> to <span id="valid-to"></span></small>
+          </div>
+
+          <div class="row">
+            <div class="col-md-6 ">
+              <label for="id_start_date" class="form-label">Start Date</label>
+              {{ form.start_date|add_class:"form-control" }}
+              {{ form.start_date.errors }}
+            </div>
+            <div class="col-md-6 ">
+              <label for="id_end_date" class="form-label">End Date</label>
+              {{ form.end_date|add_class:"form-control" }}
+              {{ form.end_date.errors }}
+            </div>
+          </div>
+
+          <div class="d-flex justify-content-start mt-2 ">
+            <a href="{% url 'assign-project-list' %}" class="btn btn-secondary btn-sm">Back</a>
+            <button type="submit" class="btn btn-success btn-sm me-2">
+              <i class="fas fa-save"></i> Save
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- Select2 -->
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const clientSel = document.getElementById('id_client');
+  const projSel = document.getElementById('id_project');
+  const startIn = document.getElementById('id_start_date');
+  const endIn = document.getElementById('id_end_date');
+  const validityBox = document.getElementById('project-validity');
+  const vf = document.getElementById('valid-from');
+  const vt = document.getElementById('valid-to');
+
+  function formatDate(isoDateStr) {
+    const date = new Date(isoDateStr);
+    const mm = String(date.getMonth() + 1).padStart(2, '0');
+    const dd = String(date.getDate()).padStart(2, '0');
+    const yyyy = date.getFullYear();
+    return `${mm}/${dd}/${yyyy}`;
+  }
+
+  function setDateLimits(option) {
+    if (!option || !option.dataset.validFrom) {
+      [startIn, endIn].forEach(i => {
+        i.removeAttribute('min');
+        i.removeAttribute('max');
+      });
+      validityBox.classList.add('d-none');
+      return;
+    }
+
+    startIn.min = endIn.min = option.dataset.validFrom;
+    startIn.max = endIn.max = option.dataset.validTo;
+    vf.textContent = formatDate(option.dataset.validFrom);
+    vt.textContent = formatDate(option.dataset.validTo);
+    validityBox.classList.remove('d-none');
+  }
+
+  function loadProjects(clientId, selectedId = null) {
+    projSel.innerHTML = '<option>Loading...</option>';
+    fetch("{% url 'ajax_load_projects' %}?client_id=" + clientId)
+      .then(res => res.json())
+      .then(data => {
+        projSel.innerHTML = '<option value="">Select Project</option>';
+        data.projects.forEach(project => {
+          const option = new Option(project.project_name, project.project_id);
+          option.dataset.validFrom = project.valid_from;
+          option.dataset.validTo = project.valid_to;
+          if (selectedId && selectedId == project.project_id) option.selected = true;
+          projSel.appendChild(option);
+        });
+        setDateLimits(projSel.selectedOptions[0]);
+      })
+      .catch(() => alert("Failed to load projects"));
+  }
+
+  projSel.addEventListener('change', () => {
+    setDateLimits(projSel.selectedOptions[0]);
+  });
+
+  $(clientSel).select2({
+    placeholder: 'Search and select a client',
+    allowClear: true,
+    width: '100%',
+    ajax: {
+      url: '{% url "client_search" %}',
+      dataType: 'json',
+      delay: 250,
+      data: params => ({ term: params.term }),
+      processResults: data => ({ results: data.results }),
+      cache: true
+    }
+  }).on('change', function() {
+    loadProjects(this.value);
+  });
+
+  const selectedProject = projSel.value;
+  if (clientSel.value) {
+    loadProjects(clientSel.value, selectedProject);
+  } else {
+    setDateLimits(null);
+  }
+});
+</script>
+{% endblock %}

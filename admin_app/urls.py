@@ -1,5 +1,5 @@
 from django.urls import path
-
+from timesheet_app import views as ts_views
 from django.contrib.auth import views as auth_views
 # from admin_app.views import load_states  # Ensure correct function import
 from .views import *
@@ -76,6 +76,26 @@ path('export-emp-bank/',export_employee_bank_details,name='export_employee_bank_
 path('setup/', setup_list_create_view, name='setup_list'),
 path('setup/edit/<int:pk>/', setup_edit_view, name='setup_edit'),
 path('setup/delete/<int:pk>/', setup_delete_view, name='setup_delete'),
+
+path('clients/', ts_views.client_list, name='client_list'),
+path('clients/add/', ts_views.client_create, name='client_create'),
+path('clients/<int:pk>/edit/', ts_views.client_update, name='client_update'),
+path('clients/<int:pk>/delete/', ts_views.client_delete, name='client_delete'),
+path('projects/', ts_views.project_list, name='project_list'),
+path('projects/add/', ts_views.project_create, name='project_create'),
+path('projects/edit/<int:pk>/', ts_views.project_update, name='project_update'),
+path('projects/delete/<int:pk>/', ts_views.project_delete_view, name='project_delete'),
+path('assignments/',ts_views.AssignProjectListView.as_view(),name='assign-project-list'), # Create a new assignment
+path('assignments/create/',ts_views.AssignProjectCreateView.as_view(),name='assignproject_create'),
+path('ajax/client-search/', ts_views.client_search, name='client_search'),
+path('ajax/load-projects/', ts_views.load_projects, name='ajax_load_projects'),
+path('ajax/get-projects/<int:client_id>/', ts_views.get_projects_for_client, name='ajax_get_projects'),
+path('assignments/<int:pk>/update/', ts_views.AssignProjectUpdateView.as_view(), name='assign-project-update'),
+path('assignments/<int:pk>/delete/', ts_views.AssignProjectDeleteView.as_view(), name='assign-project-delete'),
+path('costcenters/', ts_views.CostCenterListView.as_view(), name='costcenter_list'),
+path('costcenters/create/', ts_views.CostCenterCreateView.as_view(), name='costcenter_create'),
+path('costcenters/<str:pk>/edit/', ts_views.CostCenterUpdateView.as_view(), name='costcenter_update'),
+
 ]
 
 

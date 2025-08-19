@@ -1,0 +1,1302 @@
+{% extends 'timesheet_partials/base.html' %}
+{% load static %}
+{% block content %}
+
+<div class="content-wrapper">
+  <h2 class="page-title">Time and Activity Recording</h2>
+  <div class="container-fluid mt-0 pt-0">
+    <div class="row gx-1 justify-content-center">
+
+      <!-- 📅 Calendar Section -->
+      <div class="col-12 col-lg-auto calendar-wrapper">
+        <div class="card shadow-sm mb-1">
+
+          <!-- Calendar Header with Proper Navigation -->
+          <div
+            class="card-header bg-primary text-white d-flex justify-content-between align-items-center py-1 flex-wrap flex-sm-nowrap">
+
+            <!-- Previous Year -->
+            <a class="btn btn-sm btn-light px-1 px-sm-2 py-0 calendar-nav" data-month="{{ month }}"
+              data-year="{{ year|add:'-1' }}" {% if prev_disabled %} disabled {% endif %}>
+              &laquo; <span class="d-none d-sm-inline">{{ year|add:'-1' }}</span>
+            </a>
+
+            <!-- Previous Month -->
+            <a class="btn btn-sm btn-light px-1 px-sm-2 py-0 calendar-nav" data-month="{{ prev_month }}"
+              data-year="{{ prev_year }}" {% if prev_disabled %} disabled {% endif %}>
+              &laquo;
+              <span class="d-inline d-sm-none">{{ prev_month_name|slice:":3" }}</span>
+              <span class="d-none d-sm-inline">{{ prev_month_name }}</span>
+            </a>
+
+            <!-- Current Month & Year -->
+            <h6 class="mb-0 text-center flex-grow-1 small">
+              <span class="d-inline d-sm-none">{{ current_month_name|slice:":3" }} {{ year }}</span>
+              <span class="d-none d-sm-inline">{{ current_month_name }} {{ year }}</span>
+            </h6>
+
+            <!-- Next Month -->
+            <a class="btn btn-sm btn-light px-1 px-sm-2 py-0 calendar-nav" data-month="{{ next_month }}"
+              data-year="{{ next_year }}" {% if next_disabled %} disabled {% endif %}>
+              <span class="d-inline d-sm-none">{{ next_month_name|slice:":3" }}</span>
+              <span class="d-none d-sm-inline">{{ next_month_name }}</span> &raquo;
+            </a>
+
+            <!-- Next Year -->
+            <a class="btn btn-sm btn-light px-1 px-sm-2 py-0 calendar-nav" data-month="{{ month }}"
+              data-year="{{ year|add:'1' }}" {% if next_year_disabled %} disabled {% endif %}>
+              <span class="d-none d-sm-inline">{{ year|add:'1' }}</span> &raquo;
+            </a>
+
+            <!-- Legend Button -->
+            <button id="legend-btn" class="btn btn-sm btn-light px-1 py-0 ms-1" title="Legend">
+              &#9776;
+            </button>
+
+
+
+          </div>
+
+
+
+          <div class="card-body p-1">
+            <!-- Calendar Grid -->
+            <div class="calendar-container mb-1">
+              <!-- Week Headers -->
+              <div class="calendar-grid calendar-header mb-1 small fw-bold">
+                {% for day in weekdays %}
+                <div class="text-center border-bottom">{{ day }}</div>
+                {% endfor %}
+              </div>
+              <div class="calendar-grid calendar-days">
+                {% for week in calendar_data %}
+                {% for day in week %}
+                {% if day %}
+                <div
+                  class="calendar-day {{ day.status }} {% if day.is_today %}today-outline{% endif %} {% if day.is_disabled %}disabled{% endif %}"
+                  data-date="{{ day.date|date:'Y-m-d' }}" {% if day.holiday_name %}data-holiday="{{ day.holiday_name }}"
+                  title="{{ day.holiday_name }}" {% endif %}>
+                  <span class="day-number">{{ day.day }}</span>
+                  {% if day.total_hours %}
+                  <span class="day-hours {% if day.is_approved %}approved-hours{% endif %}">
+                    {{ day.total_hours }}h
+                  </span>
+                  {% endif %}
+                </div>
+                {% else %}
+                <!-- empty cell for alignment -->
+                <div class="calendar-day empty"></div>
+                {% endif %}
+                {% endfor %}
+                {% endfor %}
+              </div>
+            </div>
+
+            <!-- Legend -->
+            <!-- Legend Popup -->
+            <div id="legend-popup" class="legend-popup shadow-sm">
+    <div class="legend-item">
+        <span class="legend-color-box bg-success"></span>
+        Entered
+    </div>
+    <div class="legend-item">
+        <span class="legend-color-box bg-warning text-dark"></span>
+        Not Entered
+    </div>
+    <div class="legend-item">
+        <span class="legend-color-box" style="background-color:#f5c6cb;"></span>
+        Holiday
+    </div>
+    <div class="legend-item">
+        <span class="legend-color-box" style="background-color:#d6c8f4;"></span>
+        Leave
+    </div>
+    <div class="legend-item">
+        <span class="legend-color-box bg-secondary"></span>
+        Weekend
+    </div>
+    <div class="legend-item">
+        <span class="legend-color-box border border-primary"></span>
+        Today
+    </div>
+    <div class="legend-item">
+        <span class="legend-color-box bg-info"></span>
+        Selected
+    </div>
+</div>
+          </div>
+        </div>
+
+        <!-- Entry Details Table -->
+        <div id="entry-details" class="card mb-2 d-none">
+          <div class="card-header bg-light py-1 px-2 d-flex justify-content-between align-items-center">
+            <strong class="small text-primary">
+              Timesheet Details: <span id="details-date"></span>
+            </strong>
+            <div>
+              <button id="paste-btn" class="btn btn-sm btn-warning d-none me-1">Paste Selected</button>
+              <button id="add-entry-btn" class="btn btn-sm btn-primary ms-1">+ Add Entry</button>
+            </div>
+          </div>
+          <div class="card-body p-1" id="details-body"></div>
+        </div>
+      </div>
+
+      <!-- 📝 Timesheet Form -->
+      <!-- 📝 Timesheet Form -->
+      <div class="col-12 col-lg-auto" id="timesheet-form-container">
+        <div class="card shadow-sm mb-0 timesheet-card">
+          <div class="card-header bg-primary text-white py-1 px-2">
+            <h6 class="mb-0 small" id="timesheet-form-header" >Timesheet</h6>
+          </div>
+          <div class="card-body p-2">
+            <form id="timesheet-form" method="POST" action="{% url 'submit_timesheet' %}">
+              {% csrf_token %}
+              <input type="hidden" id="entry-id" name="entry_id">
+
+              <!-- Date -->
+              <div class="mb-0">
+                <label for="date" class="form-label small mb-0">Date</label>
+                <input type="date" id="date" name="date" class="form-control form-control-sm" required>
+              </div>
+
+              <!-- Hours -->
+
+
+              <!-- Project -->
+              <div class="mb-0">
+                <label class="form-label small mb-0">Project</label>
+                <select id="project" name="project" class="form-select form-select-sm" required>
+                  <option disabled selected>Pick a date to load projects</option>
+                </select>
+                <div id="remaining-days-info" class="form-text small mt-0 mb-0"></div>
+              </div>
+
+              <div class="mb-0">
+                <label for="hours_worked" class="form-label small mb-0">Hours</label>
+                <input type="number" step="1" min="0" max="12" id="hours_worked" name="hours_worked"
+                  class="form-control form-control-sm" required>
+              </div>
+
+              <!-- Activity -->
+              <div class="mb-0">
+                <label class="form-label small mb-0">Activity</label>
+                <select id="activity" name="activity" class="form-select form-select-sm" required>
+                  <option value="">Select</option>
+                  {% for a in activities %}
+                  <option value="{{ a.pk }}">{{ a.act_name }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+
+              <!-- Work Location -->
+              <div class="mb-0">
+                <label class="form-label small mb-0">Work Location</label>
+                <select id="work_location" name="work_location" class="form-select form-select-sm" required>
+                  <option value="">Select</option>
+                  {% for w in work_locations %}
+                  <option value="{{ w.pk }}">{{ w.loc_name }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+
+              <!-- Description -->
+              <div class="mb-0">
+                <label class="form-label small mb-0">Task Performed</label>
+                <textarea id="description" name="description" rows="3" class="form-control form-control-sm"
+                  required></textarea>
+              </div>
+
+              {% if not day.week_is_approved %}
+                <button type="submit" class="btn btn-success w-100 btn-sm mt-2">Submit Timesheet</button>
+              {% endif %}
+
+            </form>
+          </div>
+        </div>
+      </div>
+
+
+    </div>
+  </div>
+</div>
+
+
+<div id="message-container"></div>
+
+<style>
+  .content-wrapper {
+    margin-left: 0;
+    margin-top: 20px;
+    padding: 16px 6px 6px 6px;
+    /* Added padding-top to separate from navbar */
+  }
+
+  @media (min-width: 992px) {
+    .content-wrapper {
+      margin-left: 250px;
+      margin-top: 33px;
+      padding: 48px 8px 8px 8px;
+      /* Top padding slightly more for larger screens */
+    }
+  }
+/* 📋 Legend Popup Styles */
+.legend-popup {
+    position: absolute;
+    top: 38px;
+    right: 6px;
+    background: #fff;
+    border: 1px solid #ddd;
+    padding: 6px;
+    border-radius: 6px;
+    display: none; /* Hidden by default */
+    z-index: 999; /* Ensures it appears on top of other content */
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* Adds a slight shadow for better visibility */
+    font-size: 0.7rem; /* Reduced font size */
+}
+
+/* Updated styles for the legend items */
+.legend-popup .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 2px; /* Reduced horizontal gap */
+    margin-bottom: 0px; /* Reduced vertical gap */
+}
+
+.legend-popup .legend-item:last-child {
+    margin-bottom: 0;
+}
+
+.legend-color-box {
+    width: 10px;
+    height: 10px;
+    border-radius: 3px;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    display: inline-block;
+}
+
+  .page-title {
+    text-align: center;
+    margin-bottom: 10px;
+    color: #2c3e50;
+    font-size: 1.2rem;
+    font-weight: 600;
+  }
+
+  /* Fix selector and apply reduced width */
+  #timesheet-form-container {
+    max-width: 400px;
+    width: 100%;
+    margin-left: 12px;
+    margin-right: 0;
+    margin-top: 0 !important;
+  }
+
+  .calendar-wrapper {
+    max-width: 420px;
+    /* reduce this more to make days square-like */
+    width: 100%;
+  }
+
+  /* Optionally limit card height */
+  #timesheet-form-container .card.timesheet-card {
+    max-height: 500px;
+    overflow-y: auto;
+  }
+
+  /* --- Ultra-Compact Timesheet Form --- */
+  #timesheet-form .form-label {
+    font-size: 0.65rem;
+    margin-bottom: 0px;
+    line-height: 1;
+  }
+
+  #timesheet-form .form-control,
+  #timesheet-form .form-select {
+    height: 24px;
+    font-size: 0.7rem;
+    padding: 0 0.2rem;
+    line-height: 1;
+  }
+
+  #timesheet-form textarea {
+    min-height: 34px;
+    font-size: 0.7rem;
+    padding: 0.2rem;
+    line-height: 1.1;
+  }
+
+  #timesheet-form .mb-2 {
+    margin-bottom: 0.2rem !important;
+  }
+
+  #timesheet-form button[type="submit"] {
+    font-size: 0.7rem;
+    padding: 0.2rem 0.4rem;
+    margin-top: 0.2rem;
+    line-height: 1;
+  }
+
+  /* ---------------- Calendar ---------------- */
+  .calendar-container {
+    overflow-x: auto;
+    margin-top: 4px;
+  }
+
+  .calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 2px;
+    /* Slightly increased for visual clarity */
+  }
+
+  .calendar-header div {
+    font-size: 0.55rem;
+    padding: 1px 0;
+    font-weight: 500;
+    text-align: center;
+  }
+
+  .calendar-day {
+    position: relative;
+    height: 44px;
+    font-size: 0.65rem;
+    font-weight: 500;
+    background: #fff;
+    border: 0.5px solid #dee2e6;
+    border-radius: 4px;
+    text-align: center;
+    cursor: pointer;
+    padding: 2px;
+    transition: all 0.1s ease-in-out;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+  }
+
+  .calendar-day.disabled {
+    cursor: not-allowed;
+    opacity: 0.4;
+  }
+
+  .calendar-day:hover:not(.disabled) {
+    transform: scale(1.03);
+  }
+
+  .day-number {
+    display: block;
+    line-height: 1;
+  }
+
+  .day-hours {
+    font-size: 0.5rem;
+    font-weight: 600;
+    color: #0d6efd;
+    position: absolute;
+    bottom: 2px;
+    right: 3px;
+  }
+
+  .day-hours.approved-hours {
+    font-size: 0.5rem;
+    color: #0f9d58;
+    /* Google green */
+    font-weight: 600;
+    position: absolute;
+    bottom: 2px;
+    right: 3px;
+  }
+
+  /* ✅ Status Colors */
+  .status-entered {
+    border-bottom: 3px solid #28a745;
+  }
+
+  .status-not-entered {
+    border-bottom: 3px solid #ffc107;
+  }
+
+  .status-weekend {
+    background-color: #9bacbc;
+    color: #050e18;
+  }
+
+  .status-holiday {
+    background-color: #f8adad;
+    color: #d64352;
+    font-weight: 600;
+  }
+
+  .status-leave {
+    background-color: #a46fe5;
+    color: #140d23;
+    font-weight: 600;
+  }
+
+
+
+  .today-outline {
+    box-shadow: 0 0 0 1.5px #62a0fc inset !important;
+    font-weight: bold;
+  }
+
+  /* ✅ Selection */
+  .selected-for-copy {
+    border: 1.5px solid #20c997 !important;
+    box-shadow: 0 0 4px #20c997;
+    background-color: #e6fffa !important;
+  }
+
+  .selected-source-date {
+    border: 1.5px solid #0d6efd !important;
+    box-shadow: 0 0 4px #0d6efd;
+    background-color: #e7f0ff !important;
+  }
+
+  .selected-target-date {
+    border: 1.5px solid #20c997 !important;
+    box-shadow: 0 0 4px #20c997;
+    background-color: #e6fffa !important;
+  }
+
+  .status-weekend,
+  .status-holiday {
+    cursor: pointer !important;
+  }
+
+  /* ✅ Legend Badges */
+  .badge {
+    font-size: 0.6rem;
+    padding: 0.15em 0.25em;
+    line-height: 1;
+    border-radius: 0.2rem;
+  }
+
+  /* ✅ Loader & Messages */
+  #loader-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+  }
+
+  #loader-overlay.d-none {
+    display: none;
+  }
+
+  #message-container {
+    display: none;
+    position: fixed;
+    top: 1rem;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 2050;
+    min-width: 260px;
+    padding: 5px 10px;
+    border-radius: 0.25rem;
+    color: #fff;
+    font-weight: 600;
+    text-align: center;
+    font-size: 0.75rem;
+  }
+
+  /* Clicked date with amber/orange glow */
+  .clicked-date-temp {
+    box-shadow: 0 0 5px 2px rgba(255, 165, 0, 0.6) !important;
+  }
+
+  .calendar-day.clicked-date {
+    box-shadow: 0 0 5px 2px rgba(255, 165, 0, 0.6) !important;
+  }
+  .approved-tick {
+    color: green; /* Or any shade of green you prefer */
+    }
+
+
+
+
+  .today-outline.clicked-date-temp {
+    box-shadow: 0 0 5px 2px rgba(255, 165, 0, 0.6), 0 0 0 1.5px #62a0fc inset !important;
+  }
+
+  /* ---------------- Header & Table ---------------- */
+  #entry-details .card-header {
+    padding: 0.2rem 0.25rem !important;
+  }
+
+  #entry-details .card-header strong {
+    font-size: 0.65rem !important;
+  }
+
+  #entry-details .btn {
+    padding: 0.05rem 0.2rem !important;
+    font-size: 0.6rem !important;
+    line-height: 1 !important;
+  }
+
+  #entry-details .table {
+    margin-bottom: 0 !important;
+  }
+
+  #entry-details .table th,
+  #entry-details .table td {
+    padding: 0.05rem 0.25rem !important;
+    font-size: 0.65rem !important;
+  }
+
+  #entry-details .table-responsive {
+    margin-bottom: 0 !important;
+  }
+
+  .card-header.bg-primary.d-flex {
+    gap: 2px;
+    padding: 0.15rem 0.25rem;
+    flex-wrap: nowrap;
+  }
+
+  .card-header.bg-primary.d-flex .btn {
+    padding: 0.03rem 0.25rem;
+    font-size: 0.6rem;
+    line-height: 1;
+    margin: 0;
+    border-radius: 0.15rem;
+  }
+
+  .card-header.bg-primary.d-flex h6 {
+    margin: 0;
+    font-size: 0.7rem;
+    line-height: 1;
+    white-space: nowrap;
+    flex: 1;
+    text-align: center;
+  }
+
+  .table-checkbox-cell {
+    width: 40px;
+    padding: 0;
+    text-align: center;
+    vertical-align: middle;
+  }
+
+  .table-checkbox-cell input[type="checkbox"] {
+    width: 10px;
+    height: 10px;
+    vertical-align: middle;
+    margin: 0;
+    display: inline-block;
+  }
+
+
+
+
+  /* ✅ Style the checkbox to fit and align well */
+
+
+  /* ---------------- MOBILE OPTIMIZATION ---------------- */
+  @media (max-width: 576px) {
+
+    .calendar-day {
+      min-height: 26px;
+      font-size: 0.5rem;
+      padding: 1px;
+      border-radius: 3px;
+    }
+
+    .calendar-day .day-hours {
+      font-size: 0.4rem;
+      bottom: 1px;
+      right: 1.5px;
+    }
+
+    .card-header.bg-primary.d-flex .btn {
+      font-size: 0.5rem;
+      padding: 0.02rem 0.12rem;
+      white-space: nowrap;
+    }
+
+    .card-header.bg-primary.d-flex h6 {
+      font-size: 0.6rem;
+      white-space: nowrap;
+      flex-shrink: 1;
+    }
+
+    .card-body .d-flex.flex-wrap {
+      flex-wrap: nowrap !important;
+      overflow-x: auto;
+      justify-content: start;
+      gap: 2px;
+      scrollbar-width: none;
+    }
+
+    .card-body .d-flex.flex-wrap::-webkit-scrollbar {
+      display: none;
+    }
+
+    .badge {
+      font-size: 0.5rem;
+      padding: 0.12em 0.25em;
+      line-height: 1;
+      white-space: nowrap;
+    }
+
+    #entry-details .table th,
+    #entry-details .table td {
+      font-size: 0.5rem !important;
+      padding: 0.04rem 0.15rem !important;
+    }
+
+    #timesheet-form .form-control,
+    #timesheet-form .form-select {
+      height: 22px;
+      font-size: 0.6rem;
+      padding: 0 0.15rem;
+    }
+
+    #timesheet-form textarea {
+      min-height: 28px;
+      font-size: 0.6rem;
+    }
+
+    #timesheet-form-container {
+      margin-left: 0;
+    }
+
+
+    #timesheet-form button[type="submit"] {
+      font-size: 0.6rem;
+      padding: 0.12rem;
+    }
+
+    .btn[data-month-name]::after {
+      content: attr(data-month-short);
+    }
+
+    .btn[data-month-name] span {
+      display: none;
+    }
+
+  }
+</style>
+
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    /** -------------------- DOM Elements -------------------- **/
+    const form = document.getElementById('timesheet-form');
+    const formContainer = document.getElementById('timesheet-form-container');
+    const entryIdField = document.getElementById('entry-id');
+    const hoursField = document.getElementById('hours_worked');
+    const projectSelect = document.getElementById('project');
+    const activitySelect = document.getElementById('activity');
+    const workLocSelect = document.getElementById('work_location');
+    const descriptionField = document.getElementById('description');
+    const dateField = document.getElementById('date');
+    const submitBtn = form.querySelector('button[type="submit"]');
+    const remainingDaysInfo = document.getElementById('remaining-days-info');
+    const pasteBtn = document.getElementById('paste-btn');
+    const entryDetails = document.getElementById('entry-details');
+    const detailsDate = document.getElementById('details-date');
+    const detailsBody = document.getElementById('details-body');
+    const calendar = document.querySelector('.calendar-days');
+
+    /** -------------------- State -------------------- **/
+    let selectedEntryIds = [];
+    let targetDates = new Set();
+    let sourceDate = null;
+    let clickedDateTemp = null;
+    let isLeaveDay = false;
+
+    /** -------------------- Helpers (added) -------------------- **/
+    const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+
+    async function fetchDayDataNoCache(date) {
+      const resp = await fetch(
+        `/hrms/employee/ajax/get-timesheet-day-data/?date=${encodeURIComponent(date)}&_=${Date.now()}`,
+        { cache: 'no-store' }
+      );
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      return resp.json();
+    }
+
+
+
+    /** -------------------- Utils -------------------- **/
+    const formatDate = dStr => {
+      const d = new Date(dStr);
+      return `${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}/${d.getFullYear()}`;
+    };
+
+    const showToastMessage = (msg, type = 'success') => {
+      const bg = type === 'success' ? 'rgb(25,135,84)' : 'rgb(220,53,69)'; // only success/error are styled
+      let container = document.querySelector('.toast-container');
+      if (!container) {
+        container = document.createElement('div');
+        container.className = 'toast-container position-fixed top-0 end-0 p-3';
+        container.style.zIndex = 9996;
+        container.style.marginTop = '5rem';
+        document.body.appendChild(container);
+      }
+      const toastEl = document.createElement('div');
+      toastEl.className = 'toast mb-2 position-relative';
+      toastEl.style.backgroundColor = bg;
+      toastEl.setAttribute('role', 'alert');
+      toastEl.setAttribute('aria-live', 'assertive');
+      toastEl.setAttribute('aria-atomic', 'true');
+      toastEl.dataset.bsAutohide = 'true';
+      toastEl.dataset.bsDelay = '8000';
+      toastEl.innerHTML = `
+      <button type="button" class="btn-close btn-close-white position-absolute top-0 end-0 mt-2 me-2" data-bs-dismiss="toast" aria-label="Close"></button>
+      <div class="d-flex align-items-center text-white border-0"><div class="toast-body">${msg}</div></div>`;
+      container.appendChild(toastEl);
+      new bootstrap.Toast(toastEl).show();
+    };
+
+    const lockForm = (locked, leaveMode = false) => {
+      [projectSelect, activitySelect, workLocSelect, hoursField, descriptionField].forEach(el => {
+        el.disabled = locked;
+        el.style.backgroundColor = locked ? '#f0f0f0' : '';
+      });
+      // submitBtn.disabled = locked;
+      if (locked) {
+          submitBtn.style.display = 'none';   // <-- hide completely
+        } else {
+          submitBtn.style.display = '';       // <-- show it again
+      }
+      if (leaveMode) {
+        form.reset();
+        projectSelect.innerHTML = `<option selected>Select</option>`;
+        hoursField.value = '';
+      }
+    };
+
+    const clearForm = (preserveDate = false) => {
+      const currentDate = dateField.value;
+      form.reset();
+      entryIdField.value = '';
+      remainingDaysInfo.textContent = '';
+      formContainer.style.display = 'none';
+      if (preserveDate && currentDate) dateField.value = currentDate;
+    };
+
+    const clearDetails = () => {
+      entryDetails.classList.add('d-none');
+      detailsBody.innerHTML = '<div class="text-center py-2">Loading...</div>';
+    };
+
+    const clearDayHours = cell => { cell?.querySelector('.day-hours')?.remove(); };
+
+    /** -------------------- Initial Setup -------------------- **/
+    formContainer.style.display = 'none';
+    pasteBtn.classList.add('d-none');
+
+    // Disable weekends, holidays, leave days
+    calendar.querySelectorAll('.calendar-day').forEach(d => {
+      if (d.classList.contains('status-weekend') || d.classList.contains('status-holiday') || d.classList.contains('status-leave') || d.classList.contains('leave-day')) {
+        d.classList.add('disabled'); clearDayHours(d); d.classList.remove('status-entered');
+      } else { d.classList.remove('disabled'); }
+    });
+
+    /** -------------------- Mobile Holiday Tooltip -------------------- **/
+    calendar.querySelectorAll('.calendar-day[data-holiday]').forEach(dayEl => {
+      let tooltipEl = null;
+      dayEl.addEventListener('touchstart', e => {
+        e.preventDefault();
+        if (tooltipEl) tooltipEl.remove();
+        const holidayName = dayEl.dataset.holiday;
+        tooltipEl = document.createElement('div');
+        tooltipEl.className = 'holiday-tooltip shadow-sm p-1 rounded';
+        tooltipEl.textContent = holidayName;
+        tooltipEl.style.position = 'absolute';
+        tooltipEl.style.background = '#dc3545';
+        tooltipEl.style.color = 'white';
+        tooltipEl.style.padding = '2px 6px';
+        tooltipEl.style.fontSize = '0.75rem';
+        tooltipEl.style.borderRadius = '4px';
+        tooltipEl.style.zIndex = 9999;
+        document.body.appendChild(tooltipEl);
+        const rect = dayEl.getBoundingClientRect();
+        tooltipEl.style.top = rect.top - tooltipEl.offsetHeight - 4 + 'px';
+        tooltipEl.style.left = rect.left + (rect.width - tooltipEl.offsetWidth) / 2 + 'px';
+        setTimeout(() => { tooltipEl?.remove(); tooltipEl = null; }, 2000);
+      });
+    });
+
+    /** -------------------- Projects Dropdown -------------------- **/
+    const populateProjects = (projects, selectedProjectId = null) => {
+      projectSelect.innerHTML = ''; remainingDaysInfo.textContent = '';
+      if (!projects.length || isLeaveDay) {
+        projectSelect.innerHTML = '<option disabled selected>No projects available</option>';
+        return;
+      }
+      const frag = document.createDocumentFragment();
+      projects.forEach(item => {
+        const opt = document.createElement('option');
+        opt.value = item.projectAssignmentId;
+        opt.textContent = `${item.name} (${item.client_alias || 'Cost Center'})`;
+        if ((selectedProjectId && item.projectAssignmentId == selectedProjectId) || (!selectedProjectId && item.selected)) opt.selected = true;
+        opt.dataset.remainingDays = item.remaining_days || '';
+        frag.appendChild(opt);
+      });
+      projectSelect.appendChild(frag);
+      projectSelect.dispatchEvent(new Event('change'));
+    };
+
+    projectSelect.addEventListener('change', () => {
+      const opt = projectSelect.selectedOptions[0];
+      remainingDaysInfo.textContent = opt?.dataset.remainingDays ? `Remaining days: ${opt.dataset.remainingDays}` : '';
+    });
+
+    /** -------------------- Populate Form for Edit/View -------------------- **/
+    const populateForm = (entry, readOnly = false) => {
+      entryIdField.value = entry.tsheet_item_id;
+      dateField.value = entry.date;
+      hoursField.value = entry.hours_worked;
+      descriptionField.value = entry.description || '';
+      if (entry.activity_id) activitySelect.value = entry.activity_id;
+      if (entry.work_location_id) workLocSelect.value = entry.work_location_id;
+      if (entry.projectAssignmentId) {
+        if (!projectSelect.querySelector(`option[value="${entry.projectAssignmentId}"]`)) {
+          const opt = document.createElement('option');
+          opt.value = entry.projectAssignmentId;
+          opt.textContent = entry.project_name || entry.cost_center_name || 'Project/Cost Center';
+          opt.selected = true;
+          projectSelect.appendChild(opt);
+        } else projectSelect.value = entry.projectAssignmentId;
+      } else projectSelect.value = null;
+      formContainer.style.display = 'block';
+      lockForm(readOnly);
+      formContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    };
+
+    /** -------------------- New Entry Button -------------------- **/
+    const addEntryButtonHandler = () => {
+      clearForm(true); lockForm(false);
+      formContainer.style.display = 'block';
+      formContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    };
+
+    /** -------------------- Load Day Data -------------------- **/
+    const loadDayData = async (date, suppressErrors = false) => {
+      clearForm(true);
+      clearDetails();
+      showSpinnerAndDisableButtons();
+      try {
+        const resp = await fetch(
+          `/hrms/employee/ajax/get-timesheet-day-data/?date=${encodeURIComponent(date)}&_=${Date.now()}`,
+          { cache: 'no-store' }
+        );
+        if (!resp.ok) { if (!suppressErrors) showToastMessage(`HTTP error: ${resp.status}`, "error"); return; }
+        let data;
+        try { data = await resp.json(); }
+        catch { if (!suppressErrors) showToastMessage("Invalid JSON response from server.", "error"); return; }
+
+        dateField.value = date;
+        detailsDate.textContent = formatDate(date);
+        isLeaveDay = false;
+
+        const selectedCell = document.querySelector(`.calendar-day[data-date="${date}"]`);
+
+        if (data.is_leave_day) {
+          lockForm(true, true);
+          isLeaveDay = true;
+          if (selectedCell) {
+            selectedCell.classList.add('disabled', 'status-leave');
+            clearDayHours(selectedCell);
+            selectedCell.classList.remove('status-entered');
+          }
+          return data;
+        }
+
+        populateProjects(data.projects);
+
+        if (data.entries?.length) {
+          entryDetails.classList.remove('d-none');
+          const tbodyHTML = data.entries.map(entry => `
+          <tr ${entry.is_approved ? 'style="background:#f8f9fa;"' : ''}>
+            <td class="table-checkbox-cell">
+              <input type="checkbox" class="entry-checkbox" value="${entry.tsheet_item_id}">
+            </td>
+            <td>${entry.project_name}</td>
+            <td class="text-end">${entry.hours_worked}</td>
+            <td>${entry.work_location_name || ''}</td>
+            <td class="text-center">
+              ${entry.is_approved
+              ? `<button type="button" class="view-entry btn btn-link p-0 approved-tick" data-entry='${JSON.stringify(entry)}'>✔</button>`
+              : `<button type="button" class="edit-entry btn btn-link p-0" data-entry='${JSON.stringify(entry)}'>✏️</button>`}
+            </td>
+          </tr>`).join('');
+
+          detailsBody.innerHTML = `
+          <div class="table-responsive mb-1">
+            <table class="table table-bordered table-hover table-sm align-middle timesheet-details-table">
+              <thead class="table-primary">
+                <tr>
+                  <th class="table-checkbox-cell" style="width:30px;">
+                    <input type="checkbox" id="select-all">
+                  </th>
+                  <th>Project</th>
+                  <th class="text-end" style="width:60px;">Hours</th>
+                  <th style="width:80px;">Location</th>
+                  <th class="text-center" style="width:40px;">Action</th>
+                </tr>
+              </thead>
+              <tbody>${tbodyHTML}</tbody>
+            </table>
+          </div>`;
+
+          initCheckboxLogic();
+
+          detailsBody.querySelectorAll('.edit-entry').forEach(btn =>
+            btn.addEventListener('click', e => populateForm(JSON.parse(e.currentTarget.dataset.entry), false))
+          );
+          detailsBody.querySelectorAll('.view-entry').forEach(btn =>
+            btn.addEventListener('click', e => populateForm(JSON.parse(e.currentTarget.dataset.entry), true))
+          );
+
+          document.getElementById('add-entry-btn').addEventListener('click', addEntryButtonHandler);
+        } else {
+          formContainer.style.display = 'block';
+          lockForm(false);
+        }
+
+        if (selectedCell && (
+          selectedCell.classList.contains('status-weekend') ||
+          selectedCell.classList.contains('status-holiday') ||
+          selectedCell.classList.contains('status-leave')
+        )) {
+          selectedCell.classList.add('disabled');
+          clearDayHours(selectedCell);
+          selectedCell.classList.remove('status-entered');
+        }
+        return data;
+      } catch (err) {
+        console.error("loadDayData error:", err);
+        if (!suppressErrors) showToastMessage("Failed to load day data. Please check your connection.", "error");
+      } finally {
+        hideSpinnerAndEnableButtons();
+      }
+    };
+
+    /** -------------------- Debounce Utility -------------------- **/
+    const debounce = (fn, delay = 200) => {
+      let timer;
+      return (...args) => { clearTimeout(timer); timer = setTimeout(() => fn(...args), delay); };
+    };
+
+    /** -------------------- Calendar Click Logic -------------------- **/
+    const handleCalendarClick = async (e) => {
+      const btn = e.target.closest('.calendar-day'); if (!btn || !btn.dataset.date) return;
+      const date = btn.dataset.date; const today = new Date().toISOString().split('T')[0];
+      if (date > today) return showToastMessage("Cannot select future dates.", "error");
+
+      calendar.querySelectorAll('.calendar-day').forEach(d => d.classList.remove('clicked-date'));
+      btn.classList.add('clicked-date');
+
+      if (!sourceDate) {
+        if (clickedDateTemp === date) { resetSelection(); return; }
+        clickedDateTemp = date; await loadDayData(date); return;
+      }
+
+      if (date === sourceDate) { resetSelection(); return; }
+      if (targetDates.has(date)) { targetDates.delete(date); btn.classList.remove('selected-target-date'); }
+      else { targetDates.add(date); btn.classList.add('selected-target-date'); }
+
+      toggleActionButtons();
+    };
+
+    calendar.addEventListener('click', debounce(handleCalendarClick, 200));
+
+
+
+    function loadCalendar(month, year) {
+  showSpinnerAndDisableButtons(); // Show spinner before request
+
+  const url = new URL(window.location.href);
+  url.searchParams.set('month', month);
+  url.searchParams.set('year', year);
+
+  fetch(url, {
+    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+  })
+    .then(response => response.text())
+    .then(html => {
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(html, 'text/html');
+      const newCalendar = doc.querySelector('.calendar-wrapper');
+      const oldCalendar = document.querySelector('.calendar-wrapper');
+
+      if (newCalendar && oldCalendar) {
+        oldCalendar.replaceWith(newCalendar);
+        attachNavHandlers(); // Re-attach click handlers
+      }
+    })
+    .catch(err => console.error('Error loading calendar:', err))
+    .finally(() => hideSpinnerAndEnableButtons()); // Hide spinner when done
+}
+
+    // Attach click handlers to navigation buttons
+    function attachNavHandlers() {
+      document.querySelectorAll('.calendar-nav').forEach(btn => {
+        btn.addEventListener('click', event => {
+          event.preventDefault();
+
+          const month = btn.dataset.month;
+          const year = btn.dataset.year;
+
+          if (!month || !year || btn.disabled) return;
+
+          loadCalendar(month, year);
+        });
+      });
+    }
+
+    // Initialize
+    attachNavHandlers();
+    /** -------------------- Calendar refresh (SAFE) -------------------- **/
+    async function refreshCalendarDates(dates, maxRetries = 4, baseDelay = 250) {
+      const tasks = [...new Set(dates)].map(async (d) => {
+        const cell = document.querySelector(`.calendar-day[data-date="${d}"]`);
+        for (let attempt = 0; attempt < maxRetries; attempt++) {
+          try {
+            const data = await fetchDayDataNoCache(d);
+            const totalHrs = data.entries?.reduce((a, e) => a + parseFloat(e.hours_worked || 0), 0) || 0;
+
+            if (!cell) return;
+
+            cell.querySelector('.day-hours')?.remove();
+            cell.classList.remove('updating');
+
+            if (cell.classList.contains('status-weekend') || cell.classList.contains('status-holiday') || data.is_leave_day) {
+              cell.classList.add('disabled');
+              cell.classList.remove('status-entered', 'status-not-entered');
+              return;
+            }
+
+            if (totalHrs > 0) {
+              const hoursEl = document.createElement('span');
+              hoursEl.className = 'day-hours';
+              hoursEl.textContent = totalHrs + 'h';
+              cell.appendChild(hoursEl);
+              cell.classList.add('status-entered');
+              cell.classList.remove('status-not-entered', 'disabled');
+              return;
+            } else {
+              if (attempt < maxRetries - 1) {
+                await sleep(baseDelay * (attempt + 1));
+                continue;
+              } else {
+                cell.classList.remove('status-entered');
+                cell.classList.add('status-not-entered');
+                cell.classList.remove('disabled');
+                return;
+              }
+            }
+          } catch (err) {
+            if (attempt < maxRetries - 1) {
+              await sleep(baseDelay * (attempt + 1));
+              continue;
+            } else {
+              console.error('refreshCalendarDates error for', d, err);
+              cell?.classList.remove('updating');
+              return;
+            }
+          }
+        }
+      });
+      await Promise.all(tasks);
+    }
+
+    /** -------------------- Checkbox & Paste Logic -------------------- **/
+    const initCheckboxLogic = () => {
+      const checkboxes = document.querySelectorAll('.entry-checkbox');
+      const selectAll = document.getElementById('select-all');
+
+      const updateSelection = () => {
+        selectedEntryIds = [...checkboxes].filter(cb => cb.checked && cb.value !== '').map(cb => cb.value);
+        const sourceBtn = document.querySelector(`[data-date="${clickedDateTemp}"]`);
+        if (!sourceDate && selectedEntryIds.length > 0 && clickedDateTemp) { sourceDate = clickedDateTemp; sourceBtn?.classList.add('selected-source-date'); }
+        if (selectedEntryIds.length === 0 && sourceDate) { document.querySelector(`[data-date="${sourceDate}"]`)?.classList.remove('selected-source-date'); sourceDate = null; }
+        toggleActionButtons();
+      };
+
+      checkboxes.forEach(cb => cb.addEventListener('change', updateSelection));
+      selectAll?.addEventListener('change', () => { checkboxes.forEach(cb => { if (!cb.disabled) cb.checked = selectAll.checked; }); updateSelection(); });
+      updateSelection();
+    };
+
+    const toggleActionButtons = () => { pasteBtn.classList.toggle('d-none', selectedEntryIds.length === 0 || targetDates.size === 0); };
+
+    const resetSelection = () => {
+      sourceDate = null; clickedDateTemp = null; selectedEntryIds = []; targetDates.clear();
+      calendar.querySelectorAll('.calendar-day').forEach(d => {
+        d.classList.remove('selected-source-date', 'selected-target-date', 'clicked-date');
+        if (d.classList.contains('status-weekend') || d.classList.contains('status-holiday') || d.classList.contains('status-leave') || d.classList.contains('leave-day')) { d.classList.add('disabled'); }
+        else { d.classList.remove('disabled'); }
+      });
+      pasteBtn.classList.add('d-none'); formContainer.style.display = 'none'; entryDetails.classList.add('d-none');
+    };
+
+    /** -------------------- Paste Entries (fixed) -------------------- **/
+    pasteBtn.addEventListener('click', async () => {
+      if (!selectedEntryIds.length || !targetDates.size) {
+        return showToastMessage("Select at least one entry and one target date.", "error");
+      }
+
+      const payload = new FormData();
+      selectedEntryIds.forEach(id => payload.append('entry_ids[]', id));
+      [...targetDates].forEach(date => payload.append('target_dates[]', date));
+
+      // Let the spinner paint before the network request
+      showSpinnerAndDisableButtons();
+      await new Promise(requestAnimationFrame);
+
+      try {
+        const resp = await fetch("{% url 'copy_timesheet_entries' %}", {
+          method: 'POST',
+          body: payload,
+          headers: { 'X-CSRFToken': '{{ csrf_token }}' }
+        });
+
+        const data = await resp.json();
+
+        if (data.status === 'success') {
+          let msg = '';
+          if (data.copied?.length) msg += `Copied to: ${data.copied.join(', ')}.<br>`;
+          if (data.skipped && Object.keys(data.skipped).length) {
+            msg += 'Skipped: <ul style="margin:0;padding-left:18px;">';
+            for (const [date, reasons] of Object.entries(data.skipped)) {
+              msg += `<li><strong>${date}</strong>: ${reasons.join('; ')}</li>`;
+            }
+            msg += '</ul>';
+          }
+          showToastMessage(msg, data.copied?.length ? 'success' : 'error');
+
+          (data.copied || []).forEach(date => {
+            const cell = document.querySelector(`.calendar-day[data-date="${date}"]`);
+            if (!cell) return;
+            const isWeekendOrHoliday = cell.classList.contains('status-weekend') || cell.classList.contains('status-holiday');
+            clearDayHours(cell);
+            cell.classList.remove('status-not-entered');
+            cell.classList.add('status-entered', 'updating');
+            cell.classList.remove('disabled');
+            if (!isWeekendOrHoliday) {
+              const tick = document.createElement('span');
+              tick.className = 'day-hours';
+              tick.textContent = '✓';
+              cell.appendChild(tick);
+            }
+          });
+
+          await refreshCalendarDates([...(data.copied || []), ...Object.keys(data.skipped || {})]);
+          resetSelection();
+
+        } else {
+          showToastMessage(data.error || "Copy failed.", "error");
+        }
+
+      } catch (err) {
+        console.error('Copy timesheet entries error:', err);
+        showToastMessage("Copy request failed.", "error");
+
+      } finally {
+        hideSpinnerAndEnableButtons();
+      }
+    });
+
+    /** -------------------- Form Submission (safe refresh) -------------------- **/
+    form.addEventListener('submit', async e => {
+      e.preventDefault();
+      showSpinnerAndDisableButtons();
+
+      const formData = new FormData(form);
+      formData.delete('project');
+      formData.append('project', projectSelect.value);
+
+      let success = false;
+      try {
+        const resp = await fetch("{% url 'submit_timesheet' %}", {
+          method: 'POST',
+          body: formData,
+          headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-CSRFToken': '{{ csrf_token }}'
+          }
+        });
+
+        if (!resp.ok) {
+          const text = await resp.text();
+          console.error("HTTP error:", resp.status, text);
+          showToastMessage("Submission failed.", "error");
+          return;
+        }
+
+
+        let data;
+        try { data = await resp.json(); }
+        catch { showToastMessage("Invalid server response.", "error"); return; }
+
+        if (data.status === 'success') {
+          success = true;
+          showToastMessage(data.message || "Timesheet saved.", "success");
+
+          const cell = document.querySelector(`.calendar-day[data-date="${data.date}"]`);
+          if (cell) {
+            cell.classList.remove('status-not-entered');
+            cell.classList.add('status-entered');
+            clearDayHours(cell);
+            const el = document.createElement('span');
+            el.className = 'day-hours';
+            el.textContent = data.entry.hours_worked + 'h';
+            cell.appendChild(el);
+          }
+
+          // Disable or hide the submit button if approved
+          const submitBtn = document.getElementById('submit-timesheet-btn');
+          if (submitBtn && data.entry.is_approved) {
+            submitBtn.disabled = true;  
+            // OR: submitBtn.disabled = true;  // Disable instead
+          }
+
+          // Refresh & reload (isolated from failure toast)
+          try { await refreshCalendarDates([data.date]); } catch (e) { console.error(e); }
+          try { await loadDayData(data.date, true); } catch (e) { console.error(e); }
+        } else {
+          const err = Array.isArray(data.message) ? data.message.join(', ') : data.message;
+          showToastMessage(err || "Error saving timesheet.", "error");
+        }
+      } catch (err) {
+        console.error(err);
+        if (!success) showToastMessage("Submission failed.", "error");
+      } finally {
+        hideSpinnerAndEnableButtons();
+      }
+    });
+  });
+</script>
+
+
+<script>
+  const legendBtn = document.getElementById('legend-btn');
+  const legendPopup = document.getElementById('legend-popup');
+
+  legendBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    legendPopup.style.display = (legendPopup.style.display === 'block') ? 'none' : 'block';
+  });
+
+  document.addEventListener('click', () => {
+    legendPopup.style.display = 'none';
+  });
+
+  legendPopup.addEventListener('click', (e) => {
+    e.stopPropagation(); // prevent close when clicking inside popup
+  });
+</script>
+
+{% endblock %}

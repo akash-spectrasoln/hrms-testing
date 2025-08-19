@@ -5,7 +5,7 @@ from django.utils import timezone
 import random
 import os
 import logging
-from .models import Employees, Country, state, Salutation, Role, Department,Resume,Certificate
+from .models import Employees, Country, state, Salutation, Role, Department,Resume,Certificate,CostCenter
 
 logger = logging.getLogger(__name__)
 
@@ -59,7 +59,9 @@ class EmployeeEditForm(forms.ModelForm):
         required=False,
         empty_label="None"
     )
-
+    cost_center = forms.ModelChoiceField(
+    queryset=CostCenter.objects.all(),
+    )
     resignation_date = forms.DateField(
         required=False,
         widget=forms.DateInput(attrs={'type': 'date', 'class': 'form-control'})
@@ -118,7 +120,7 @@ class EmployeeEditForm(forms.ModelForm):
             'employee_id', 'old_employee_id','salutation', 'first_name', 'middle_name', 'last_name',
             'company_email', 'personal_email', 'mobile_phone', 'office_phone','home_post_office',
             'home_phone', 'valid_from', 'valid_to', 'country', 'state', 
-            'department', 'role', 'manager','home_city','pincode','emergency_contact_name','emergency_contact_phone','emergency_contact_email',
+            'department', 'role', 'manager','cost_center','home_city','pincode','emergency_contact_name','emergency_contact_phone','emergency_contact_email',
              'emergency_contact_relation',
              'base_salary','employee_type','employee_status',
             'resignation_date', 'house_name', 'resumes', 'certificates', 'incentive', 'joining_bonus',

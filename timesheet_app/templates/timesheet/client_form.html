@@ -1,0 +1,78 @@
+{% extends 'admin_partials/admin_base.html' %}
+{% load static %}
+{% load form_tags %}
+
+{% block content %}
+<style>
+    .centered-form-container {
+        max-width: 500px;
+        margin: 0 auto;
+    }
+
+    /* Reduce vertical gap between label and input */
+    .form-label {
+        margin-bottom: 2px;
+        font-weight: 500;
+    }
+
+    /* Tighten up spacing inside form */
+    .form-control-sm {
+        padding: 0.3rem 0.5rem;
+        font-size: 0.875rem;
+    }
+
+    /* Center title text in header */
+    .card-header h5 {
+        width: 100%;
+        text-align: center;
+    }
+</style>
+
+<div class="container my-4">
+    <div class="card centered-form-container shadow">
+        <div class="card-header bg-primary text-white py-2 px-3">
+            <h5 class="mb-0">{{ form.instance.pk|yesno:"Edit Client,Add Client" }}</h5>
+        </div>
+
+        <div class="card-body py-3 px-3">
+            <form method="post" novalidate>
+                {% csrf_token %}
+                {{ form.non_field_errors }}
+
+                <div class="mb-2">
+                    <label for="id_client_name" class="form-label">Client Name</label>
+                    {{ form.client_name|add_class:"form-control form-control-sm" }}
+                    {{ form.client_name.errors }}
+                </div>
+
+                <div class="mb-2">
+                    <label for="id_client_alias" class="form-label">Abbreviation</label>
+                    {{ form.client_alias|add_class:"form-control form-control-sm" }}
+                    {{ form.client_alias.errors }}
+                </div>
+
+                <div class="mb-2">
+                    <label for="id_client_addr" class="form-label">Client Address</label>
+                    {{ form.client_addr|add_class:"form-control form-control-sm" }}
+                    {{ form.client_addr.errors }}
+                </div>
+
+                <div class="mb-3">
+                    <label for="id_country" class="form-label">Country</label>
+                    {{ form.country|add_class:"form-control form-control-sm" }}
+                    {{ form.country.errors }}
+                </div>
+
+                <div class="d-flex justify-content-start gap-2 mt-3">
+                    <a href="{% url 'client_list' %}" class="btn btn-secondary btn-sm">
+                        <i class="fas fa-arrow-left me-1"></i> Back
+                    </a>
+                    <button type="submit" class="btn btn-success btn-sm">
+                        <i class="fas fa-save me-1"></i> Save
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

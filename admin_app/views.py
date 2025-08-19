@@ -98,7 +98,9 @@ def add_employee(request):
         form = EmployeeEditForm(request.POST, request.FILES, request=request)
         if form.is_valid():
             try:
-                employee = form.save(commit=False) 
+                employee = form.save(commit=False)
+                employee.cost_center = form.cleaned_data.get('cost_center')
+                print("Selected cost_center:", request.POST.get('cost_center')) 
                 # employee.data=employee.company_email  # Save the form but don't commit to the database yet
                 employee.enc_home_city=employee.home_city
                 employee.enc_date_of_birth=employee.date_of_birth
@@ -126,7 +128,7 @@ def add_employee(request):
 
                 employee.hr_emails=request.POST.get('hr_email_access') == 'on'
                 employee.save()  # Now save the employee instance
-
+                form.save_m2m()  
                 if employee.hr_emails:
                     Communication.objects.get_or_create(user=employee.user)
                 
@@ -173,6 +175,7 @@ def add_employee(request):
         'countries': Country.objects.all().order_by('code'),
         'salutations': Salutation.objects.all(),
         'employees': Employees.objects.all().order_by('first_name'),
+        'costcenters': CostCenter.objects.all(),
         'default_valid_from': date.today(),
         'default_valid_to': date(9999, 12, 31),
         'employee_types' : EmployeeType.objects.all().order_by('id')
@@ -501,6 +504,7 @@ class EmployeeUpdateView(UpdateView):
             context['departments'] = Department.objects.all()
             context['managers'] = Employees.objects.filter(employees_managed__isnull=False).distinct()
             context['employees'] = Employees.objects.all().order_by('first_name')
+            context['costcenters'] = CostCenter.objects.all()
             employee = self.object
             context['countries'] = Country.objects.all()
             context['selected_country'] = employee.country if employee.country else None

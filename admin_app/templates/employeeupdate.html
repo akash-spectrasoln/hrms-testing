@@ -247,18 +247,31 @@ label {
 </div>
 
 
-  <!-- Row 2: 3 fields + Resignation Date (if visible) -->
+  <!-- Row 2: 4 fields Cost Center added -->
+
   <div class="form-row" id="row2">
-    <div class="form-group col-md-4"> <!-- Company Email -->
+    <div class="form-group col-md-3">
+        <label>Cost Center</label>
+        <select name="cost_center" class="form-control">
+            <option value="">None</option>
+            {% for cc in costcenters %}
+            <option value="{{ cc.costcenter_id }}" 
+                {% if form.instance.cost_center and form.instance.cost_center.costcenter_id == cc.costcenter_id %}selected{% endif %}>
+                {{ cc.costcenter_name }}
+            </option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="form-group col-md-3"> <!-- Company Email -->
       <label class="required">Company Email</label>
       <input type="email" name="company_email" class="form-control" value="{{ form.instance.company_email }}" required>
     </div>
-    <div class="form-group col-md-4">
+    <div class="form-group col-md-3">
         <label>PM Email</label>
         <input type="email" name="pm_email" class="form-control" value="{{ form.instance.pm_email|default:'' }}" >
     </div>
 
-    <div class="form-group col-md-4"> <!-- Office Phone -->
+    <div class="form-group col-md-3"> <!-- Office Phone -->
       <label>Office Phone</label>
       <input type="tel" name="office_phone" class="form-control" value="{{ form.instance.office_phone }}">
     </div>

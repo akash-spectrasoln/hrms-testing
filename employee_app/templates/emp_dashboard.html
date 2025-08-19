@@ -1,4 +1,4 @@
-{% extends 'partials/base.html' %} 
+{% extends 'partials/base.html' %}
 
 {% block title %}HRMS{% endblock %}
 
@@ -8,15 +8,27 @@
 
 {% block styles %}
 <style>
+    .container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+        /* center vertically */
 
-.container {
+    }
+    .content-wrapper {
     display: flex;
-    justify-content: center;
-    align-items: center;
-    min-height: 100vh; /* center vertically */
-    
+    flex-direction: column;
+    align-items: center;  /* centers all content horizontally */
+    /* remove margin-right */
 }
 
+.card-wrapper {
+    display: flex;          /* horizontal layout */
+    justify-content: center; /* center cards horizontally */
+    gap: 20px;              /* space between cards */
+    flex-wrap: wrap;         /* wrap cards on small screens */
+}
 
 </style>
 {% endblock styles %}
@@ -29,7 +41,6 @@
         <h2 class="page-title">Dashboard</h2>
 
         <div class="card-wrapper">
-            
             <!-- Leave management system -->
             <a href="{% url 'index' %}" class="card">
                 <div class="card-content">
@@ -38,26 +49,43 @@
                 </div>
             </a>
 
-            
+            {% if request.user.is_authenticated and request.user.is_manager %}
+                <a href="{% url 'tsheet_index' %}" class="card">
+                    <div class="card-content">
+                        <span class="card-icon">⏰</span>
+                        <h3>Timesheet</h3>
+                    </div>
+                </a>
+            {% else %}
+                <a href="{% url 'timesheet_calendar' %}" class="card">
+                    <div class="card-content">
+                        <span class="card-icon">⏱️</span>
+                        <h3>Timesheet</h3>
+                    </div>
+                </a>
+            {% endif %}
+
         </div>
+
     </div>
 </div>
 <style>
     .content-wrapper {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    margin-right: 100px;
-    
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        margin-right: 100px;
+
     }
 
-    .page-title{
+    .page-title {
         margin-bottom: 40px;
     }
 
     .card {
         display: block;
-        width: 150px;  /* Ensures the card is square */
+        width: 150px;
+        /* Ensures the card is square */
         height: 150px;
         background: #ffffff;
         border-radius: 8px;
@@ -83,9 +111,11 @@
     }
 
     .card-icon {
-        font-size: 2rem;  /* Larger icon size */
+        font-size: 2rem;
+        /* Larger icon size */
         margin-bottom: 10px;
-        color: #3b82f6;  /* Icon color */
+        color: #3b82f6;
+        /* Icon color */
     }
 
     .card-content h3 {

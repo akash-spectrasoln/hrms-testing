@@ -1,6 +1,7 @@
 
 from django.urls import path
 from .views import *
+from timesheet_app import views as ts_views
 from django.contrib.auth import views as auth_views
 urlpatterns = [
 path('login/', employee_login, name='login'),
@@ -9,6 +10,7 @@ path('emp_dashboard/',dashboard_view, name='emp_dashboard'),
 path('emp_index/',emp_index,name='index'),
 path('emp_logout/',emp_logout,name='emp_logout'),
 path('profile/<int:employee_id>/', employee_profile, name='profile'),
+path('set-from-timesheet/<int:employee_id>/',set_from_timesheet, name='set_from_timesheet'),
 path('request_leave/', request_leave, name='request_leave'),
 path('my_leave_history/', my_leave_history, name='my_leave_history'),
 path('update_employee_passwords/', update_employee_passwords, name='update_employee_passwords'),
@@ -43,6 +45,16 @@ path('check-floating-holidays/', check_floating_holidays, name='check_floating_h
 path('check-leave-conflicts/', check_leave_conflicts, name='check_leave_conflicts'),
 path('delete-leave/<int:leave_id>/', delete_leave, name='delete_leave'),
 
+path('tsheet_index/',ts_views.tsheet_index,name='tsheet_index'),
+path('timesheet/', ts_views.timesheet_calendar, name='timesheet_calendar'),
+path('submit-timesheet/', ts_views.submit_timesheet, name='submit_timesheet'),
+path('ajax/get-timesheet-day-data/', ts_views.get_timesheet_day_data, name='get_timesheet_day_data'),
+path('copy-entries/', ts_views.copy_timesheet_entries, name='copy_timesheet_entries'),
+path('timesheet-approvals/', ts_views.timesheet_approval_list, name='timesheet_approval_list'),
+path('timesheet/unapprove/<int:tsheet_id>/', ts_views.timesheet_unapprove, name='timesheet_unapprove'),
+path('timesheets/approve/', ts_views.approve_timesheet, name='approve_timesheet'),
+path('timesheets/approve-selected/', ts_views.approve_selected_timesheets, name='approve_selected_timesheets'),
+path("timesheet-week-details/", ts_views.timesheet_week_details, name="timesheet_week_details"),
 ]
 
 

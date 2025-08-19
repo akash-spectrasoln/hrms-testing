@@ -28,6 +28,7 @@ class Role(models.Model):
 class Country(models.Model):
     country_name = models.CharField(max_length=100)
     code = models.CharField(max_length=15,null=True)
+    working_hours = models.PositiveIntegerField(default=9)
 
     def __str__(self):
         return self.country_name
@@ -132,6 +133,7 @@ class Employees(models.Model):
     department = models.ForeignKey('Department', on_delete=models.CASCADE)
     
     manager = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True, related_name='employees_managed')
+    cost_center = models.ForeignKey('CostCenter',on_delete=models.SET_NULL,null=True,blank=True,related_name='employees')
     employee_status = models.CharField(
     max_length=50,
     choices=STATUS_CHOICES,
@@ -804,3 +806,409 @@ class HolidayResetPeriod(models.Model):
 
     class Meta:
         db_table='holidayresetperiod'
+
+
+
+class Client(models.Model):
+    """
+    Stores client details including name, alias, address, and country.
+    """
+    client_id = models.AutoField(primary_key=True)
+    client_name = models.CharField(max_length=100)
+    client_alias = models.CharField(max_length=20, unique=True)
+    client_addr = models.CharField(max_length=255)
+    country = models.ForeignKey(
+        'Country',
+        on_delete=models.PROTECT,  # prevent accidental deletion
+        related_name='clients'
+    )
+    is_deleted = models.BooleanField(default=False)
+
+    class Meta:
+        db_table = 'client'
+        ordering = ['client_name']
+        indexes = [
+            models.Index(fields=['client_alias']),
+            models.Index(fields=['is_deleted']),
+        ]
+        verbose_name = 'Client'
+        verbose_name_plural = 'Clients'
+
+    def __str__(self):
+        return self.client_name
+     
+class Project(models.Model):
+    """
+    Project model to track projects under specific clients.
+    Includes validity range, active status, manager assignment, and soft deletion support.
+    """
+
+    project_id = models.AutoField(primary_key=True)
+    project_name = models.CharField(max_length=255)
+    project_desc = models.TextField(
+        verbose_name="Project Description (Short)",
+        help_text="A brief description of the project.",
+        blank=True,
+        null=True
+    )
+
+    valid_from = models.DateField()
+    valid_to = models.DateField()
+
+    client = models.ForeignKey(
+        'Client',
+        on_delete=models.CASCADE,
+        related_name='projects'
+    )
+
+    prj_manager = models.ForeignKey(
+        'Employees',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='managed_projects',
+        verbose_name="Project Manager"
+    )
+
+    is_active = models.BooleanField(default=True)
+
+    # Optional audit fields
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'project'
+        ordering = ['-valid_from']
+        constraints = [
+            models.CheckConstraint(
+                check=models.Q(valid_from__lte=models.F('valid_to')),
+                name='valid_date_range_check'
+            ),
+            models.UniqueConstraint(
+                fields=['project_name', 'client'],
+                name='unique_project_per_client'
+            ),
+        ]
+        indexes = [
+            models.Index(fields=['is_active']),
+            models.Index(fields=['client']),
+            models.Index(fields=['valid_to']),
+        ]
+
+    def clean(self):
+        super().clean()
+        if self.valid_from and self.valid_to and self.valid_from > self.valid_to:
+            raise ValidationError({
+                'valid_to': 'Valid To date must be on or after Valid From date.'
+            })
+
+    def soft_delete(self):
+        """Marks the project as inactive instead of deleting it."""
+        self.is_active = False
+        self.save(update_fields=['is_active'])
+
+    def restore(self):
+        """Restores the project to active state."""
+        self.is_active = True
+        self.save(update_fields=['is_active'])
+
+    def __str__(self):
+        return f"{self.project_name} ({self.client.client_alias})"
+    def is_expired(self):
+        """Returns True if the project's valid_to date has passed."""
+        return self.valid_to < timezone.now().date()
+
+    def auto_expire_if_needed(self):
+        """Deactivates the project if its valid_to date is in the past."""
+        if self.is_active and self.is_expired():
+            self.is_active = False
+            self.save(update_fields=['is_active'])
+
+from django.db import models
+from django.core.exceptions import ValidationError
+from django.db.models import Q
+
+
+class AssignProject(models.Model):
+    """
+    Links an employee to a project assignment with date validation and overlap prevention.
+    """
+    emp_prj_id = models.AutoField(primary_key=True)
+
+    employee = models.ForeignKey(
+        Employees,
+        on_delete=models.CASCADE,
+        related_name='project_assignments'
+    )
+    project = models.ForeignKey(
+        Project,
+        on_delete=models.CASCADE,
+        related_name='employee_assignments'
+    )
+
+    start_date = models.DateField()
+    end_date = models.DateField(null=True, blank=True)
+    designation = models.CharField(
+        max_length=100,
+        verbose_name="Designation in Project",
+        help_text="Role of the employee in this project",
+        null=True,
+        blank=True,
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        unique_together = ('employee', 'project', 'start_date')
+        ordering = ['-start_date']
+        verbose_name = "Assigned Project"
+        verbose_name_plural = "Assigned Projects"
+        db_table = 'assignproject'
+        indexes = [
+            models.Index(fields=['employee', 'project']),
+            models.Index(fields=['start_date']),
+            models.Index(fields=['end_date']),
+        ]
+
+    def clean(self):
+        project = getattr(self, 'project', None)
+
+        if project:
+            if self.start_date and self.start_date < project.valid_from:
+                raise ValidationError({
+                    'start_date': f"Start date cannot be before project validity ({project.valid_from})."
+                })
+            if self.end_date and self.end_date > project.valid_to:
+                raise ValidationError({
+                    'end_date': f"End date cannot be after project validity ({project.valid_to})."
+                })
+
+        if self.end_date and self.start_date and self.end_date < self.start_date:
+            raise ValidationError({
+                'end_date': "End date cannot be before start date."
+            })
+
+        # Check overlapping assignments
+        if self.employee and self.project and self.start_date:
+            qs = AssignProject.objects.filter(
+                employee=self.employee,
+                project=self.project
+            ).exclude(pk=self.pk)
+
+            if self.end_date:
+                qs = qs.filter(
+                    start_date__lte=self.end_date
+                ).filter(
+                    Q(end_date__isnull=True) | Q(end_date__gte=self.start_date)
+                )
+            else:
+                qs = qs.filter(
+                    Q(end_date__isnull=True) | Q(end_date__gte=self.start_date)
+                )
+
+            if qs.exists():
+                raise ValidationError(
+                    "This employee is already assigned to this project in the selected date range."
+                )
+
+    def __str__(self):
+        return f"{self.employee} -> {self.project} from {self.start_date}"
+
+class Activity(models.Model):
+
+    act_id = models.AutoField(primary_key=True)
+    act_name = models.CharField(max_length=100)
+    class Meta:
+        db_table='activity'
+
+class WrkLocation(models.Model):  
+
+    loc_id = models.AutoField(primary_key=True)
+    loc_name = models.CharField(max_length=100)
+    class Meta:
+        db_table='wrklocation'
+class CostCenter(models.Model):
+    costcenter_id = models.CharField(
+        max_length=10,
+        primary_key=True,
+        editable=False
+    )
+    costcenter_name = models.CharField(max_length=100)
+    is_active = models.BooleanField(default=True)
+    class Meta:
+        db_table='costcenter'
+
+    def save(self, *args, **kwargs):
+        if not self.costcenter_id:
+            last = CostCenter.objects.order_by('-costcenter_id').first()
+            if last and last.costcenter_id[2:].isdigit():
+                last_num = int(last.costcenter_id[2:])
+                next_num = last_num + 1
+            else:
+                next_num = 1
+            self.costcenter_id = f"CC{next_num:05d}"
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.costcenter_id} - {self.costcenter_name}"
+from django.db import models
+from django.core.validators import MinValueValidator, MaxValueValidator
+from django.core.exceptions import ValidationError
+from django.db.models import Sum, Q
+from django.utils import timezone
+
+from django.db import models
+from django.core.validators import MinValueValidator, MaxValueValidator
+from django.core.exceptions import ValidationError
+from django.db.models import Q, Sum
+from django.utils import timezone
+
+
+
+from datetime import timedelta
+from django.db import models
+from django.core.validators import MinValueValidator, MaxValueValidator
+
+
+
+class TimesheetHdr(models.Model):
+    tsheet_id = models.AutoField(primary_key=True)
+    employee = models.ForeignKey(Employees, on_delete=models.CASCADE, related_name="timesheet_headers")
+    week_start = models.DateField()  # Monday
+    week_end = models.DateField()    # Sunday
+    tot_hrs_wrk = models.IntegerField(default=0)
+    tot_hol_hrs = models.IntegerField(default=0)
+    tot_lev_hrs = models.IntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    is_delayed = models.BooleanField(default=False)
+    is_approved = models.BooleanField(default=False)
+    approved_date = models.DateTimeField(null=True, blank=True)
+    approved_by = models.ForeignKey(Employees, on_delete=models.SET_NULL, null=True, blank=True, related_name="approved_timesheets")
+    
+    class Meta:
+        db_table='timesheet_hdr'
+
+    def check_delayed_status(self):
+        # Deadline = Monday after week_end, end of day
+        deadline = timezone.datetime.combine(
+            self.week_end + timedelta(days=1),  # Monday
+            timezone.datetime.max.time()        # 23:59:59
+        )
+        deadline = timezone.make_aware(deadline)
+
+        now = timezone.now()
+
+        # Delayed if created/updated after deadline
+        self.is_delayed = now > deadline and (self.created_at > deadline or self.updated_at > deadline)
+        self.save(update_fields=["is_delayed"])
+
+
+    def recalc_totals(self):
+        work_hours_per_day = getattr(self.employee.country, "working_hours", 9)
+        items = list(self.timesheet_items.all())
+        self.tot_hrs_wrk = 0
+        self.tot_hol_hrs = 0
+        self.tot_lev_hrs = 0
+        date_range_start = self.week_start
+        date_range_end = self.week_end
+
+        holidays = set(Holiday.objects.filter(
+            country=self.employee.country,
+            date__range=(date_range_start, date_range_end)
+        ).values_list('date', flat=True))
+
+        state_holidays = set(StateHoliday.objects.filter(
+            country=self.employee.country,
+            state=self.employee.state,
+            date__range=(date_range_start, date_range_end)
+        ).values_list('date', flat=True))
+
+        all_holidays = holidays | state_holidays
+
+        current_date = self.week_start
+        while current_date <= self.week_end:
+            day_items = [i for i in items if i.wrk_date == current_date]
+            total_daily_work_hours = sum(i.wrk_hours for i in day_items)
+
+            is_holiday = current_date in all_holidays
+            is_leave = LeaveRequest.objects.filter(
+                employee_master=self.employee,
+                start_date__lte=current_date,
+                end_date__gte=current_date,
+                status="Approved"
+            ).exists()
+
+            if is_holiday:
+                if total_daily_work_hours > 0:
+                    # Scenario 1 & 2: Hours are entered on a holiday
+                    if total_daily_work_hours < work_hours_per_day:
+                        # Entry < minimum hours: credit minimum hours
+                        self.tot_hol_hrs += work_hours_per_day
+                    else:
+                        # Entry >= minimum hours: credit entered hours
+                        self.tot_hol_hrs += total_daily_work_hours
+                else:
+                    # Scenario 3: No entry on a holiday
+                    self.tot_hol_hrs += work_hours_per_day
+            elif is_leave:
+                # Leave day logic
+                self.tot_lev_hrs += work_hours_per_day
+            else:
+                # Regular weekday or weekend logic
+                self.tot_hrs_wrk += total_daily_work_hours
+            
+            current_date += timedelta(days=1)
+        
+        self.save(update_fields=["tot_hrs_wrk", "tot_hol_hrs", "tot_lev_hrs"])
+    def __str__(self):
+        return f"Timesheet {self.tsheet_id} - {self.employee.first_name}{self.employee.middle_name}{self.employee.last_name}"
+
+
+class TimesheetItem(models.Model):
+    id = models.AutoField(primary_key=True)
+    hdr = models.ForeignKey(TimesheetHdr, on_delete=models.CASCADE, related_name="timesheet_items")
+    wrk_date = models.DateField()
+    project_assignment = models.ForeignKey(AssignProject, on_delete=models.CASCADE, related_name="timesheet_items",null=True,
+    blank=True)
+    project = models.ForeignKey(Project, on_delete=models.CASCADE, editable=False,null=True,
+    blank=True)
+    costcenter = models.ForeignKey(CostCenter, on_delete=models.CASCADE,null=True,
+    blank=True)
+    wrk_hours = models.IntegerField()
+    activity = models.ForeignKey(
+        'Activity', on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='timesheets'
+    )
+    work_location = models.ForeignKey(
+        'WrkLocation', on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='timesheets'
+    )
+    description = models.TextField(blank=True)
+
+    class Meta:
+        db_table='timesheetitem'
+
+    def save(self, *args, **kwargs):
+        # Set project from assignment
+        if self.project_assignment:
+            self.project = self.project_assignment.project
+
+        super().save(*args, **kwargs)
+
+        # Update totals & delayed status
+        self.hdr.recalc_totals()
+        self.hdr.check_delayed_status()
+
+    def delete(self, *args, **kwargs):
+        hdr = self.hdr
+        super().delete(*args, **kwargs)
+        hdr.recalc_totals()
+
+    def __str__(self):
+        return f"Item {self.id} - {self.project.project_name} ({self.date})"
+
+
+

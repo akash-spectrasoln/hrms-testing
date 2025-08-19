@@ -168,9 +168,22 @@ from django.shortcuts import render, get_object_or_404
 from .models import Employees
 from django.utils.timezone import now
 from datetime import date, timedelta
+def set_from_timesheet(request, employee_id):
+    """
+    Marks in the session that the user came to the employee page from the timesheet.
 
+    This helps us remember where the user came from so we can show the right left-sidebar element according to that.
+    """
+
+    request.session['from_timesheet'] = True
+    return redirect('profile', employee_id=employee_id)
 @signin_required
 def employee_profile(request, employee_id):
+    from_timesheet = request.session.pop('from_timesheet', False)
+ 
+    base_template = 'partials/base.html'
+    if from_timesheet:
+        base_template = 'timesheet_partials/base.html'
     employee = get_object_or_404(Employees, pk=employee_id, is_deleted=False)
     today = now().date()
 
@@ -278,6 +291,7 @@ def employee_profile(request, employee_id):
     is_manager = Employees.objects.filter(manager=employee, is_deleted=False).exists()
 
     return render(request, 'profile.html', {
+        'base_template':base_template ,
         'employee': employee,
         'is_manager': is_manager,
         'available_leaves': available_leaves,  # <--- ONLY this number!
@@ -1312,6 +1326,12 @@ def my_leave_history(request):
 from django.utils.timezone import now
 @signin_required
 def emp_index(request):
+    sidebar_template = 'partials/left-sidebar.html'
+
+    if '/timesheet/' in request.path:
+        sidebar_template = 'timesheet_partials//left-sidebar.html'
+
+   
     try:
         employee = Employees.objects.get(company_email=request.user.username)
     except Employees.DoesNotExist:
@@ -1323,18 +1343,18 @@ def emp_index(request):
     else:
         is_manager = False
 
-    # Get total used leaves for the current year
-    current_year = now().year  # Get current year
+
+
 
 
     return render(request, 'emp_index.html', {
         'employee': employee,
         'is_manager': is_manager , # Pass whether the employee is a manager or not
-        # 'total_used_leaves': total_used_leaves , # Pass the used leaves count to the template
         'emp_designation': employee.role.role_name,  # Employee designation
         'emp_id': employee.employee_id,  # Employee ID
         'emp_fname' : employee.first_name, #employee firstname
-        'emp_lname' : employee.last_name #employee lastname
+        'emp_lname' : employee.last_name ,#employee lastname
+        'sidebar_template':sidebar_template
     })
 
 

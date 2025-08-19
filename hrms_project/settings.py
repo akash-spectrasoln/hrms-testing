@@ -68,7 +68,8 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'django_celery_beat',
     'employee_app',
-    'admin_app'
+    'admin_app',
+    'timesheet_app'
     
 ]
 

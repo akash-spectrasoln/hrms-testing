@@ -1,0 +1,158 @@
+{% extends 'admin_partials/admin_base.html' %}
+{% load static %}
+{% load form_tags %}
+
+{% block styles %}
+<!-- Select2 CSS -->
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+
+<style>
+  .container {
+    max-width: 700px;
+  }
+
+  .form-control, .form-select, .btn {
+    font-size: 0.8rem !important;
+    padding: 3px 8px !important;
+    height: auto !important;
+  }
+
+  .form-label {
+    margin-bottom: 2px;
+    font-weight: 500;
+  }
+
+  .form-check-label {
+    margin-left: 4px;
+  }
+
+  .card-header {
+    padding: 0.5rem 1rem !important;
+    font-size: 1.2rem;
+    font-weight: 600;
+    height: 3rem;
+  }
+
+  .card-body {
+    padding: 0.8rem 1.2rem !important;
+  }
+
+  .mb-2, .mb-3 {
+    margin-bottom: 0.4rem !important;
+  }
+
+  .row > .col-md-6 {
+    margin-bottom: 0.4rem !important;
+  }
+
+  .btn {
+    margin-right: 4px;
+  }
+
+  .select2-container .select2-selection--single {
+    height: 32px !important;
+    padding: 2px 4px;
+    font-size: 0.8rem;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+  <div class="main-content">
+    <div class="card mt-3">
+      <div class="card-header bg-dark text-white position-relative d-flex justify-content-end align-items-center">
+        <h5 class="mb-0 position-absolute start-50 translate-middle-x">
+          {% if project %} Edit Project {% else %} Add Project {% endif %}
+        </h5>
+      </div>
+
+      <div class="card-body">
+        <form method="post" novalidate>
+          {% csrf_token %}
+          {{ form.non_field_errors }}
+
+          <div class="mb-2 text-start">
+            <label for="{{ form.project_name.id_for_label }}" class="form-label">Project Name</label>
+            {{ form.project_name|add_class:"form-control" }}
+            {{ form.project_name.errors }}
+          </div>
+
+          <div class="mb-2 text-start">
+            <label for="{{ form.project_desc.id_for_label }}" class="form-label">Project Description</label>
+            {{ form.project_desc|add_class:"form-control" }}
+            {% if form.project_desc.help_text %}
+              <div class="form-text">{{ form.project_desc.help_text }}</div>
+            {% endif %}
+            {{ form.project_desc.errors }}
+          </div>
+
+          <div class="mb-2 text-start">
+            <label for="{{ form.client.id_for_label }}" class="form-label">Client</label>
+            {{ form.client|add_class:"form-control select2" }}
+            {{ form.client.errors }}
+          </div>
+
+          <div class="row">
+            <div class="col-md-6 mb-2 text-start">
+              <label for="{{ form.valid_from.id_for_label }}" class="form-label">Valid From</label>
+              {{ form.valid_from|add_class:"form-control" }}
+              {{ form.valid_from.errors }}
+            </div>
+
+            <div class="col-md-6 mb-2 text-start">
+              <label for="{{ form.valid_to.id_for_label }}" class="form-label">Valid To</label>
+              {{ form.valid_to|add_class:"form-control" }}
+              {{ form.valid_to.errors }}
+            </div>
+          </div>
+
+          <div class="mb-2 text-start">
+            <label for="{{ form.prj_manager.id_for_label }}" class="form-label">Project Manager</label>
+            {{ form.prj_manager|add_class:"form-control" }}
+            {{ form.prj_manager.errors }}
+          </div>
+
+          <div class="form-check mb-2 text-start">
+            {{ form.is_active|add_class:"form-check-input" }}
+            <label class="form-check-label" for="{{ form.is_active.id_for_label }}">Is Active</label>
+            {{ form.is_active.errors }}
+          </div>
+
+          <div class="d-flex justify-content-end mt-3">
+            <a href="{% url 'project_list' %}" class="btn btn-secondary btn-sm">Back</a>
+            <button type="submit" class="btn btn-success btn-sm">
+              <i class="fas fa-save"></i> Save
+            </button>    
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script>
+  $(document).ready(function () {
+    $('.select2').select2({
+      placeholder: 'Search or select a client',
+      allowClear: false,
+      width: '100%',
+      ajax: {
+        url: '{% url "client_search" %}',
+        dataType: 'json',
+        delay: 250,
+        data: function (params) {
+          return { term: params.term };
+        },
+        processResults: function (data) {
+          return { results: data.results };
+        },
+        cache: true
+      }
+    });
+  });
+</script>
+{% endblock %}

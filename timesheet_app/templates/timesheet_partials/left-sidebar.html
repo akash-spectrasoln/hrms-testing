@@ -1,0 +1,59 @@
+{% load static %}
+{% block left_sidebar %}
+<!-- ========== Left Sidebar Start ========== -->
+<nav id="admin-sidebar" class="vertical-menu mt-0">
+    <div data-simplebar class="h-100">
+        <!--- Sidemenu -->
+        <div id="sidebar-menu" style="position: fixed;">
+            <!-- Left Menu Start -->
+            <ul class="metismenu list-unstyled mt-0 " id="side-menu">
+                <!-- <li>
+                    <a href="{% url 'tsheet_index' %}">
+                        <i data-feather="layers"></i>
+                        <span data-key="t-dashboard"><strong>Dashboard</strong></span>
+                    </a>
+                </li>
+                 <li>
+                    <a href="{% url 'timesheet_calendar' %}">
+                        <i data-feather="clock"></i>
+                        <span data-key="t-dashboard"><strong>Time Sheet</strong></span>
+                    </a>
+                </li>
+                {% if is_manager %}
+                <li>
+                    <a href="{% url 'timesheet_approval_list' %}">
+                        <i data-feather="archive"></i>
+                        <span data-key="t-dashboard"><strong>Approve Timesheet</strong></span>
+                    </a>
+                </li>
+                {% endif %} -->
+                {% if is_manager %}
+                 <li>
+                    <a href="{% url 'timesheet_calendar' %}">
+                        <i data-feather="clock"></i>
+                        <span data-key="t-dashboard"><strong>Time Sheet</strong></span>
+                    </a>
+                </li>
+                <li>
+                    <a href="{% url 'timesheet_approval_list' %}">
+                        <i data-feather="archive"></i>
+                        <span data-key="t-dashboard"><strong>Approve Timesheet</strong></span>
+                    </a>
+                </li>
+          
+                {% else %}
+                <li>
+                    <a href="{% url 'timesheet_calendar' %}">
+                        <i data-feather="clock"></i>
+                        <span data-key="t-dashboard"><strong>Time Sheet</strong></span>
+                    </a>
+                </li>
+                {% endif %}
+
+            </ul>
+        </div>
+        <!-- Sidebar -->
+    </div>
+</nav>
+<!-- Left Sidebar End -->
+{% endblock left_sidebar %}

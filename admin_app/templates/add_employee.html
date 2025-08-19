@@ -221,7 +221,7 @@
                 <!-- Row 3 -->
                 <div class="section">
                     <div class="form-row">
-                        <div class="form-group col-md-4">
+                        <div class="form-group col-md-3">
                             <label class="required">Department</label>
                             <select name="department" class="form-control" required>
                                 <option value="">Select</option>
@@ -230,7 +230,7 @@
                                 {% endfor %}
                             </select>
                         </div>
-                        <div class="form-group col-md-4">
+                        <div class="form-group col-md-3">
                             <label class="required" >Designation</label>
                             <select name="role" class="form-control" required>
                                 <option value="">Select</option>
@@ -239,12 +239,21 @@
                                 {% endfor %}
                             </select>
                         </div>
-                        <div class="form-group col-md-4">
+                        <div class="form-group col-md-3">
                             <label>Manager</label>
                             <select name="manager" class="form-control">
                                 <option value="">None</option>
                                 {% for employee in employees %}
                                 <option value="{{ employee.id }}">{{ employee.first_name }} {{ employee.last_name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="form-group col-md-3">
+                            <label>Cost Center</label>
+                            <select name="cost_center" class="form-control">
+                                <option value="">None</option>
+                                {% for costcenter in costcenters %}
+                                <option value="{{ costcenter.pk }}">{{ costcenter.costcenter_name }}</option>
                                 {% endfor %}
                             </select>
                         </div>

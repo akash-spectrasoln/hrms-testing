@@ -1,0 +1,118 @@
+{% extends 'timesheet_partials/base.html' %}
+
+{% block title %}
+HRMS Portal
+{% endblock %}
+
+{% block styles %}
+<style>
+.container {
+    margin-top: 100px;
+    padding: 40px 20px;
+    background-color: #f4f4f9;
+}
+
+.content-wrapper {
+    max-width: 1100px;
+    margin: 0 auto;
+    position: relative;
+}
+
+.page-title {
+    text-align: center;
+    margin-bottom: 25px;
+    color: #2c3e50;
+    font-size: 1.5rem;
+    font-weight: 600;
+}
+
+.card-wrapper {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 20px;
+    padding: 20px;
+}
+
+.card {
+    display: block;
+    width: 150px;
+    height: 150px;
+    background: #ffffff;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    text-decoration: none;
+    color: inherit;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+}
+
+.card-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    padding: 20px;
+    text-align: center;
+}
+
+.card-icon {
+    font-size: 2rem;
+    margin-bottom: 10px;
+    color: #3b82f6;
+}
+
+.card-content h3 {
+    margin: 0;
+    font-size: 1rem;
+    color: #2c3e50;
+}
+
+@media (max-width: 768px) {
+    .card {
+        width: 130px;
+        height: 130px;
+    }
+}
+
+@media (max-width: 480px) {
+    .card {
+        width: 100px;
+        height: 100px;
+    }
+}
+</style>
+{% endblock styles %}
+
+{% block content %}
+<div class="container">
+    <div class="content-wrapper">
+        <h2 class="page-title">Dashboard</h2>
+
+        <div class="card-wrapper">
+            <!-- Timesheet Entry -->
+            <a href="{% url 'timesheet_calendar' %}" class="card">
+                <div class="card-content">
+                    <span class="card-icon">⏱️</span>
+                    <h3>Timesheet</h3>
+                </div>
+            </a>
+
+            {% if is_manager %}
+            <!-- Manager Timesheet Approval -->
+            <a href="{% url 'timesheet_approval_list' %}" class="card">
+                <div class="card-content">
+                    <span class="card-icon">📊</span>
+                    <h3>Manage Timesheet</h3>
+                </div>
+            </a>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock content %}

@@ -6,47 +6,45 @@ Admin Portal
 
 {% block styles %}
 <style>
-
-
     .content-wrapper {
         width: 95%;
-        max-width: 1100px;
+        max-width: 1200px;
         margin: 0 auto;
         position: relative;
-        left: -60px;
+        left: -40px;
     }
 
     .page-title {
         text-align: center;
-        margin-bottom: 25px;
+        margin-bottom: 20px;
         color: #2c3e50;
-        font-size: 1.5rem;
+        font-size: 1.4rem;
         font-weight: 600;
     }
 
     .card-wrapper {
-        display: flex;
-        flex-wrap: wrap;
-        justify-content: center;
-        gap: 20px;
-        padding: 20px;
-    }
-
-    .card {
-        display: block;
-        width: 150px;
-        height: 150px;
-        background: #ffffff;
-        border-radius: 8px;
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-        text-decoration: none;
-        color: inherit;
-        transition: transform 0.2s, box-shadow 0.2s;
-    }
+    display: grid;
+    grid-template-columns: repeat(5, 120px); /* exactly 5 fixed-width columns */
+    gap: 12px;  /* consistent spacing */
+    justify-content: center; /* center grid in wrapper */
+    padding: 10px;
+    margin: 0 auto;
+}
+.card {
+    display: block;
+    width: 120px;
+    height: 110px;
+    background: #ffffff;
+    border-radius: 6px;
+    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.1);
+    text-decoration: none;
+    color: inherit;
+    transition: transform 0.15s, box-shadow 0.15s;
+}
 
     .card:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+        transform: translateY(-4px);
+        box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
         color: #3b82f6;
     }
 
@@ -56,64 +54,41 @@ Admin Portal
         align-items: center;
         justify-content: center;
         height: 100%;
-        padding: 20px;
+        padding: 10px;
         text-align: center;
     }
 
     .card-icon {
-        font-size: 2rem;
-        margin-bottom: 10px;
+        font-size: 1.6rem;
+        margin-bottom: 6px;
         color: #3b82f6;
     }
 
     .card-content h3 {
         margin: 0;
-        font-size: 1rem;
+        font-size: 0.85rem;
         color: #2c3e50;
     }
 
-    @media (max-width: 1200px) {
-        .content-wrapper {
-            width: 90%;
-            left: -40px;
+    @media (max-width: 992px) {
+        .card-wrapper {
+            grid-template-columns: repeat(3, 1fr); /* 3 per row on tablets */
         }
     }
 
-    @media (max-width: 1024px) {
-        .container {
-            left: 200px;
-        }
-        .content-wrapper {
-            width: 95%;
-            left: -30px;
-        }
-    }
-
-    @media (max-width: 768px) {
-        .container {
-            left: 0;
-            padding: 30px 15px;
-        }
-        .content-wrapper {
-            width: 100%;
-            left: 0;
-        }
-        .card {
-            width: 130px;
-            height: 130px;
-        }
-    }
-
-    @media (max-width: 480px) {
-        .container {
-            padding: 20px 10px;
-        }
-        .page-title {
-            font-size: 1.3rem;
+    @media (max-width: 600px) {
+        .card-wrapper {
+            grid-template-columns: repeat(2, 1fr); /* 2 per row on mobile */
         }
         .card {
             width: 100px;
-            height: 100px;
+            height: 90px;
+        }
+        .card-icon {
+            font-size: 1.3rem;
+        }
+        .card-content h3 {
+            font-size: 0.75rem;
         }
     }
 </style>
@@ -124,61 +99,85 @@ Admin Portal
     <div class="content-wrapper">
         <h2 class="page-title">Admin Dashboard</h2>
         <div class="card-wrapper">
-            <!-- Add Employee Card -->
+            <!-- First Row -->
             <a href="{% url 'add_employee' %}" class="card">
                 <div class="card-content">
                     <span class="card-icon">👤</span>
                     <h3>Add Employee</h3>
                 </div>
             </a>
-            <!-- Download Employees Card -->
             <a href="#" class="card" id="downloadEmployees">
                 <div class="card-content">
                     <span class="card-icon">⬇️</span>
-                    <h3>Download Employees</h3>
+                    <h3>Download</h3>
                 </div>
             </a>
-            <!-- View Employees Card -->
             <a href="{% url 'employee_list' %}" class="card">
                 <div class="card-content">
                     <span class="card-icon">👥</span>
                     <h3>View Employees</h3>
                 </div>
             </a>
-            <!-- Deleted Employees Card -->
             <a href="{% url 'deleted_employees' %}" class="card">
                 <div class="card-content">
                     <span class="card-icon">🗑️</span>
-                    <h3>Deleted Employees</h3>
+                    <h3>Deleted</h3>
                 </div>
             </a>
-            <!-- Manage Leave Requests Card -->
             <a href="{% url 'leave_request_display' %}" class="card">
                 <div class="card-content">
                     <span class="card-icon">📋</span>
-                    <h3>Manage Leave Requests</h3>
+                    <h3>Leave Requests</h3>
+                </div>
+            </a>
+
+            <!-- Second Row -->
+            <a href="{% url 'client_list' %}" class="card">
+                <div class="card-content">
+                    <span class="card-icon">💼</span>
+                    <h3>Clients</h3>
+                </div>
+            </a>
+            <a href="{% url 'project_list' %}" class="card">
+                <div class="card-content">
+                    <span class="card-icon">📑</span>
+                    <h3>Projects</h3>
+                </div>
+            </a>
+            <a href="{% url 'assign-project-list' %}" class="card">
+                <div class="card-content">
+                    <span class="card-icon">📝</span>
+                    <h3>Assignments</h3>
+                </div>
+            </a>
+            <a href="{% url 'costcenter_list' %}" class="card">
+                <div class="card-content">
+                    <span class="card-icon">🏢</span>
+                    <h3>Cost Centers</h3>
+                </div>
+            </a>
+            <a href="{% url 'setup_list' %}" class="card">
+                <div class="card-content">
+                    <span class="card-icon">⚙️</span>
+                    <h3>Setup</h3>
                 </div>
             </a>
         </div>
     </div>
 </div>
+
 <script>
 document.getElementById('downloadEmployees').addEventListener('click', function (e) {
     e.preventDefault();
-
     const spinner = document.getElementById('spinner-overlay');
     spinner.style.display = 'flex';
 
     fetch("{% url 'export_employees' %}", {
         method: 'GET',
-        headers: {
-            'X-Requested-With': 'XMLHttpRequest',
-        }
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
     })
     .then(response => {
-        if (!response.ok) {
-            throw new Error('Network response was not ok');
-        }
+        if (!response.ok) throw new Error('Network response was not ok');
         return response.blob();
     })
     .then(blob => {
