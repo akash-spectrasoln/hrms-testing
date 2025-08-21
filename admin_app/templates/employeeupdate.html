@@ -251,8 +251,8 @@ label {
 
   <div class="form-row" id="row2">
     <div class="form-group col-md-3">
-        <label>Cost Center</label>
-        <select name="cost_center" class="form-control">
+        <label  class="required">Cost Center</label>
+        <select name="cost_center" class="form-control" required>
             <option value="">None</option>
             {% for cc in costcenters %}
             <option value="{{ cc.costcenter_id }}" 

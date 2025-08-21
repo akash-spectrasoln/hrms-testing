@@ -249,8 +249,8 @@
                             </select>
                         </div>
                         <div class="form-group col-md-3">
-                            <label>Cost Center</label>
-                            <select name="cost_center" class="form-control">
+                            <label  class="required">Cost Center</label>
+                            <select name="cost_center" class="form-control" required>
                                 <option value="">None</option>
                                 {% for costcenter in costcenters %}
                                 <option value="{{ costcenter.pk }}">{{ costcenter.costcenter_name }}</option>

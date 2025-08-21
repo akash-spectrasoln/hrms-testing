@@ -126,22 +126,20 @@ def client_create(request):
 
 def client_update(request, pk):
     client = get_object_or_404(Client, pk=pk)
-    print(request.user)
     form = ClientForm(request.POST or None, instance=client)
+
     if request.method == 'POST' and form.is_valid():
         client = form.save(commit=False)
 
-        # ✅ Directly get Employee using request.user
-        try:
-            employee = Employees.objects.get(company_email=request.user)
-            client.updated_by = employee
-        except Employees.DoesNotExist:
-            pass  # Optionally handle this case
+        # store updated_by correctly (same style as create)
+        if hasattr(request.user, "employee_profile"):
+            client.updated_by = request.user.employee_profile  # assign object
 
         client.save()
         return redirect('client_list')
 
     return render(request, 'timesheet/client_form.html', {'form': form})
+
 
 
 
@@ -274,10 +272,16 @@ def project_create(request):
     """
     form = ProjectForm(request.POST or None)
     if request.method == 'POST' and form.is_valid():
-        form.save()
-        return redirect('project_list')
-    return render(request, 'timesheet/project_form.html', {'form': form})
+        project = form.save(commit=False)  # Don't save yet
 
+        # assign created_by
+        if hasattr(request.user, "employee_profile"):
+            project.created_by = request.user.employee_profile
+
+        project.save()  # now save with created_by
+        return redirect('project_list')
+
+    return render(request, 'timesheet/project_form.html', {'form': form})
 
 def project_update(request, pk):
     """
@@ -286,9 +290,17 @@ def project_update(request, pk):
     project = get_object_or_404(Project, pk=pk)
     form = ProjectForm(request.POST or None, instance=project)
     if request.method == 'POST' and form.is_valid():
-        form.save()
+        project = form.save(commit=False)  # Don't save yet
+
+        # assign updated_by
+        if hasattr(request.user, "employee_profile"):
+            project.updated_by = request.user.employee_profile
+
+        project.save()  # now save with updated_by
         return redirect('project_list')
+
     return render(request, 'timesheet/project_form.html', {'form': form, 'project': project})
+
 
 
 def project_delete_view(request, pk):
@@ -382,15 +394,19 @@ class AssignProjectCreateView(CreateView):
     success_url = reverse_lazy('assign-project-list')
 
     def form_valid(self, form):
-        form.save()
+        assign_project = form.save(commit=False)  # Don't save yet
+
+        # Set created_by from request.user
+        if hasattr(self.request.user, "employee_profile"):
+            assign_project.created_by = self.request.user.employee_profile
+
+        assign_project.save()  # Now save
         messages.success(self.request, "Project assigned successfully!")
         return super().form_valid(form)
 
     def form_invalid(self, form):
         messages.error(self.request, "Please correct the errors below.")
         return super().form_invalid(form)
-
-
 class AssignProjectUpdateView(UpdateView):
     model = AssignProject
     form_class = AssignProjectUpdateForm
@@ -398,13 +414,20 @@ class AssignProjectUpdateView(UpdateView):
     success_url = reverse_lazy('assign-project-list')
 
     def form_valid(self, form):
-        form.save()
+        assign_project = form.save(commit=False)  # Don't save yet
+
+        # Set updated_by from request.user
+        if hasattr(self.request.user, "employee_profile"):
+            assign_project.updated_by = self.request.user.employee_profile
+
+        assign_project.save()  # Now save
         messages.success(self.request, "Assignment updated successfully!")
         return super().form_valid(form)
 
     def form_invalid(self, form):
         messages.error(self.request, "Please correct the errors below.")
         return super().form_invalid(form)
+
 
 
 def load_projects(request):
