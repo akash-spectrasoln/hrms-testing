@@ -12,7 +12,7 @@ class ClientForm(forms.ModelForm):
 
     country = forms.ModelChoiceField(
         queryset=Country.objects.all(),
-        empty_label="Select a country",
+        empty_label="Select Country",
         widget=forms.Select(attrs={'class': 'form-control'})
     )
 
@@ -58,7 +58,7 @@ class ProjectForm(forms.ModelForm):
         widgets = {
             'project_name': forms.TextInput(attrs={
                 'class': 'form-control',
-                'placeholder': 'Enter project name'
+                'placeholder': 'Enter Project Name'
             }),
             'valid_from': forms.DateInput(attrs={
                 'type': 'date', 
@@ -74,7 +74,7 @@ class ProjectForm(forms.ModelForm):
             'project_desc': forms.Textarea(attrs={
                 'class': 'form-control',
                 'rows': 3,
-                'placeholder': 'Enter a short project description'
+                'placeholder': 'Enter Short Project Description'
             }),
             'prj_manager': forms.Select(attrs={
                 'class': 'form-control'
@@ -103,6 +103,12 @@ from django.forms import DateInput
 
 
 class BaseAssignProjectForm(forms.ModelForm):
+    # Define the employee field with the sorted queryset here
+    employee = forms.ModelChoiceField(
+        queryset=Employees.objects.all().order_by('employee_id'),
+        widget=forms.Select(attrs={'class': 'form-select form-select-sm'}),
+        label="Employee"
+    )
     client = forms.ModelChoiceField(
         queryset=Client.objects.all().only("client_id", "client_name").order_by('client_name'),
         widget=forms.Select(attrs={'class': 'form-select form-select-sm'}),
@@ -114,7 +120,6 @@ class BaseAssignProjectForm(forms.ModelForm):
         model = AssignProject
         fields = ['client', 'project', 'employee', 'designation', 'start_date', 'end_date']
         widgets = {
-            'employee': forms.Select(attrs={'class': 'form-select form-select-sm'}),
             'project': forms.Select(attrs={'class': 'form-select form-select-sm'}),
             'designation': forms.TextInput(attrs={'class': 'form-control form-control-sm'}),
             'start_date': DateInput(attrs={'type': 'date', 'class': 'form-control form-control-sm'}),

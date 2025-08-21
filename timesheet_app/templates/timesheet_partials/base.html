@@ -10,8 +10,18 @@
     <title>{% block title %}{% endblock title %}</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    {% block css %}
-    {% block extra_css %}
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" integrity="sha512-XXXXX" crossorigin="anonymous" />
+    <link href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.8.1/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-KyZXEAg3QhqLMpG8r+Knujsl7/1L_dstPt3HV5HzF6Gvk/e3s4Wz6iJgD/+ub2oU" crossorigin="anonymous">
+    <link rel="stylesheet" href="{% static 'tool/style.css' %}">
+    <link rel="stylesheet" href="{% static 'css/preloader.min.css'%}" type="text/css" />
+    <link href="{% static 'css/bootstrap.min.css'%}" id="bootstrap-style" rel="stylesheet" type="text/css" />
+    <link href="{% static 'css/icons.min.css'%}" rel="stylesheet" type="text/css" />
+    <link href="{% static 'css/app.min.css'%}" id="app-style" rel="stylesheet" type="text/css" />
+
     <style>
         /* === Responsive main content for sidebar === */
         .content-wrapper {
@@ -21,13 +31,11 @@
         body[data-sidebar-size="sm"] .content-wrapper {
             margin-left: 70px;
         }
-
         .col-3, .col-4, .col-6 {
             padding-top: 20px;
             height: auto;
             overflow-y: auto;
         }
-
         .vertical-menu {
             width: 70px !important;
             min-width: 70px !important;
@@ -64,60 +72,38 @@
         [data-bs-theme="light"] .header-item.border-end, [data-bs-theme="light"] .header-item.border-start { border-color: rgba(0, 0, 0, 0.129) !important; }
         [data-bs-theme="light"] .header-profile-user  { border: 1px solid rgba(9, 9, 9, 0.11) !important; background-color: rgba(73, 76, 77, 0.196) !important;}
         body[data-sidebar-size="sm"] { min-height: auto !important; }
-
         .spinner-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(255, 255, 255, 0.6);
-  display: none;
-  justify-content: center;
-  align-items: center;
-  z-index: 9999;
-}
-
-.spinner {
-  width: 50px;
-  height: 50px;
-  border: 6px solid #ccc;
-  border-top: 6px solid #007bff;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
-
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.6);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 6px solid #ccc;
+            border-top: 6px solid #007bff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
     </style>
-    {% endblock extra_css %}
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" integrity="sha512-XXXXX" crossorigin="anonymous" />
-    <link href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.8.1/font/bootstrap-icons.min.css">
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet"
-        integrity="sha384-KyZXEAg3QhqLMpG8r+Knujsl7/1L_dstPt3HV5HzF6Gvk/e3s4Wz6iJgD/+ub2oU" crossorigin="anonymous">
-    <link rel="stylesheet" href="{% static 'tool/style.css' %}">
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.12.1/jquery-ui.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
-    <link rel="stylesheet" href="{% static 'css/preloader.min.css'%}" type="text/css" />
-    <link href="{% static 'css/bootstrap.min.css'%}" id="bootstrap-style" rel="stylesheet" type="text/css" />
-    <link href="{% static 'css/icons.min.css'%}" rel="stylesheet" type="text/css" />
-    <link href="{% static 'css/app.min.css'%}" id="app-style" rel="stylesheet" type="text/css" />
-    {% endblock css %}
-    {% block styles %}{% endblock %}
-    {% block scripts %}{% endblock %}
+    
+    {% block page_css %}{% endblock %} 
 </head>
 
 <body {% block extra_body %} data-topbar="dark"{% endblock extra_body %}
       data-sidebar="{% if request.user.is_authenticated and request.user.is_dark_mode %}dark{% else %}light{% endif %}"
       data-sidebar-size="sm">
 
-    <!-- Begin page -->
     <div id="layout-wrapper">
         {% block admin_header %}
             {% include "timesheet_partials/header.html" %}
@@ -132,11 +118,15 @@
             {% endblock footer %}
         {% endblock content %}
     </div>
-    <!-- END layout-wrapper -->
-
-    {% block javascript %}
+    <div id="spinner-overlay" class="spinner-overlay">
+        <div class="spinner"></div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.12.1/jquery-ui.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
     <script src="{% static 'tool/main.js' %}"></script>
-    <!-- JAVASCRIPT -->
     <script src="{% static 'libs/jquery/dist/jquery.min.js' %}"></script>
     <script src="{% static 'libs/bootstrap/dist/js/bootstrap.bundle.min.js' %}"></script>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
@@ -145,99 +135,83 @@
     <script src="{% static 'libs/node-waves/dist/waves.min.js' %}"></script>
     <script src="{% static 'libs/feather-icons/dist/feather.min.js' %}"></script>
     <script src="{% static 'libs/pace-js/pace.min.js' %}"></script>
-    {% block extra_js %}{% endblock extra_js %}
-<script src="{% static 'js/app.js' %}"></script>
+    <script src="{% static 'js/app.js' %}"></script>
+    
+    {% block javascript %}
+        {% block extra_js %}{% endblock extra_js %}
+        <script>
+            // Your script for Table Search
+            document.addEventListener('DOMContentLoaded', function() {
+                var searchForm = document.querySelector('.app-search');
+                var searchInput = document.getElementById('searchInput');
+                var table = document.getElementById('searchableTable');
+                if (!searchForm || !searchInput || !table) return;
+                var tableRows = table.querySelectorAll('tbody tr');
+                var loadingOverlay = document.getElementById('loadingOverlay');
 
-<!--  Table Search Script (unchanged) -->
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        var searchForm = document.querySelector('.app-search');
-        var searchInput = document.getElementById('searchInput');
-        var table = document.getElementById('searchableTable');
-        if (!searchForm || !searchInput || !table) return;
-        var tableRows = table.querySelectorAll('tbody tr');
-        var loadingOverlay = document.getElementById('loadingOverlay');
+                function filterRows() {
+                    var searchQuery = searchInput.value.toLowerCase();
+                    tableRows.forEach(function(row) {
+                        var cells = row.querySelectorAll('td');
+                        var matches = false;
+                        cells.forEach(function(cell) {
+                            var isSearchable = cell.getAttribute('data-searchable') === 'true';
+                            if (isSearchable && cell.textContent.toLowerCase().includes(searchQuery)) {
+                                matches = true;
+                            }
+                        });
+                        row.style.display = matches ? 'table-row' : 'none';
+                    });
+                }
 
-        function filterRows() {
-            var searchQuery = searchInput.value.toLowerCase();
-            tableRows.forEach(function(row) {
-                var cells = row.querySelectorAll('td');
-                var matches = false;
-                cells.forEach(function(cell) {
-                    var isSearchable = cell.getAttribute('data-searchable') === 'true';
-                    if (isSearchable && cell.textContent.toLowerCase().includes(searchQuery)) {
-                        matches = true;
-                    }
+                searchInput.addEventListener('input', function() {
+                    filterRows();
                 });
-                row.style.display = matches ? 'table-row' : 'none';
+
+                searchForm.addEventListener('submit', function(event) {
+                    event.preventDefault();
+                    loadingOverlay.style.display = 'flex';
+                    filterRows();
+                    setTimeout(function() {
+                        loadingOverlay.style.display = 'none';
+                    }, 300);
+                });
             });
-        }
 
-        searchInput.addEventListener('input', function() {
-            filterRows();
-        });
+            // Your script for Spinner
+            function showSpinnerAndDisableButtons() {
+                const spinner = document.getElementById('spinner-overlay');
+                if (spinner) {
+                    spinner.style.display = 'flex';
+                }
+                document.querySelectorAll('button, input[type=submit]').forEach(el => {
+                    el.disabled = true;
+                });
+            }
 
-        searchForm.addEventListener('submit', function(event) {
-            event.preventDefault();
-            loadingOverlay.style.display = 'flex';
-            filterRows();
-            setTimeout(function() {
-                loadingOverlay.style.display = 'none';
-            }, 300);
-        });
-    });
-</script>
+            function hideSpinnerAndEnableButtons() {
+                const spinner = document.getElementById('spinner-overlay');
+                if (spinner) {
+                    spinner.style.display = 'none';
+                }
+                document.querySelectorAll('button, input[type=submit]').forEach(el => {
+                    el.disabled = false;
+                });
+            }
 
-<script>
-    function showSpinnerAndDisableButtons() {
-        const spinner = document.getElementById('spinner-overlay');
-        if (spinner) {
-            spinner.style.display = 'flex';
-        }
-
-        document.querySelectorAll('button, input[type=submit]').forEach(el => {
-            el.disabled = true;
-        });
-    }
-
-    function hideSpinnerAndEnableButtons() {
-        const spinner = document.getElementById('spinner-overlay');
-        if (spinner) {
-            spinner.style.display = 'none';
-        }
-
-        document.querySelectorAll('button, input[type=submit]').forEach(el => {
-            el.disabled = false;
-        });
-    }
-
-    document.addEventListener('DOMContentLoaded', () => {
-        // ✅ STOP spinner even if view renders same template (after error)
-        hideSpinnerAndEnableButtons();
-
-        // Spinner on form submit
-        document.querySelectorAll('form').forEach(form => {
-            form.addEventListener('submit', (e) => {
-                if (!form.checkValidity()) return;
-                showSpinnerAndDisableButtons();
+            document.addEventListener('DOMContentLoaded', () => {
+                hideSpinnerAndEnableButtons();
+                document.querySelectorAll('form').forEach(form => {
+                    form.addEventListener('submit', (e) => {
+                        if (!form.checkValidity()) return;
+                        showSpinnerAndDisableButtons();
+                    });
+                });
+                window.addEventListener('beforeunload', showSpinnerAndDisableButtons);
             });
-        });
-
-        // Spinner on navigation away
-        window.addEventListener('beforeunload', showSpinnerAndDisableButtons);
-    });
-
-    // ✅ Extra safety: stop spinner on full load too
-    window.addEventListener('load', hideSpinnerAndEnableButtons);
-</script>
-
-
-{% endblock javascript %}
-
-
-<div id="spinner-overlay" class="spinner-overlay">
-  <div class="spinner"></div>
-</div>
+            window.addEventListener('load', hideSpinnerAndEnableButtons);
+        </script>
+    {% endblock javascript %}
 
 </body>
 </html>

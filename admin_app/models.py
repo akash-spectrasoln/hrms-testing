@@ -823,6 +823,20 @@ class Client(models.Model):
         related_name='clients'
     )
     is_deleted = models.BooleanField(default=False)
+    created_by = models.ForeignKey(
+        'Employees',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="clients_created"
+    )
+    updated_by = models.ForeignKey(
+        'Employees',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="clients_updated"
+    )
 
     class Meta:
         db_table = 'client'
@@ -836,18 +850,27 @@ class Client(models.Model):
 
     def __str__(self):
         return self.client_name
+
      
+from django.db import models
+from django.core.exceptions import ValidationError
+from django.utils import timezone
+
 class Project(models.Model):
     """
     Project model to track projects under specific clients.
     Includes validity range, active status, manager assignment, and soft deletion support.
+
+    Business Rules:
+    - Current project: valid_from <= today <= valid_to (or valid_to is null) => is_active=True
+    - Expired project: valid_to < today => is_active=False
+    - Future project: valid_from > today => is_active=False
     """
 
     project_id = models.AutoField(primary_key=True)
     project_name = models.CharField(max_length=255)
     project_desc = models.TextField(
-        verbose_name="Project Description (Short)",
-        help_text="A brief description of the project.",
+        verbose_name="Project Description",
         blank=True,
         null=True
     )
@@ -876,6 +899,22 @@ class Project(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    # ✅ New fields
+    created_by = models.ForeignKey(
+        'Employees',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="projects_created"
+    )
+    updated_by = models.ForeignKey(
+        'Employees',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="projects_updated"
+    )
+
     class Meta:
         db_table = 'project'
         ordering = ['-valid_from']
@@ -896,11 +935,44 @@ class Project(models.Model):
         ]
 
     def clean(self):
+        """Ensure valid_from <= valid_to."""
         super().clean()
         if self.valid_from and self.valid_to and self.valid_from > self.valid_to:
             raise ValidationError({
                 'valid_to': 'Valid To date must be on or after Valid From date.'
             })
+
+    def save(self, *args, **kwargs):
+        """
+        Override save() to automatically set is_active based on project validity:
+        - Current project: is_active=True
+        - Expired or future: is_active=False
+        """
+        today = timezone.now().date()
+
+        if self.valid_from > today:
+            self.is_active = False  # future project
+        elif self.valid_to < today:
+            self.is_active = False  # expired project
+        else:
+            self.is_active = True   # current project
+
+        super().save(*args, **kwargs)
+
+    @property
+    def status(self):
+        """
+        Returns project status as one of:
+        - 'current'  -> active project within validity dates
+        - 'expired'  -> valid_to has passed
+        - 'future'   -> valid_from is in the future
+        """
+        today = timezone.now().date()
+        if self.valid_from > today:
+            return "future"
+        elif self.valid_to < today:
+            return "expired"
+        return "current"
 
     def soft_delete(self):
         """Marks the project as inactive instead of deleting it."""
@@ -913,7 +985,8 @@ class Project(models.Model):
         self.save(update_fields=['is_active'])
 
     def __str__(self):
-        return f"{self.project_name} ({self.client.client_alias})"
+        return f"{self.client.client_alias}-{self.project_name} "
+
     def is_expired(self):
         """Returns True if the project's valid_to date has passed."""
         return self.valid_to < timezone.now().date()
@@ -951,7 +1024,6 @@ class AssignProject(models.Model):
     designation = models.CharField(
         max_length=100,
         verbose_name="Designation in Project",
-        help_text="Role of the employee in this project",
         null=True,
         blank=True,
     )
@@ -959,6 +1031,21 @@ class AssignProject(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     is_active = models.BooleanField(default=True)
+    created_by = models.ForeignKey(
+    'Employees',
+    on_delete=models.SET_NULL,
+    null=True,
+    blank=True,
+        related_name="assignments_created"
+    )
+    updated_by = models.ForeignKey(
+        'Employees',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="assignments_updated"
+    )
+
 
     class Meta:
         unique_together = ('employee', 'project', 'start_date')

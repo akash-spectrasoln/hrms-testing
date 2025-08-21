@@ -1,229 +1,9 @@
 {% extends 'timesheet_partials/base.html' %}
 {% load static %}
+{% block page_css %}
+
+{% endblock page_css %}
 {% block content %}
-
-<div class="content-wrapper">
-  <h2 class="page-title">Time and Activity Recording</h2>
-  <div class="container-fluid mt-0 pt-0">
-    <div class="row gx-1 justify-content-center">
-
-      <!-- 📅 Calendar Section -->
-      <div class="col-12 col-lg-auto calendar-wrapper">
-        <div class="card shadow-sm mb-1">
-
-          <!-- Calendar Header with Proper Navigation -->
-          <div
-            class="card-header bg-primary text-white d-flex justify-content-between align-items-center py-1 flex-wrap flex-sm-nowrap">
-
-            <!-- Previous Year -->
-            <a class="btn btn-sm btn-light px-1 px-sm-2 py-0 calendar-nav" data-month="{{ month }}"
-              data-year="{{ year|add:'-1' }}" {% if prev_disabled %} disabled {% endif %}>
-              &laquo; <span class="d-none d-sm-inline">{{ year|add:'-1' }}</span>
-            </a>
-
-            <!-- Previous Month -->
-            <a class="btn btn-sm btn-light px-1 px-sm-2 py-0 calendar-nav" data-month="{{ prev_month }}"
-              data-year="{{ prev_year }}" {% if prev_disabled %} disabled {% endif %}>
-              &laquo;
-              <span class="d-inline d-sm-none">{{ prev_month_name|slice:":3" }}</span>
-              <span class="d-none d-sm-inline">{{ prev_month_name }}</span>
-            </a>
-
-            <!-- Current Month & Year -->
-            <h6 class="mb-0 text-center flex-grow-1 small">
-              <span class="d-inline d-sm-none">{{ current_month_name|slice:":3" }} {{ year }}</span>
-              <span class="d-none d-sm-inline">{{ current_month_name }} {{ year }}</span>
-            </h6>
-
-            <!-- Next Month -->
-            <a class="btn btn-sm btn-light px-1 px-sm-2 py-0 calendar-nav" data-month="{{ next_month }}"
-              data-year="{{ next_year }}" {% if next_disabled %} disabled {% endif %}>
-              <span class="d-inline d-sm-none">{{ next_month_name|slice:":3" }}</span>
-              <span class="d-none d-sm-inline">{{ next_month_name }}</span> &raquo;
-            </a>
-
-            <!-- Next Year -->
-            <a class="btn btn-sm btn-light px-1 px-sm-2 py-0 calendar-nav" data-month="{{ month }}"
-              data-year="{{ year|add:'1' }}" {% if next_year_disabled %} disabled {% endif %}>
-              <span class="d-none d-sm-inline">{{ year|add:'1' }}</span> &raquo;
-            </a>
-
-            <!-- Legend Button -->
-            <button id="legend-btn" class="btn btn-sm btn-light px-1 py-0 ms-1" title="Legend">
-              &#9776;
-            </button>
-
-
-
-          </div>
-
-
-
-          <div class="card-body p-1">
-            <!-- Calendar Grid -->
-            <div class="calendar-container mb-1">
-              <!-- Week Headers -->
-              <div class="calendar-grid calendar-header mb-1 small fw-bold">
-                {% for day in weekdays %}
-                <div class="text-center border-bottom">{{ day }}</div>
-                {% endfor %}
-              </div>
-              <div class="calendar-grid calendar-days">
-                {% for week in calendar_data %}
-                {% for day in week %}
-                {% if day %}
-                <div
-                  class="calendar-day {{ day.status }} {% if day.is_today %}today-outline{% endif %} {% if day.is_disabled %}disabled{% endif %}"
-                  data-date="{{ day.date|date:'Y-m-d' }}" {% if day.holiday_name %}data-holiday="{{ day.holiday_name }}"
-                  title="{{ day.holiday_name }}" {% endif %}>
-                  <span class="day-number">{{ day.day }}</span>
-                  {% if day.total_hours %}
-                  <span class="day-hours {% if day.is_approved %}approved-hours{% endif %}">
-                    {{ day.total_hours }}h
-                  </span>
-                  {% endif %}
-                </div>
-                {% else %}
-                <!-- empty cell for alignment -->
-                <div class="calendar-day empty"></div>
-                {% endif %}
-                {% endfor %}
-                {% endfor %}
-              </div>
-            </div>
-
-            <!-- Legend -->
-            <!-- Legend Popup -->
-            <div id="legend-popup" class="legend-popup shadow-sm">
-    <div class="legend-item">
-        <span class="legend-color-box bg-success"></span>
-        Entered
-    </div>
-    <div class="legend-item">
-        <span class="legend-color-box bg-warning text-dark"></span>
-        Not Entered
-    </div>
-    <div class="legend-item">
-        <span class="legend-color-box" style="background-color:#f5c6cb;"></span>
-        Holiday
-    </div>
-    <div class="legend-item">
-        <span class="legend-color-box" style="background-color:#d6c8f4;"></span>
-        Leave
-    </div>
-    <div class="legend-item">
-        <span class="legend-color-box bg-secondary"></span>
-        Weekend
-    </div>
-    <div class="legend-item">
-        <span class="legend-color-box border border-primary"></span>
-        Today
-    </div>
-    <div class="legend-item">
-        <span class="legend-color-box bg-info"></span>
-        Selected
-    </div>
-</div>
-          </div>
-        </div>
-
-        <!-- Entry Details Table -->
-        <div id="entry-details" class="card mb-2 d-none">
-          <div class="card-header bg-light py-1 px-2 d-flex justify-content-between align-items-center">
-            <strong class="small text-primary">
-              Timesheet Details: <span id="details-date"></span>
-            </strong>
-            <div>
-              <button id="paste-btn" class="btn btn-sm btn-warning d-none me-1">Paste Selected</button>
-              <button id="add-entry-btn" class="btn btn-sm btn-primary ms-1">+ Add Entry</button>
-            </div>
-          </div>
-          <div class="card-body p-1" id="details-body"></div>
-        </div>
-      </div>
-
-      <!-- 📝 Timesheet Form -->
-      <!-- 📝 Timesheet Form -->
-      <div class="col-12 col-lg-auto" id="timesheet-form-container">
-        <div class="card shadow-sm mb-0 timesheet-card">
-          <div class="card-header bg-primary text-white py-1 px-2">
-            <h6 class="mb-0 small" id="timesheet-form-header" >Timesheet</h6>
-          </div>
-          <div class="card-body p-2">
-            <form id="timesheet-form" method="POST" action="{% url 'submit_timesheet' %}">
-              {% csrf_token %}
-              <input type="hidden" id="entry-id" name="entry_id">
-
-              <!-- Date -->
-              <div class="mb-0">
-                <label for="date" class="form-label small mb-0">Date</label>
-                <input type="date" id="date" name="date" class="form-control form-control-sm" required>
-              </div>
-
-              <!-- Hours -->
-
-
-              <!-- Project -->
-              <div class="mb-0">
-                <label class="form-label small mb-0">Project</label>
-                <select id="project" name="project" class="form-select form-select-sm" required>
-                  <option disabled selected>Pick a date to load projects</option>
-                </select>
-                <div id="remaining-days-info" class="form-text small mt-0 mb-0"></div>
-              </div>
-
-              <div class="mb-0">
-                <label for="hours_worked" class="form-label small mb-0">Hours</label>
-                <input type="number" step="1" min="0" max="12" id="hours_worked" name="hours_worked"
-                  class="form-control form-control-sm" required>
-              </div>
-
-              <!-- Activity -->
-              <div class="mb-0">
-                <label class="form-label small mb-0">Activity</label>
-                <select id="activity" name="activity" class="form-select form-select-sm" required>
-                  <option value="">Select</option>
-                  {% for a in activities %}
-                  <option value="{{ a.pk }}">{{ a.act_name }}</option>
-                  {% endfor %}
-                </select>
-              </div>
-
-              <!-- Work Location -->
-              <div class="mb-0">
-                <label class="form-label small mb-0">Work Location</label>
-                <select id="work_location" name="work_location" class="form-select form-select-sm" required>
-                  <option value="">Select</option>
-                  {% for w in work_locations %}
-                  <option value="{{ w.pk }}">{{ w.loc_name }}</option>
-                  {% endfor %}
-                </select>
-              </div>
-
-              <!-- Description -->
-              <div class="mb-0">
-                <label class="form-label small mb-0">Task Performed</label>
-                <textarea id="description" name="description" rows="3" class="form-control form-control-sm"
-                  required></textarea>
-              </div>
-
-              {% if not day.week_is_approved %}
-                <button type="submit" class="btn btn-success w-100 btn-sm mt-2">Submit Timesheet</button>
-              {% endif %}
-
-            </form>
-          </div>
-        </div>
-      </div>
-
-
-    </div>
-  </div>
-</div>
-
-
-<div id="message-container"></div>
-
 <style>
   .content-wrapper {
     margin-left: 0;
@@ -287,7 +67,7 @@
   #timesheet-form-container {
     max-width: 400px;
     width: 100%;
-    margin-left: 12px;
+    margin-left: 10px;
     margin-right: 0;
     margin-top: 0 !important;
   }
@@ -339,7 +119,7 @@
 
   /* ---------------- Calendar ---------------- */
   .calendar-container {
-    overflow-x: auto;
+    overflow-x: hidden;
     margin-top: 4px;
   }
 
@@ -449,7 +229,7 @@
   }
 
   .selected-source-date {
-    border: 1.5px solid #0d6efd !important;
+    border: 1.5px solid #fc37ff !important;
     box-shadow: 0 0 4px #0d6efd;
     background-color: #e7f0ff !important;
   }
@@ -683,7 +463,270 @@
     }
 
   }
+.calendar-wrapper,
+#timesheet-form-container {
+  max-width: 420px;
+  flex: 1 1 420px;
+  width: 100%;
+}
+@media (max-width: 576px) {
+  .calendar-wrapper,
+  #timesheet-form-container {
+    max-width: 100%;
+  }
+  #timesheet-form-container {
+    margin-left: 0;
+  }
+}
+#timesheet-form-container .card-header {
+  padding: 0.25rem 0.5rem;
+  margin-bottom: 0;
+}
+#timesheet-form .form-group:first-child,
+#timesheet-form .mb-0:first-child {
+  margin-top: 0;
+}
+#timesheet-form textarea {
+  min-height: 50px;
+  resize: none;
+}
+input[type="date"] {
+    text-align: left;        /* Horizontal: align text to the left */
+    padding-left: 8px;       /* Adjust the gap from the left */
+    height: 38px;            /* Match your input height */
+    line-height: 38px;       /* Vertically center text */
+    vertical-align: middle;  /* Ensure alignment in flex/inline contexts */
+}
+
+
+
 </style>
+
+<div class="content-wrapper">
+  <h2 class="page-title">Time and Activity Recording</h2>
+  <div class="container-fluid mt-0 pt-0">
+    <div class="row gx-1 justify-content-center">
+
+     <div class="calendar-timesheet-container d-flex flex-wrap justify-content-center gap-2">
+       <!-- 📅 Calendar Section -->
+      <div class=" calendar-wrapper">
+        <div class="card shadow-sm mb-1">
+
+          <!-- Calendar Header with Proper Navigation -->
+          <div
+            class="card-header bg-primary text-white d-flex justify-content-between align-items-center py-1 flex-wrap flex-sm-nowrap">
+
+            <!-- Previous Year -->
+            <a class="btn btn-sm btn-light px-1 px-sm-2 py-0 calendar-nav" data-month="{{ month }}"
+              data-year="{{ year|add:'-1' }}" {% if prev_disabled %} disabled {% endif %}>
+              &laquo; <span class="d-none d-sm-inline">{{ year|add:'-1' }}</span>
+            </a>
+
+            <!-- Previous Month -->
+            <a class="btn btn-sm btn-light px-1 px-sm-2 py-0 calendar-nav" data-month="{{ prev_month }}"
+              data-year="{{ prev_year }}" {% if prev_disabled %} disabled {% endif %}>
+              &laquo;
+              <span class="d-inline d-sm-none">{{ prev_month_name|slice:":3" }}</span>
+              <span class="d-none d-sm-inline">{{ prev_month_name }}</span>
+            </a>
+
+            <!-- Current Month & Year -->
+            <h6 class="mb-0 text-center flex-grow-1 small">
+              <span class="d-inline d-sm-none">{{ current_month_name|slice:":3" }} {{ year }}</span>
+              <span class="d-none d-sm-inline">{{ current_month_name }} {{ year }}</span>
+            </h6>
+
+            <!-- Next Month -->
+            <a class="btn btn-sm btn-light px-1 px-sm-2 py-0 calendar-nav" data-month="{{ next_month }}"
+              data-year="{{ next_year }}" {% if next_disabled %} disabled {% endif %}>
+              <span class="d-inline d-sm-none">{{ next_month_name|slice:":3" }}</span>
+              <span class="d-none d-sm-inline">{{ next_month_name }}</span> &raquo;
+            </a>
+
+            <!-- Next Year -->
+            <a class="btn btn-sm btn-light px-1 px-sm-2 py-0 calendar-nav" data-month="{{ month }}"
+              data-year="{{ year|add:'1' }}" {% if next_year_disabled %} disabled {% endif %}>
+              <span class="d-none d-sm-inline">{{ year|add:'1' }}</span> &raquo;
+            </a>
+
+            <!-- Legend Button -->
+            <button id="legend-btn" class="btn btn-sm btn-light px-1 py-0 ms-1" title="Legend">
+              &#9776;
+            </button>
+
+
+
+          </div>
+
+
+
+          <div class="card-body p-1">
+            <!-- Calendar Grid -->
+            <div class="calendar-container mb-1">
+              <!-- Week Headers -->
+              <div class="calendar-grid calendar-header mb-1 small fw-bold">
+                {% for day in weekdays %}
+                <div class="text-center border-bottom">{{ day }}</div>
+                {% endfor %}
+              </div>
+              <div class="calendar-grid calendar-days">
+                {% for week in calendar_data %}
+                {% for day in week %}
+                {% if day %}
+                <div
+                  class="calendar-day {{ day.status }} {% if day.is_today %}today-outline{% endif %} {% if day.is_disabled %}disabled{% endif %}"
+                  data-date="{{ day.date|date:'Y-m-d' }}" {% if day.holiday_name %}data-holiday="{{ day.holiday_name }}"
+                  title="{{ day.holiday_name }}" {% endif %}>
+                  <span class="day-number">{{ day.day }}</span>
+                  {% if day.total_hours %}
+                  <span class="day-hours {% if day.is_approved %}approved-hours{% endif %}">
+                    {{ day.total_hours }}h
+                  </span>
+                  {% endif %}
+                </div>
+                {% else %}
+                <!-- empty cell for alignment -->
+                <div class="calendar-day empty"></div>
+                {% endif %}
+                {% endfor %}
+                {% endfor %}
+              </div>
+            </div>
+
+            <!-- Legend -->
+            <!-- Legend Popup -->
+            <div id="legend-popup" class="legend-popup shadow-sm">
+    <div class="legend-item">
+        <span class="legend-color-box bg-success"></span>
+        Entered
+    </div>
+    <div class="legend-item">
+        <span class="legend-color-box bg-warning text-dark"></span>
+        Not Entered
+    </div>
+    <div class="legend-item">
+        <span class="legend-color-box" style="background-color:#f5c6cb;"></span>
+        Holiday
+    </div>
+    <div class="legend-item">
+        <span class="legend-color-box" style="background-color:#d6c8f4;"></span>
+        Leave
+    </div>
+    <div class="legend-item">
+        <span class="legend-color-box bg-secondary"></span>
+        Weekend
+    </div>
+    <div class="legend-item">
+        <span class="legend-color-box border border-primary"></span>
+        Today
+    </div>
+    <div class="legend-item">
+        <span class="legend-color-box " style="border:1px solid #fc37ff ;"></span>
+        Selected
+    </div>
+</div>
+          </div>
+        </div>
+
+        <!-- Entry Details Table -->
+        <div id="entry-details" class="card mb-2 d-none">
+          <div class="card-header bg-light py-1 px-2 d-flex justify-content-between align-items-center">
+            <strong class="small text-primary">
+              Timesheet Details: <span id="details-date"></span>
+            </strong>
+            <div>
+              <button id="paste-btn" class="btn btn-sm btn-warning d-none me-1">Paste Selected</button>
+              <button id="add-entry-btn" class="btn btn-sm btn-primary ms-1">+ Add Entry</button>
+            </div>
+          </div>
+          <div class="card-body p-1" id="details-body"></div>
+        </div>
+      </div>
+
+      <!-- 📝 Timesheet Form -->
+      <!-- 📝 Timesheet Form -->
+      <div  id="timesheet-form-container">
+        <div class="card shadow-sm mb-0 timesheet-card">
+          <div class="card-header bg-primary text-white py-1 px-2">
+            <h6 class="mb-0 small" id="timesheet-form-header" >Timesheet</h6>
+          </div>
+          <div class="card-body p-2">
+            <form id="timesheet-form" method="POST" action="{% url 'submit_timesheet' %}">
+              {% csrf_token %}
+              <input type="hidden" id="entry-id" name="entry_id">
+
+              <!-- Date -->
+              <div class="mb-0">
+                <label for="date" class="form-label small mb-0">Date</label>
+                <input type="date" id="date" name="date" class="form-control form-control-sm" required>
+              </div>
+
+              <!-- Hours -->
+
+
+              <!-- Project -->
+              <div class="mb-0">
+                <label class="form-label small mb-0">Project</label>
+                <select id="project" name="project" class="form-select form-select-sm" required>
+                  <option disabled selected>Pick a date to load projects</option>
+                </select>
+                <div id="remaining-days-info" class="form-text small mt-0 mb-0"></div>
+              </div>
+
+              <div class="mb-0">
+                <label for="hours_worked" class="form-label small mb-0">Hours</label>
+                <input type="number" step="1" min="0" max="12" id="hours_worked" name="hours_worked"
+                  class="form-control form-control-sm" required>
+              </div>
+
+              <!-- Activity -->
+              <div class="mb-0">
+                <label class="form-label small mb-0">Activity</label>
+                <select id="activity" name="activity" class="form-select form-select-sm" required>
+                  <option value="">Select</option>
+                  {% for a in activities %}
+                  <option value="{{ a.pk }}">{{ a.act_name }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+
+              <!-- Work Location -->
+              <div class="mb-0">
+                <label class="form-label small mb-0">Work Location</label>
+                <select id="work_location" name="work_location" class="form-select form-select-sm" required>
+                  <option value="">Select</option>
+                  {% for w in work_locations %}
+                  <option value="{{ w.pk }}">{{ w.loc_name }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+
+              <!-- Description -->
+              <div class="mb-0">
+                <label class="form-label small mb-0">Task Performed</label>
+                <textarea id="description" name="description" rows="3" class="form-control form-control-sm"
+                  required></textarea>
+              </div>
+
+              {% if not day.week_is_approved %}
+                <button type="submit" class="btn btn-success w-100 btn-sm mt-2">Submit Timesheet</button>
+              {% endif %}
+
+            </form>
+          </div>
+        </div>
+      </div>
+     </div>
+
+
+    </div>
+  </div>
+</div>
+
+
+<div id="message-container"></div>
+
+
 
 <script>
   document.addEventListener('DOMContentLoaded', () => {
@@ -733,7 +776,7 @@
     };
 
     const showToastMessage = (msg, type = 'success') => {
-      const bg = type === 'success' ? 'rgb(25,135,84)' : 'rgb(220,53,69)'; // only success/error are styled
+      const bg = type === 'success' ? 'rgb(123,178,206)' : 'rgb(123,178,206)'; // only success/error are styled
       let container = document.querySelector('.toast-container');
       if (!container) {
         container = document.createElement('div');
@@ -828,29 +871,46 @@
     });
 
     /** -------------------- Projects Dropdown -------------------- **/
-    const populateProjects = (projects, selectedProjectId = null) => {
-      projectSelect.innerHTML = ''; remainingDaysInfo.textContent = '';
-      if (!projects.length || isLeaveDay) {
-        projectSelect.innerHTML = '<option disabled selected>No projects available</option>';
-        return;
-      }
-      const frag = document.createDocumentFragment();
-      projects.forEach(item => {
-        const opt = document.createElement('option');
-        opt.value = item.projectAssignmentId;
-        opt.textContent = `${item.name} (${item.client_alias || 'Cost Center'})`;
-        if ((selectedProjectId && item.projectAssignmentId == selectedProjectId) || (!selectedProjectId && item.selected)) opt.selected = true;
-        opt.dataset.remainingDays = item.remaining_days || '';
-        frag.appendChild(opt);
-      });
-      projectSelect.appendChild(frag);
-      projectSelect.dispatchEvent(new Event('change'));
-    };
+    /** -------------------- Projects Dropdown (Corrected) -------------------- **/
+      const populateProjects = (projects, selectedProjectId = null) => {
+        projectSelect.innerHTML = '';
+        remainingDaysInfo.textContent = '';
 
-    projectSelect.addEventListener('change', () => {
-      const opt = projectSelect.selectedOptions[0];
-      remainingDaysInfo.textContent = opt?.dataset.remainingDays ? `Remaining days: ${opt.dataset.remainingDays}` : '';
-    });
+        if (!projects.length) {
+          projectSelect.innerHTML = '<option disabled selected>No projects available</option>';
+          return;
+        }
+
+        const frag = document.createDocumentFragment();
+        projects.forEach(item => {
+          const opt = document.createElement('option');
+          opt.value = item.projectAssignmentId;
+          opt.textContent = item.client_alias ? `${item.client_alias} - ${item.name}` : `${item.name} (Cost Center)`;
+
+
+          // add dataset for start/end date
+          opt.dataset.startDate = item.assignment_start_date || '';
+          opt.dataset.endDate = item.assignment_end_date || '';
+
+          if ((selectedProjectId && item.projectAssignmentId == selectedProjectId) || (!selectedProjectId && item.selected)) {
+            opt.selected = true;
+          }
+          frag.appendChild(opt);
+        });
+        projectSelect.appendChild(frag);
+        projectSelect.dispatchEvent(new Event('change'));
+      };
+
+      projectSelect.addEventListener('change', () => {
+        const opt = projectSelect.selectedOptions[0];
+        if (opt?.dataset.startDate && opt?.dataset.endDate) {
+          const start = formatDate(opt.dataset.startDate);
+          const end = formatDate(opt.dataset.endDate);
+          remainingDaysInfo.textContent = `Project Validity: ${start} → ${end}`;
+        } else {
+          remainingDaysInfo.textContent = '';
+        }
+      });
 
     /** -------------------- Populate Form for Edit/View -------------------- **/
     const populateForm = (entry, readOnly = false) => {
@@ -883,106 +943,113 @@
 
     /** -------------------- Load Day Data -------------------- **/
     const loadDayData = async (date, suppressErrors = false) => {
-      clearForm(true);
-      clearDetails();
-      showSpinnerAndDisableButtons();
-      try {
+    clearForm(true);
+    clearDetails();
+    showSpinnerAndDisableButtons();
+    try {
         const resp = await fetch(
-          `/hrms/employee/ajax/get-timesheet-day-data/?date=${encodeURIComponent(date)}&_=${Date.now()}`,
-          { cache: 'no-store' }
+            `/hrms/employee/ajax/get-timesheet-day-data/?date=${encodeURIComponent(date)}&_=${Date.now()}`,
+            { cache: 'no-store' }
         );
-        if (!resp.ok) { if (!suppressErrors) showToastMessage(`HTTP error: ${resp.status}`, "error"); return; }
+        if (!resp.ok) {
+            if (!suppressErrors) showToastMessage(`HTTP error: ${resp.status}`, "error");
+            return;
+        }
         let data;
-        try { data = await resp.json(); }
-        catch { if (!suppressErrors) showToastMessage("Invalid JSON response from server.", "error"); return; }
+        try {
+            data = await resp.json();
+        } catch {
+            if (!suppressErrors) showToastMessage("Invalid JSON response from server.", "error");
+            return;
+        }
 
         dateField.value = date;
         detailsDate.textContent = formatDate(date);
-        isLeaveDay = false;
+        isLeaveDay = data.is_leave_day; // Keep track of leave status
 
         const selectedCell = document.querySelector(`.calendar-day[data-date="${date}"]`);
 
-        if (data.is_leave_day) {
-          lockForm(true, true);
-          isLeaveDay = true;
-          if (selectedCell) {
-            selectedCell.classList.add('disabled', 'status-leave');
-            clearDayHours(selectedCell);
-            selectedCell.classList.remove('status-entered');
-          }
-          return data;
+        // IMPORTANT: Check for leave status from server data, but only apply the leave class
+        // and lock the form if it's NOT a weekend or holiday.
+        if (isLeaveDay && !selectedCell.classList.contains('status-weekend') && !selectedCell.classList.contains('status-holiday')) {
+            lockForm(true, true);
+            if (selectedCell) {
+                selectedCell.classList.add('disabled', 'status-leave');
+                clearDayHours(selectedCell);
+                selectedCell.classList.remove('status-entered');
+            }
+        } else {
+            // For all other days (regular days, weekends, holidays), enable the form.
+            lockForm(false);
+            if (data.entries?.length) {
+                entryDetails.classList.remove('d-none');
+                // ... your existing code to display entries ...
+                const tbodyHTML = data.entries.map(entry => `
+                    <tr ${entry.is_approved ? 'style="background:#f8f9fa;"' : ''}>
+                        <td class="table-checkbox-cell">
+                            <input type="checkbox" class="entry-checkbox" value="${entry.tsheet_item_id}">
+                        </td>
+                        <td>${entry.project_name}</td>
+                        <td class="text-end">${entry.hours_worked}</td>
+                        <td>${entry.work_location_name || ''}</td>
+                        <td class="text-center">
+                            ${entry.is_approved
+                              ? `<button type="button" class="view-entry btn btn-link p-0 approved-tick" data-entry='${JSON.stringify(entry)}'>✔</button>`
+                              : `<button type="button" class="edit-entry btn btn-link p-0" data-entry='${JSON.stringify(entry)}'>✏️</button>`}
+                        </td>
+                    </tr>`).join('');
+                detailsBody.innerHTML = `
+                <div class="table-responsive mb-1">
+                    <table class="table table-bordered table-hover table-sm align-middle timesheet-details-table">
+                        <thead class="table-primary">
+                            <tr>
+                                <th class="table-checkbox-cell" style="width:30px;">
+                                    <input type="checkbox" id="select-all">
+                                </th>
+                                <th>Project</th>
+                                <th class="text-end" style="width:60px;">Hours</th>
+                                <th style="width:80px;">Location</th>
+                                <th class="text-center" style="width:40px;">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>${tbodyHTML}</tbody>
+                    </table>
+                </div>`;
+                initCheckboxLogic();
+                detailsBody.querySelectorAll('.edit-entry').forEach(btn =>
+                    btn.addEventListener('click', e => populateForm(JSON.parse(e.currentTarget.dataset.entry), false))
+                );
+                detailsBody.querySelectorAll('.view-entry').forEach(btn =>
+                    btn.addEventListener('click', e => populateForm(JSON.parse(e.currentTarget.dataset.entry), true))
+                );
+                document.getElementById('add-entry-btn').addEventListener('click', addEntryButtonHandler);
+            } else {
+                formContainer.style.display = 'block';
+                lockForm(false);
+            }
         }
 
         populateProjects(data.projects);
 
-        if (data.entries?.length) {
-          entryDetails.classList.remove('d-none');
-          const tbodyHTML = data.entries.map(entry => `
-          <tr ${entry.is_approved ? 'style="background:#f8f9fa;"' : ''}>
-            <td class="table-checkbox-cell">
-              <input type="checkbox" class="entry-checkbox" value="${entry.tsheet_item_id}">
-            </td>
-            <td>${entry.project_name}</td>
-            <td class="text-end">${entry.hours_worked}</td>
-            <td>${entry.work_location_name || ''}</td>
-            <td class="text-center">
-              ${entry.is_approved
-              ? `<button type="button" class="view-entry btn btn-link p-0 approved-tick" data-entry='${JSON.stringify(entry)}'>✔</button>`
-              : `<button type="button" class="edit-entry btn btn-link p-0" data-entry='${JSON.stringify(entry)}'>✏️</button>`}
-            </td>
-          </tr>`).join('');
-
-          detailsBody.innerHTML = `
-          <div class="table-responsive mb-1">
-            <table class="table table-bordered table-hover table-sm align-middle timesheet-details-table">
-              <thead class="table-primary">
-                <tr>
-                  <th class="table-checkbox-cell" style="width:30px;">
-                    <input type="checkbox" id="select-all">
-                  </th>
-                  <th>Project</th>
-                  <th class="text-end" style="width:60px;">Hours</th>
-                  <th style="width:80px;">Location</th>
-                  <th class="text-center" style="width:40px;">Action</th>
-                </tr>
-              </thead>
-              <tbody>${tbodyHTML}</tbody>
-            </table>
-          </div>`;
-
-          initCheckboxLogic();
-
-          detailsBody.querySelectorAll('.edit-entry').forEach(btn =>
-            btn.addEventListener('click', e => populateForm(JSON.parse(e.currentTarget.dataset.entry), false))
-          );
-          detailsBody.querySelectorAll('.view-entry').forEach(btn =>
-            btn.addEventListener('click', e => populateForm(JSON.parse(e.currentTarget.dataset.entry), true))
-          );
-
-          document.getElementById('add-entry-btn').addEventListener('click', addEntryButtonHandler);
-        } else {
-          formContainer.style.display = 'block';
-          lockForm(false);
-        }
-
+        // Keep the original disabled logic for the initial setup.
         if (selectedCell && (
-          selectedCell.classList.contains('status-weekend') ||
-          selectedCell.classList.contains('status-holiday') ||
-          selectedCell.classList.contains('status-leave')
+            selectedCell.classList.contains('status-weekend') ||
+            selectedCell.classList.contains('status-holiday') ||
+            selectedCell.classList.contains('status-leave')
         )) {
-          selectedCell.classList.add('disabled');
-          clearDayHours(selectedCell);
-          selectedCell.classList.remove('status-entered');
+            selectedCell.classList.add('disabled');
+            clearDayHours(selectedCell);
+            selectedCell.classList.remove('status-entered');
         }
+
         return data;
-      } catch (err) {
+    } catch (err) {
         console.error("loadDayData error:", err);
         if (!suppressErrors) showToastMessage("Failed to load day data. Please check your connection.", "error");
-      } finally {
+    } finally {
         hideSpinnerAndEnableButtons();
-      }
-    };
-
+    }
+};
     /** -------------------- Debounce Utility -------------------- **/
     const debounce = (fn, delay = 200) => {
       let timer;

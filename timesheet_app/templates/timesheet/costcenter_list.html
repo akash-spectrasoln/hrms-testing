@@ -1,78 +1,182 @@
 {% extends 'admin_partials/admin_base.html' %}
 {% load static %}
 
+{% block styles %}
+{{ block.super }}
+<style>
+  .costcenter-card {
+    border-radius: 10px;
+    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.05);
+    background: #fff;
+    margin-top: 0.75rem;
+  }
+
+  .card-header {
+    background-color: #0d6efd;
+    color: white;
+    padding: 0.5rem 0.75rem;
+    border-radius: 10px 10px 0 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .card-title {
+    font-size: 1rem;
+    margin: 0;
+    flex-grow: 1;
+    text-align: center;
+  }
+
+  .form-label {
+    font-size: 0.75rem;
+    margin-bottom: 0.05rem !important;
+    font-weight: 500;
+    line-height: 1.2;
+  }
+.card-body{
+  margin-bottom: 0;
+}
+  .form-control,
+  .form-select {
+    font-size: 0.75rem !important;
+    padding: 1px 4px !important;
+    height: auto !important;
+    line-height: 1.3;
+    margin-top: 0px !important;
+  }
+
+  .form-group,
+  .col-md-2,
+  .col-md-3 {
+    margin-bottom: 0.4rem !important;
+  }
+
+  .filter-section {
+    margin-bottom: 0.3rem !important;
+    row-gap: 0.4rem;
+  }
+
+  .filter-section .btn {
+    font-size: 0.75rem;
+    padding: 3px 8px;
+    height: calc(1.5em + 6px);
+    line-height: 1.3;
+  }
+
+  .card-body {
+    padding: 0.6rem 0.8rem !important;
+  }
+
+  .btn {
+    padding: 2px 6px !important;
+    font-size: 0.78rem;
+  }
+.table th,
+.table td {
+  padding: 0.2rem 0.4rem !important;
+  font-size: 0.75rem;
+  vertical-align: middle;
+}
+
+.table th {
+  font-weight: 600;
+  background-color: #f1f5f9;
+  color: #075098; /* dark blue text */
+  letter-spacing: 0.3px;
+}
+
+  .btn-sm {
+    padding: 2px 5px !important;
+    font-size: 0.75rem !important;
+  }
+
+  .btn i {
+    margin-right: 2px;
+  }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="container">
-  <div class="main-content">
-    <div class="card mt-3">
-      <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center py-2 px-3">
-        <div class="flex-grow-1 text-center">
-          <h6 class="mb-0">Cost Centers</h6>
-        </div>
-        <div>
-          <a href="{% url 'costcenter_create' %}" class="btn btn-success btn-sm">
+  <div class="row justify-content-center">
+    <div class="col-12 col-lg-11 col-xl-10">
+      <div class="costcenter-card mt-3 mb-4">
+
+        <!-- Header -->
+        <div class="card-header">
+          <h2 class="card-title mb-0">Cost Center List</h2>
+          <a href="{% url 'costcenter_create' %}" class="btn btn-success btn-sm ms-2 me-3">
             <i class="fas fa-plus"></i> Add Cost Center
           </a>
+          <a href="{% url 'admin_index' %}" class="btn-close btn-close-white" aria-label="Close"></a>
         </div>
-      </div>
 
-      <div class="card-body py-2 px-3">
-        <form method="get" >
-          <div class="row g-1 justify-content-end align-items-center">
-            <div class="col-auto">
-              <input type="text" name="search" value="{{ search_query }}" class="form-control form-control-sm" placeholder="Search cost center">
-            </div>
-            <div class="col-auto">
-              <select name="is_active" class="form-select form-select-sm">
-                <option value="">All Status</option>
-                <option value="active" {% if is_active_filter == 'active' %}selected{% endif %}>Active</option>
-                <option value="inactive" {% if is_active_filter == 'inactive' %}selected{% endif %}>Inactive</option>
-              </select>
-            </div>
-            <div class="col-auto">
-              <button type="submit" class="btn btn-primary btn-sm">
-                <i class="fas fa-search"></i> Search
-              </button>
-            </div>
+        <div class="card-body">
+          <!-- Filter Form -->
+          <form method="get" class="row g-2 filter-section justify-content-end align-items-end">
+  <div class="col-auto" style="width: 200px;">
+    <label for="searchInput" class="form-label">Search</label>
+    <input type="text" id="searchInput" name="search" value="{{ search_query }}" 
+           class="form-control" placeholder="Search Cost Center">
+  </div>
+  <div class="col-auto" style="width: 200px;">
+    <label for="statusSelect" class="form-label">Status</label>
+    <select id="statusSelect" name="is_active" class="form-select">
+      <option value="">All</option>
+      <option value="active" {% if is_active_filter == 'active' %}selected{% endif %}>Active</option>
+      <option value="inactive" {% if is_active_filter == 'inactive' %}selected{% endif %}>Inactive</option>
+    </select>
+  </div>
+  <div class="col-auto">
+    <button type="submit" class="btn btn-primary">
+      Search
+    </button>
+  </div>
+</form>
+
+
+          <!-- Table -->
+          <div class="table-responsive">
+            <table class="table table-striped table-hover mb-0">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Name</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for cc in costcenters %}
+                <tr>
+                  <td>{{ cc.costcenter_id }}</td>
+                  <td>{{ cc.costcenter_name }}</td>
+                  <td>
+                    {% if cc.is_active %}
+                      <span class="badge bg-success">Active</span>
+                    {% else %}
+                      <span class="badge bg-secondary">Inactive</span>
+                    {% endif %}
+                  </td>
+                  <td>
+                    <div class="d-flex gap-2">
+                      <a href="{% url 'costcenter_update' cc.pk %}" class="btn btn-sm btn-primary" title="Edit">
+                        <i class="fas fa-edit"></i>
+                      </a>
+                    </div>
+                  </td>
+                </tr>
+                {% empty %}
+                <tr>
+                  <td colspan="4" class="text-center text-muted">No cost centers found.</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
           </div>
-        </form>
+        </div> <!-- card-body -->
 
-        <div class="table-responsive">
-          <table class="table table-sm table-striped table-hover mb-0">
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>Name</th>
-                <th>Status</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for cc in costcenters %}
-              <tr>
-                <td>{{ cc.costcenter_id }}</td>
-                <td>{{ cc.costcenter_name }}</td>
-                <td>
-                  {% if cc.is_active %}
-                    <span class="badge bg-success">Active</span>
-                  {% else %}
-                    <span class="badge bg-secondary">Inactive</span>
-                  {% endif %}
-                </td>
-                <td>
-                  <a href="{% url 'costcenter_update' cc.pk %}" class="btn btn-sm btn-primary">
-                    <i class="fas fa-edit"></i>
-                  </a>
-                </td>
-              </tr>
-              {% empty %}
-              <tr>
-                <td colspan="4" class="text-center text-muted">No cost centers found.</td>
-              </tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </div>
       </div>
     </div>
   </div>

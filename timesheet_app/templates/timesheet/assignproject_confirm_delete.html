@@ -128,21 +128,17 @@
     <div class="confirmation-card">
         <div class="warning-icon">⚠️</div>
         <h1>Remove Assignment</h1>
-
-        <p class="assignment-info">
-            {{ assignment.employee.first_name }} {{ assignment.employee.last_name }}<br>
-            <small>{{ assignment.project.project_name }}</small>
-        </p>
-
         <p class="warning-message">
-            Are you sure you want to remove this assignment? This will deactivate the assignment, but not delete data permanently.
+            Are you sure you want to remove the assignment of 
+            <strong>{{ assignment.employee.first_name }} {{ assignment.employee.last_name }}</strong>
+            from <strong>{{ assignment.project.project_name }}</strong>?  
+            This will deactivate the assignment, but not delete data permanently.
         </p>
-
         <form method="post">
             {% csrf_token %}
             <div class="button-group">
+                 <a href="{% url 'assign-project-list' %}" class="cancel-link">Cancel</a>
                 <button type="submit" class="delete-btn">Remove</button>
-                <a href="{% url 'assign-project-list' %}" class="cancel-link">Cancel</a>
             </div>
         </form>
     </div>

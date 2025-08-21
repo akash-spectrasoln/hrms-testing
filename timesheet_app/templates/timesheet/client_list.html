@@ -12,6 +12,25 @@
     margin: 5px auto;
     padding: 0 5px;
   }
+  /* Ensure same height + consistent look */
+/* Smaller uniform height for all filters */
+.filter-section .form-control,
+.filter-section .form-select,
+.filter-section .btn {
+  height: 28px !important;        /* force smaller height */
+  min-height: 28px !important;    /* prevent Bootstrap override */
+  max-height: 28px !important;
+  padding: 2px 6px !important;    /* tighten padding */
+  font-size: 0.8rem !important;
+  line-height: 1.2 !important;
+}
+
+/* Make all filter fields equal width */
+.filter-section .col {
+  flex: 1 1 0 !important;   /* distribute evenly */
+  min-width: 150px;         /* prevent shrinking too small */
+}
+
 
   .client-card {
     border-radius: 10px;
@@ -82,20 +101,18 @@
 
   }
 
-  .table th,
-  .table td {
-    padding: 0.3rem 0.5rem !important;
-    font-size: 0.78rem;
-    vertical-align: middle;
-  }
-
-  .table th {
-    font-weight: 600;
-    background-color: #f1f5f9;
-    color: #1e293b;
-    text-transform: uppercase;
-    letter-spacing: 0.3px;
-  }
+.table th,
+.table td {
+  padding: 0.2rem 0.4rem !important; /* reduce row height */
+  font-size: 0.75rem;
+  vertical-align: middle;
+}
+.table th {
+  font-weight: 600;
+  background-color: #f1f5f9;  /* keep light gray background */
+  color: #075098;             /* dark blue text */
+  letter-spacing: 0.3px;
+}
 
   .btn-sm {
     padding: 2px 5px !important;
@@ -124,6 +141,7 @@
       font-size: 0.75rem !important;
     }
   }
+  
 </style>
 
 {% endblock %}
@@ -137,21 +155,22 @@
         <!-- Header -->
         <div class="card-header">
           <h2 class="card-title mb-0">Client List</h2>
-          <a href="{% url 'client_create' %}" class="btn btn-success btn-sm ms-2">
+          <a href="{% url 'client_create' %}" class="btn btn-success btn-sm ms-2 me-3">
             <i class="fas fa-plus"></i> Add Client
           </a>
+          <a href="{% url 'admin_index' %}" class="btn-close btn-close-white" aria-label="Close"></a>
         </div>
 
         <div class="card-body">
           <!-- Filter Form -->
           <form method="get" class="row g-2 filter-section align-items-end">
-            <div class="col-12 col-sm-6 col-md-3">
+            <div class="col-12 col-sm-6 col-md-3 col">
               <label for="searchInput" class="form-label">Search</label>
               <input type="text" id="searchInput" name="search" class="form-control"
-                     placeholder="Name or address" value="{{ search_query }}">
+                     placeholder="Name or Address" value="{{ search_query }}">
             </div>
 
-            <div class="col-sm-6 col-md-2">
+            <div class="col-sm-6 col-md-2 col">
               <label for="aliasSelect" class="form-label">Abbreviation</label>
               <select id="aliasSelect" name="alias" class="form-select">
                 <option value="">All</option>
@@ -163,7 +182,7 @@
               </select>
             </div>
 
-            <div class="col-sm-6 col-md-3">
+            <div class="col-sm-6 col-md-3 col">
               <label for="countrySelect" class="form-label">Country</label>
               <select id="countrySelect" name="country" class="form-select">
                 <option value="">All</option>
@@ -175,7 +194,7 @@
               </select>
             </div>
 
-            <div class="col-sm-6 col-md-2">
+            <div class="col-sm-6 col-md-2 col">
               <label for="sortSelect" class="form-label">Sort</label>
               <select id="sortSelect" name="sort" class="form-select">
                 {% for value, label in sort_options %}
@@ -186,7 +205,7 @@
               </select>
             </div>
 
-            <div class="col-sm-6 col-md-2">
+            <div class="col-sm-6 col-md-2 col">
               <button type="submit" class="btn btn-primary w-100">
                Search
               </button>

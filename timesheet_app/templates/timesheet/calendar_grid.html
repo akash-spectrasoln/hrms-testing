@@ -63,7 +63,7 @@
                 data-date="{{ day.date|date:'Y-m-d' }}" {% if day.holiday_name %}data-holiday="{{ day.holiday_name }}"
                 title="{{ day.holiday_name }}" {% endif %}>
                 <span class="day-number">{{ day.day }}</span>
-                {% if day.total_hours %}
+                {% if day.total_hours and not day.is_weekend and not day.is_holiday %}
                   <span class="day-hours {% if day.is_approved %}approved-hours{% endif %}">
                     {{ day.total_hours }}h
                   </span>

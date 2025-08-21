@@ -2,46 +2,108 @@
 
 {% block title %}HRMS{% endblock %}
 
-{% block admin_left-sidebar %}
-<!-- Intentionally left empty to remove the sidebar -->
-{% endblock admin_left-sidebar %}
+{% block admin_left-sidebar %}{% endblock %}
 
 {% block styles %}
 <style>
-    .container {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        min-height: 100vh;
-        /* center vertically */
+.container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+}
 
-    }
-    .content-wrapper {
+.content-wrapper {
     display: flex;
     flex-direction: column;
-    align-items: center;  /* centers all content horizontally */
-    /* remove margin-right */
+    align-items: center;
 }
 
 .card-wrapper {
-    display: flex;          /* horizontal layout */
-    justify-content: center; /* center cards horizontally */
-    gap: 20px;              /* space between cards */
-    flex-wrap: wrap;         /* wrap cards on small screens */
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    flex-wrap: wrap;
 }
 
+.page-title {
+    margin-bottom: 40px;
+}
+
+/* Card sizes and style */
+.card {
+    display: block;
+    width: 120px;   /* reduced */
+    height: 120px;  /* reduced */
+    background: #ffffff;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    text-decoration: none;
+    color: inherit;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+}
+
+.card-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    padding: 10px;  /* reduced */
+    text-align: center;
+}
+
+.card-icon {
+    font-size: 1.5rem; /* reduced */
+    margin-bottom: 8px;
+    color: #3b82f6;
+}
+
+.card-content h3 {
+    margin: 0;
+    font-size: 0.9rem; /* reduced */
+    color: #2c3e50;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .card {
+        width: 100px;
+        height: 100px;
+    }
+    .card-icon {
+        font-size: 1.3rem;
+    }
+    .card-content h3 {
+        font-size: 0.8rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .card {
+        width: 90px;
+        height: 90px;
+    }
+    .card-icon {
+        font-size: 1.1rem;
+    }
+    .card-content h3 {
+        font-size: 0.7rem;
+    }
+}
 </style>
 {% endblock styles %}
-
-
 
 {% block content %}
 <div class="container">
     <div class="content-wrapper">
         <h2 class="page-title">Dashboard</h2>
-
         <div class="card-wrapper">
-            <!-- Leave management system -->
             <a href="{% url 'index' %}" class="card">
                 <div class="card-content">
                     <span class="card-icon">📅</span>
@@ -64,78 +126,7 @@
                     </div>
                 </a>
             {% endif %}
-
         </div>
-
     </div>
 </div>
-<style>
-    .content-wrapper {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        margin-right: 100px;
-
-    }
-
-    .page-title {
-        margin-bottom: 40px;
-    }
-
-    .card {
-        display: block;
-        width: 150px;
-        /* Ensures the card is square */
-        height: 150px;
-        background: #ffffff;
-        border-radius: 8px;
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-        text-decoration: none;
-        color: inherit;
-        transition: transform 0.2s, box-shadow 0.2s;
-    }
-
-    .card:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
-    }
-
-    .card-content {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        height: 100%;
-        padding: 20px;
-        text-align: center;
-    }
-
-    .card-icon {
-        font-size: 2rem;
-        /* Larger icon size */
-        margin-bottom: 10px;
-        color: #3b82f6;
-        /* Icon color */
-    }
-
-    .card-content h3 {
-        margin: 0;
-        font-size: 1rem;
-        color: #2c3e50;
-    }
-
-    @media (max-width: 768px) {
-        .card {
-            width: 130px;
-            height: 130px;
-        }
-    }
-
-    @media (max-width: 480px) {
-        .card {
-            width: 100px;
-            height: 100px;
-        }
-    }
-</style>
 {% endblock content %}

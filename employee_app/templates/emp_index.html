@@ -243,8 +243,8 @@ HRMS Portal
 
     .card {
         display: block;
-        width: 150px;  /* Ensures the card is square */
-        height: 150px;
+        width: 120px;  /* Ensures the card is square */
+        height: 120px;
         background: #ffffff;
         border-radius: 8px;
         box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
@@ -264,13 +264,13 @@ HRMS Portal
         align-items: center;
         justify-content: center;
         height: 100%;
-        padding: 20px;
+        padding: 10px;
         text-align: center;
     }
 
     .card-icon {
-        font-size: 2rem;  /* Larger icon size */
-        margin-bottom: 10px;
+        font-size: 1.5rem;  /* Larger icon size */
+        margin-bottom: 8px;
         color: #3b82f6;  /* Icon color */
     }
 
@@ -282,16 +282,28 @@ HRMS Portal
 
     @media (max-width: 768px) {
         .card {
-            width: 130px;
-            height: 130px;
+            width: 100px;
+            height: 100px;
         }
+        .card-icon {
+        font-size: 1.3rem;
+    }
+    .card-content h3 {
+        font-size: 0.8rem;
+    }
     }
 
     @media (max-width: 480px) {
         .card {
-            width: 100px;
-            height: 100px;
+            width: 90px;
+            height: 90px;
         }
+        .card-icon {
+        font-size: 1.1rem;
+    }
+    .card-content h3 {
+        font-size: 0.7rem;
+    }
     }
 </style>
 {% endblock content %}

@@ -45,9 +45,7 @@
     margin-bottom: 0.4rem !important;
   }
 
-  .btn {
-    margin-right: 4px;
-  }
+
 
   .select2-container .select2-selection--single {
     height: 32px !important;
@@ -109,7 +107,7 @@
 
           <div class="mb-2 text-start">
             <label for="{{ form.prj_manager.id_for_label }}" class="form-label">Project Manager</label>
-            {{ form.prj_manager|add_class:"form-control" }}
+            {{ form.prj_manager|add_class:"form-control employee-select2" }}
             {{ form.prj_manager.errors }}
           </div>
 
@@ -119,8 +117,8 @@
             {{ form.is_active.errors }}
           </div>
 
-          <div class="d-flex justify-content-end mt-3">
-            <a href="{% url 'project_list' %}" class="btn btn-secondary btn-sm">Back</a>
+          <div class="d-flex justify-content-end gap-4 mt-3">
+            <a href="{% url 'project_list' %}" class="btn btn-secondary btn-sm"><i class="fas fa-arrow-left me-1"></i> Back</a>
             <button type="submit" class="btn btn-success btn-sm">
               <i class="fas fa-save"></i> Save
             </button>    
@@ -137,7 +135,7 @@
 <script>
   $(document).ready(function () {
     $('.select2').select2({
-      placeholder: 'Search or select a client',
+      placeholder: 'Search Or Select Client',
       allowClear: false,
       width: '100%',
       ajax: {
@@ -153,6 +151,20 @@
         cache: true
       }
     });
+    // ✨ NEW: Initialize Select2 for Employee Search
+  $('.employee-select2').select2({
+      placeholder: 'Search Or Select Project Manager',
+      allowClear: true,
+      width: '100%',
+      ajax: {
+          url: '{% url "employee_search" %}', // NOTE: You must create this URL and view
+          dataType: 'json',
+          delay: 250,
+          data: params => ({ term: params.term }),
+          processResults: data => ({ results: data.results }),
+          cache: true
+      }
+  });
   });
 </script>
 {% endblock %}

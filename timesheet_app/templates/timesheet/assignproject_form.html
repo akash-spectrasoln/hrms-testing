@@ -3,6 +3,7 @@
 
 {% block styles %}
 <style>
+  /* (CSS styles remain unchanged) */
   .form-control, .form-select {
     font-size: 0.8rem;
     padding: 4px 8px;
@@ -10,7 +11,7 @@
   }
 
   .form-label {
-    margin-bottom: 2px; /* tighter space between label and input */
+    margin-bottom: 1px; /* tighter space between label and input */
     font-weight: 500;
     font-size: 0.8rem;
   }
@@ -37,13 +38,23 @@
 
   .form-text {
     font-size: 0.75rem;
-    margin-top: 2px;
+    margin-top: 1px;
   }
-
+    .text-info {
+  color: #2fcdec !important; /* Bootstrap’s light blue */
+}
   #project-validity {
     font-size: 0.75rem;
-    margin-top: 0.25rem;
   }
+  .errorlist {
+  color: #dc3545;          /* Bootstrap danger red */
+  font-size: 0.7rem;
+  margin-top: 2px;
+  margin-bottom: 0;
+  list-style: none;
+  padding-left: 0;
+  font-weight: 200;
+}
 
   .content-wrapper {
     margin-left: 250px;
@@ -57,7 +68,6 @@
     }
   }
 </style>
-
 {% endblock %}
 
 {% block content %}
@@ -66,7 +76,7 @@
     <div class="card mt-3">
       <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center py-2">
         <h6 class="mb-0 mx-auto">
-          {% if project %} Edit Project {% else %} Assign Project to Employee {% endif %}
+          {% if project %} Edit Assign Project {% else %} Assign Project {% endif %}
         </h6>
       </div>
 
@@ -77,18 +87,27 @@
 
           {% for field in form %}
             {% if field.name != 'start_date' and field.name != 'end_date' %}
-              <div >
+              <div class="mb-1">
                 <label for="{{ field.id_for_label }}" class="form-label">{{ field.label }}</label>
                 {{ field|add_class:"form-control" }}
+
                 {% if field.help_text %}
                   <small class="form-text text-muted">{{ field.help_text }}</small>
                 {% endif %}
-                {{ field.errors }}
+
+                {% if field.errors %}
+                  <div class="invalid-feedback d-block">
+                    {% for error in field.errors %}
+                      {{ error }}
+                    {% endfor %}
+                  </div>
+                {% endif %}
               </div>
             {% endif %}
           {% endfor %}
 
-          <div id="project-validity" class="text-dark d-none ">
+
+          <div id="project-validity" class="text-info d-none ">
             <small>Project Validity: <span id="valid-from"></span> to <span id="valid-to"></span></small>
           </div>
 
@@ -105,8 +124,8 @@
             </div>
           </div>
 
-          <div class="d-flex justify-content-start mt-2 ">
-            <a href="{% url 'assign-project-list' %}" class="btn btn-secondary btn-sm">Back</a>
+          <div class="d-flex justify-content-start gap-4 mt-2 ">
+            <a href="{% url 'assign-project-list' %}" class="btn btn-secondary btn-sm"><i class="fas fa-arrow-left me-1"></i> Back</a>
             <button type="submit" class="btn btn-success btn-sm me-2">
               <i class="fas fa-save"></i> Save
             </button>
@@ -119,20 +138,22 @@
 {% endblock %}
 
 {% block extra_js %}
-<!-- Select2 -->
 <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 
 <script>
 document.addEventListener('DOMContentLoaded', () => {
+  // === GET ELEMENTS ===
   const clientSel = document.getElementById('id_client');
   const projSel = document.getElementById('id_project');
+  const empSel = document.getElementById('id_employee'); // Added for employee search
   const startIn = document.getElementById('id_start_date');
   const endIn = document.getElementById('id_end_date');
   const validityBox = document.getElementById('project-validity');
   const vf = document.getElementById('valid-from');
   const vt = document.getElementById('valid-to');
 
+  // === HELPER FUNCTIONS ===
   function formatDate(isoDateStr) {
     const date = new Date(isoDateStr);
     const mm = String(date.getMonth() + 1).padStart(2, '0');
@@ -163,6 +184,11 @@ document.addEventListener('DOMContentLoaded', () => {
     fetch("{% url 'ajax_load_projects' %}?client_id=" + clientId)
       .then(res => res.json())
       .then(data => {
+        // Destroy previous Select2 instance if it exists
+        if ($(projSel).data('select2')) {
+            $(projSel).select2('destroy');
+        }
+
         projSel.innerHTML = '<option value="">Select Project</option>';
         data.projects.forEach(project => {
           const option = new Option(project.project_name, project.project_id);
@@ -171,17 +197,44 @@ document.addEventListener('DOMContentLoaded', () => {
           if (selectedId && selectedId == project.project_id) option.selected = true;
           projSel.appendChild(option);
         });
+
+        // ✨ NEW: Initialize Select2 on the project dropdown to make it searchable
+        $(projSel).select2({
+            placeholder: 'Select Or Search Project',
+            width: '100%'
+        });
+
         setDateLimits(projSel.selectedOptions[0]);
       })
       .catch(() => alert("Failed to load projects"));
   }
 
-  projSel.addEventListener('change', () => {
+  // === EVENT LISTENERS & INITIALIZATIONS ===
+
+  // Listen for changes on the project dropdown
+  $(projSel).on('change', () => {
     setDateLimits(projSel.selectedOptions[0]);
   });
 
+  // ✨ NEW: Initialize Select2 for Employee Search
+  $(empSel).select2({
+      placeholder: 'Search Or Select Employee',
+      allowClear: true,
+      width: '100%',
+      ajax: {
+          url: '{% url "employee_search" %}', // NOTE: You must create this URL and view
+          dataType: 'json',
+          delay: 250,
+          data: params => ({ term: params.term }),
+          processResults: data => ({ results: data.results }),
+          cache: true
+      }
+  });
+
+
+  // Initialize Select2 for Client Search
   $(clientSel).select2({
-    placeholder: 'Search and select a client',
+    placeholder: 'Search Or Select Client',
     allowClear: true,
     width: '100%',
     ajax: {
@@ -193,15 +246,30 @@ document.addEventListener('DOMContentLoaded', () => {
       cache: true
     }
   }).on('change', function() {
+    // When client changes, load their projects
     loadProjects(this.value);
   });
 
+
+  // On page load, if a client is already selected (i.e., on an edit page), load their projects.
   const selectedProject = projSel.value;
   if (clientSel.value) {
     loadProjects(clientSel.value, selectedProject);
   } else {
     setDateLimits(null);
   }
+
 });
 </script>
+
+{% if form.errors %}
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      const firstError = document.querySelector(".invalid-feedback");
+      if (firstError) {
+        firstError.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
+    });
+  </script>
+{% endif %}
 {% endblock %}
