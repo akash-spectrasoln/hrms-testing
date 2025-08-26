@@ -32,7 +32,7 @@
 .table th {
     background-color: #4683fd;
     font-weight: 600;
-    color: rgb(19, 18, 18);
+    color: white;
 }
 
 .no-data {
@@ -51,7 +51,7 @@
 <div class="container">
     <div class="main-content">
         <!-- Filter Form -->
-        <form method="GET" action="" class="form-inline mb-3" id="employeeFilterForm">
+        <form method="GET" action="" class="form-inline mb-3" id="employeeFilterForm" style="margin-left: 20px;">
             <!-- Country Filter -->
             <div class="form-group mr-2">
                 <select name="country_id" class="form-control form-control-sm" id="countrySelect">
@@ -67,10 +67,10 @@
             
         </form>
  
-        <div class="">
+        <div class="" style="margin-left: 20px;">
             <a id="downloadBtn"
             href="{% url 'export_employee_bank_details' %}?country_id={{ current_filters.country_id }}"
-            class="btn btn-success btn-sm px-2 py-1 {% if not queryset %}disabled{% endif %}"
+            class="btn btn-success btn-sm px-1 py-1 {% if not queryset %}disabled{% endif %}"
             {% if not queryset %}aria-disabled="true" onclick="return false;"{% endif %}>
                 <i class="fas fa-download"></i> Download Excel
             </a>

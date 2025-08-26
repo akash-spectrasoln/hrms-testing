@@ -33,7 +33,7 @@
     font-weight: 600;
     text-align: center;
     vertical-align: middle !important;
-    color: black;
+    color: white;
     
 }
 
@@ -60,7 +60,7 @@
 <div class="container">
     <div class="main-content">
         <!-- Filter Form -->
-        <form method="GET" action="" class="form-inline mb-3" id="leaveFilterForm">
+        <form method="GET" action="" class="form-inline mb-3" id="leaveFilterForm" style="margin-left: 20px;">
             <!-- Country Filter -->
             <div class="form-group mr-2">
                 <select name="country_id" class="form-control form-control-sm form-select" id="countrySelect">
@@ -100,9 +100,9 @@
         </form>
 
         <!-- calling view for downloading employees leave details -->
-        <div class="">
+        <div class="" style="margin-left: 20px;">
             <a id="downloadBtn" href="{% if queryset %}{% url 'export_employees_leaves' %}?country_id={{ current_filters.country_id }}&state_id={{ current_filters.state_id }}&year={{ current_filters.year }}&name={{ current_filters.name }}{% else %}#{% endif %}"
-            class="btn btn-success btn-xs px-1 py-1 {% if not queryset %}disabled{% endif %}"
+            class="btn btn-success btn-sm px-1 py-1 {% if not queryset %}disabled{% endif %}"
             {% if not queryset %}aria-disabled="true" onclick="return false;"{% endif %}>
                 <i class="fas fa-download"></i> Download Excel
             </a>

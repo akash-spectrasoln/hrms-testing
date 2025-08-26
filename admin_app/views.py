@@ -385,6 +385,8 @@ def list_employees(request):
             'today': date.today(),
         })
 
+        employee_list.sort(key = lambda x: x['employee_id'])
+
     context = {
         'employee_list': employee_list,
         'country_list': country_list,
@@ -1208,6 +1210,8 @@ def accept_leave_request(request, leave_request_id):
 
         if financial_year_start_date <= leave_request.start_date <= financial_year_end_date:
             pass
+        elif leave_request.start_date > financial_year_end_date:
+            current_year += 1
         else:
             current_year-=1
 
@@ -1355,6 +1359,8 @@ def reject_leave_request(request, leave_request_id):
 
         if financial_year_start_date <= leave_request.start_date <= financial_year_end_date:
             pass
+        elif leave_request.start_date > financial_year_end_date:
+            current_year += 1 
         else:
             current_year-=1
 
@@ -1715,7 +1721,7 @@ def admin_leave_requests(request):
     fy_start, fy_end = get_financial_year_dates(request, country_obj, reference_date=reference_date)
 
     leave_requests = LeaveRequest.objects.select_related('employee_user', 'employee_master').filter(
-        start_date__lte=fy_end,
+        start_date__lte=fy_end + relativedelta(months=2),
         end_date__gte=fy_start,
         employee_master__country=country_obj,
     )

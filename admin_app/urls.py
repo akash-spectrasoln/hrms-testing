@@ -13,7 +13,6 @@ path('add_holidays/', add_holidays, name='add_holidays'),
 path('export-employees/', export_employees_to_excel, name='export_employees'),
 path('get-states/', get_states, name='get_states'),
 path('list_employees/',list_employees,name='employee_list'),
-
 path('employee_delete/<pk>',EmployeeDeleteView.as_view(),name='employee_delete'),
 path('restore_employee/<int:pk>/', restore_employee, name='restore_employee'),
 path('deleted_employees/', DeletedEmployeeListView.as_view(), name='deleted_employees'),

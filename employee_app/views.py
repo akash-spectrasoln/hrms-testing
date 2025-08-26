@@ -419,7 +419,7 @@ import json
 from django.db.models import Sum, F
 from datetime import timedelta
 from datetime import datetime
-
+from dateutil.relativedelta import relativedelta
 from datetime import timedelta, date, datetime
 from django.db.models import Sum, F
 from django.shortcuts import render, redirect
@@ -563,11 +563,15 @@ def request_leave(request):
     # Helper: get all holidays as sets (avoids repeat queries)
     def get_holidays(employee, fy_start, fy_end):
 
+        # fy_end extended because it is needed when span two years (for example: march 2025 - april 2025)
+        fy_end_extended = fy_end + relativedelta(months=2)
+
+
         # Dates from country-based holidays
         country_holiday_dates = set(
             Holiday.objects.filter(
                 country=employee.country,
-                date__range=(fy_start, fy_end)
+                date__range=(fy_start, fy_end_extended)
             ).values_list('date', flat=True)
         )
 
@@ -575,7 +579,7 @@ def request_leave(request):
         state_holiday_dates = set(
             StateHoliday.objects.filter(
                 state=employee.state,
-                date__range=(fy_start, fy_end)
+                date__range=(fy_start, fy_end_extended)
             ).values_list('date', flat=True)
         )
 
@@ -584,14 +588,14 @@ def request_leave(request):
         floating_holidays = set(
             FloatingHoliday.objects.filter(
                 country=employee.country,
-                date__range=(fy_start, fy_end)
+                date__range=(fy_start, fy_end_extended)
             ).values_list('date', flat=True)
         )
 
         state_excluded = set(
         StateHoliday.objects.filter(
             country=employee.country,
-            date__range=(fy_start, fy_end)
+            date__range=(fy_start, fy_end_extended)
         ).exclude(
             state=employee.state
         ).values_list('date', flat=True)
@@ -642,6 +646,8 @@ def request_leave(request):
 
             if fy_start <= leave_request.start_date <= fy_end:
                 pass
+            elif leave_request.start_date > fy_end:
+                current_year += 1 
             else:
                 current_year-=1
 
@@ -668,7 +674,7 @@ def request_leave(request):
             
             holidays, floating_holidays = get_holidays(employee, fy_start, fy_end)
             # Pre-batch all leaves once
-            all_leaves = get_leave_requests(request.user, fy_start, fy_end)
+            all_leaves = get_leave_requests(request.user, fy_start, fy_end + relativedelta(months=2))
             used_casual_leaves = emp_leave_details.casual_leaves_used if emp_leave_details else 0
             used_floating_leaves = emp_leave_details.floating_holidays_used if emp_leave_details else 0
             pending_casual_leaves = emp_leave_details.pending_casual if emp_leave_details else 0
@@ -854,7 +860,7 @@ def request_leave(request):
         holidays, floating_holidays = get_holidays(employee, fy_start, fy_end)
 
         # Only call DB for all leaves ONCE!
-        all_leaves = get_leave_requests(request.user, fy_start, fy_end)
+        all_leaves = get_leave_requests(request.user, fy_start, fy_end + relativedelta(months=2))
 
         used_casual_leaves = employee_leaves.casual_leaves_used if employee_leaves else 0
         used_floating_leaves = employee_leaves.floating_holidays_used if employee_leaves else 0
@@ -908,13 +914,61 @@ def request_leave(request):
             'used_pending_floating_leaves': used_pending_floating_leaves,
             'remaining_casual_leaves': remaining_casual_leaves,
             'remaining_floating_leaves': remaining_floating_leaves,
+            'fy_end_calender': fy_end
         }
         return render(request, 'leaverequest.html', context)
 
 from django.core.mail import send_mail
 from django.http import HttpResponse
 
+
+
+# this view is used for displaying next year count in employee request leave
+@login_required
+def get_next_year_leave_counts(request):
+
+    # take the financial year  
+    fy_end = request.GET.get("fy_end_year")
+    employee_id = request.GET.get("employee_id")
     
+    # convert the fy_end to date object
+    fy_end_date = datetime.strptime(fy_end, "%Y-%m-%d").date()
+
+    # add one month to take the next FY year since fy_end_date is the last month of current FY
+    next_year = (fy_end_date + relativedelta(months = 1)).year
+
+    # fetch the employee
+    if employee_id:
+        employee = Employees.objects.get(id = employee_id)
+    else:
+        employee= Employees.objects.get(user=request.user)
+
+    # fetching employee leave count of next year 
+    leave_details=get_leave_policy_details(employee,next_year)
+    holiday_policy = leave_details['allowed_holiday_policy']
+    floating_holiday_policy = leave_details['allowed_floating_holiday_policy']
+
+    if not (holiday_policy and floating_holiday_policy):
+        messages.error(request,f"No holiday policy configured for the year {next_year} . contact the manager")
+        return redirect('request_leave')
+    employee_leaves, created = LeaveDetails.objects.get_or_create(employee=employee,year=next_year,defaults={"total_casual_leaves":holiday_policy})
+
+    casual_leaves = employee_leaves.total_casual_leaves if employee_leaves else 0
+    used_casual_leaves = employee_leaves.casual_leaves_used if employee_leaves else 0
+    used_floating_leaves = employee_leaves.floating_holidays_used if employee_leaves else 0
+    used_pending_casual_leaves = employee_leaves.pending_casual if employee_leaves else 0
+    used_pending_floating_leaves = employee_leaves.pending_float if employee_leaves else 0
+    planned_casual=employee_leaves.planned_casual if employee_leaves else 0
+    planned_float=employee_leaves.planned_float if employee_leaves else 0
+
+    next_year_casual = (casual_leaves or 0) - (used_casual_leaves or 0) - (used_pending_casual_leaves or 0) - (planned_casual or 0)
+    next_year_floating = (floating_holiday_policy or 0) - (used_floating_leaves or 0) - (used_pending_floating_leaves or 0) - (planned_float or 0)
+
+    return JsonResponse({
+        "remaining_casual_leaves": next_year_casual,
+        "remaining_floating_leaves": next_year_floating,
+    })
+
 
 @signin_required
 def check_floating_holidays(request):
@@ -971,7 +1025,7 @@ def check_leave_conflicts(request):
         leave_qs = LeaveRequest.objects.filter(
             employee_user=request.user,
             status__in=['Pending', 'Approved'],
-            start_date__lte=fy_end_date,
+            start_date__lte=fy_end_date + relativedelta(months=2),
             end_date__gte=fy_start_date,
         )
 
@@ -988,11 +1042,13 @@ def check_leave_conflicts(request):
         floating_holidays = set(FloatingHoliday.objects.filter(
             country=country,
             date__gte=fy_start_date,
-            date__lte=fy_end_date
+            date__lte=fy_end_date + relativedelta(months=2)
         ).values_list('date', flat=True))
         state_excluded = set(
         StateHoliday.objects.filter(
-            country=country
+            country=country,
+            date__gte=fy_start_date,
+            date__lte=fy_end_date + relativedelta(months=2)
         ).exclude(
             state=employee_profile.state
         ).values_list('date', flat=True)
@@ -1038,8 +1094,11 @@ def delete_leave(request, leave_id):
 
     if financial_year_start_date <= leave.start_date <= financial_year_end_date:
         pass
+    elif leave.start_date > financial_year_end_date:
+        current_year +=1
     else:
         current_year-=1
+
     emp_leave_details = LeaveDetails.objects.get(employee=employee,year=current_year)
     if request.method == "POST":
         if leave.status in ["Accepted", "Approved"]:
@@ -1536,7 +1595,7 @@ def manager_leave_requests(request):
     # Base leave requests filtered by subordinates and financial year overlap
     leave_requests = LeaveRequest.objects.filter(
         employee_master__in=subordinates,
-        start_date__lte=fy_end,
+        start_date__lte=fy_end + relativedelta(months=2),
         end_date__gte=fy_start,
     )
 
@@ -1669,6 +1728,8 @@ def manage_leave_request(request, leave_request_id):
 
         if financial_year_start_date <= leave_request.start_date <= financial_year_end_date:
             pass
+        elif leave_request.start_date > financial_year_end_date:
+            current_year += 1
         else:
             current_year-=1 
 
@@ -2004,14 +2065,12 @@ def allocate_leave(request, employee_id):
 
 
     remaining_casual_leaves = casual_leaves - used_casual_leaves - pending_casual_leaves - planned_casual
-    print(remaining_casual_leaves)
     remaining_floating_leaves = floating_leaves - used_floating_leaves - pending_floating_leaves -planned_float
-    print(remaining_floating_leaves)
 
     # --- Financial Year Leave Aggregations ---
     leaves_fin_year = LeaveRequest.objects.filter(
         employee_user=employee.user,
-        start_date__lte=financial_year_end,
+        start_date__lte=financial_year_end + relativedelta(months=2),
         end_date__gte=financial_year_start,
     )
 
@@ -2113,6 +2172,8 @@ def allocate_leave(request, employee_id):
 
             if financial_year_start_date <= leave_request.start_date <= financial_year_end_date:
                 pass
+            elif leave_request.start_date > financial_year_end_date:
+                current_year += 1
             else:
                 current_year-=1
             leave_details=get_leave_policy_details(employee,current_year)
@@ -2156,6 +2217,7 @@ def allocate_leave(request, employee_id):
         # Financial year leave aggregates
         'financial_year_start': financial_year_start,
         'financial_year_end': financial_year_end,
+        'fy_end_calender': financial_year_end,
         'approved_leaves': approved_leaves,
         'pending_leaves': pending_leaves,
         'rejected_leaves': rejected_leaves,

@@ -55,6 +55,7 @@ path('timesheet/unapprove/<int:tsheet_id>/', ts_views.timesheet_unapprove, name=
 path('timesheets/approve/', ts_views.approve_timesheet, name='approve_timesheet'),
 path('timesheets/approve-selected/', ts_views.approve_selected_timesheets, name='approve_selected_timesheets'),
 path("timesheet-week-details/", ts_views.timesheet_week_details, name="timesheet_week_details"),
+path('nextyearcount/',get_next_year_leave_counts, name= 'get_next_year_leave_counts')
 ]
 
 
