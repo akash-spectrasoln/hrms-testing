@@ -22,7 +22,7 @@
 
 thead th {
     background-color: #3380eb !important; /* Light grey background */
-    font-weight: 600 !important; /* Make text bold */
+    color: rgb(255, 255, 255) !important;
 }
 
 #employeeFilterForm .form-select {
@@ -36,7 +36,7 @@ thead th {
 <div class="container">
     <div class="main-content">
         <!-- Filter Form -->
-        <form method="GET" action="{% url 'employee_list' %}" class="form-inline mb-3" id="employeeFilterForm">
+        <form method="GET" action="{% url 'employee_list' %}" class="form-inline mb-3" id="employeeFilterForm" style="margin-left: 20px;">
             <!-- Country Filter -->
             <div class="form-group mr-2">
                 <select name="country_id" class="form-control form-control-sm form-select" id="countrySelect">
@@ -72,7 +72,7 @@ thead th {
         <!-- Employee Table -->
         <div class="card">
             <div class="card-body">
-                <div class="table-responsive">
+                <div class="table-responsive-md">
                     <table class="table table-hover">
                         <thead>
                             <tr>

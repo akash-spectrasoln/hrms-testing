@@ -3,7 +3,7 @@
 {% block styles %}
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
     <style>
-        .allocate-leave-content { position: fixed; top: 72px; left: 250px; right: 0; bottom: 0; overflow-y: auto;
+        .allocate-leave-content { position: fixed; top: 72px; left: 90px; right: 0; bottom: 0; overflow-y: auto;
             background-color: #f4f4f9; display: flex; justify-content: center; align-items: center;
             padding: 20px; z-index: 1; }
         .form-container { max-width: 450px; width: 100%; background-color: #fff;
@@ -64,15 +64,7 @@
                 for {{ employee.first_name }} {{ employee.last_name }}
             </div>
         </div>
-        {% if messages %}
-            <div class="messages">
-                {% for message in messages %}
-                <div class="message {% if message.tags %}message-{{ message.tags }}{% endif %}">
-                    {{ message }}
-                </div>
-                {% endfor %}
-            </div>
-        {% endif %}
+
 
         <!-- Info indicators -->
         <div class="info-indicators">
@@ -92,7 +84,6 @@
                 <label class="form-label" for="leave_type">Leave Type</label>
                 <select id="leave_type" name="leave_type"
                   class="form-select"
-                  {% if remaining_casual_leaves <= 0 and remaining_floating_leaves <= 0 %}disabled{% endif %}
                   required>
                     <option value="">Select Type</option>
                     <option value="Casual Leave"
@@ -107,10 +98,19 @@
                 </select>
                 {% if remaining_casual_leaves <= 0 and remaining_floating_leaves <= 0 %}
                     <div class="error-message">
-                        You have exhausted your Casual and Floating Leave entitlements for this year.
+                        employee have exhausted the Casual and Floating Leave entitlements for this year.
                     </div>
                 {% endif %}
             </div>
+
+            <div class="form-group" id="next-year-option" style="display: none;">
+                <label>
+                    <input type="checkbox" id="id_next_year" name="next_year">
+                    Apply leave for Next Financial Year
+                </label>
+                <div id="next-year-leave-counts" style="margin-top:5px; font-size:0.85rem; color:#2563eb;"></div>
+            </div>
+
             <div class="form-group">
                 <label class="required " for="start_date">Start Date</label>
                 <input type="text" id="start_date" name="start_date" class="form-input" required autocomplete="off">
@@ -145,6 +145,12 @@ document.addEventListener("DOMContentLoaded", function () {
     const holidays = JSON.parse(document.getElementById('holidays-data').textContent);
     const floatingHolidays = JSON.parse(document.getElementById('floating-holidays-data').textContent);
 
+
+    //  Get FY end date from backend
+    const fyEndDateStr = "{{ fy_end_calender|date:'Y-m-d' }}";
+    const fyEndDate = new Date(fyEndDateStr);
+
+
     function flatpickrDayStyler(dObj, dStr, fp, dayElem) {
         const dayString = dayElem.dateObj.toLocaleDateString('en-CA');
         if (dayElem.dateObj.getDay() === 6 || dayElem.dateObj.getDay() === 0) {
@@ -167,6 +173,7 @@ document.addEventListener("DOMContentLoaded", function () {
         dateFormat: "Y-m-d",
         altInput: true,             // show formatted date
         altFormat: "m-d-Y", 
+        maxDate: fyEndDateStr,   //  Set FY end as maxDate
         disable: [
                 function(date) {
                     return date.getDay() === 0 || date.getDay() === 6;  // Disable Sat & Sun
@@ -190,12 +197,47 @@ document.addEventListener("DOMContentLoaded", function () {
         dateFormat: "Y-m-d",
         altInput: true,             // show formatted date
         altFormat: "m-d-Y", 
+        maxDate: fyEndDateStr,   //  Set FY end as maxDate
         disable: [
                 function(date) {
                     return date.getDay() === 0 || date.getDay() === 6;  // Disable Sat & Sun
                 }
             ],
         onDayCreate: flatpickrDayStyler
+    });
+
+    //  Checkbox logic for Next Year
+    const nextYearCheckbox = document.getElementById("id_next_year");
+    nextYearCheckbox.addEventListener("change", function () {
+        if (this.checked) {
+            // Allow only next 2 months after FY end
+            const nextTwoMonthsEnd = new Date(fyEndDate);
+            // Start month = FY end month + 1
+            const startMonth = new Date(fyEndDate);
+            startMonth.setDate(1); // reset day to avoid overflow
+            startMonth.setMonth(fyEndDate.getMonth() + 1);
+            nextTwoMonthsEnd.setMonth(fyEndDate.getMonth() + 2);
+
+            const startMonthStr = startMonth.toISOString().split("T")[0]; 
+
+            startDatePicker.set("minDate", startMonthStr);
+            startDatePicker.set("maxDate", nextTwoMonthsEnd);
+
+            endDatePicker.set("minDate", startMonthStr);
+            endDatePicker.set("maxDate", nextTwoMonthsEnd);
+
+            //  Prefill with starting date
+            startDatePicker.setDate(startMonthStr, true);
+            endDatePicker.setDate(startMonthStr, true);
+
+        } else {
+            // Reset back to current year constraint
+            startDatePicker.set("minDate", null);
+            startDatePicker.set("maxDate", fyEndDateStr);
+
+            endDatePicker.set("minDate", null);
+            endDatePicker.set("maxDate", fyEndDateStr);
+        }
     });
 
     // Optional: Also sync end date if user types date manually in start date
@@ -227,9 +269,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if (startInput._flatpickr) {
             startInput._flatpickr.setDate(today, true); // true => triggers change
         }
-        if (endInput._flatpickr) {
-            endInput._flatpickr.setDate(tomorrow, true);
-        }
+        if (endPicker) endPicker.setDate(tomorrow, true);
     }
 
     function updateEndDateBasedOnStart() {
@@ -241,13 +281,79 @@ document.addEventListener('DOMContentLoaded', function () {
             const startDate = new Date(parts[0], parts[1] - 1, parts[2]); // Month is 0-based
             const nextDay = new Date(startDate);
             nextDay.setDate(startDate.getDate() + 1);
-            endInput.value = formatDate(nextDay);
+            if (endPicker) endPicker.setDate(nextDay, true);
         }
     }
 
     setDefaultDates();
 
     startInput.addEventListener('change', updateEndDateBasedOnStart);
+});
+</script>
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const leaveTypeSelect = document.getElementById("leave_type");
+    const nextYearOption = document.getElementById("next-year-option");
+    const nextYearCheckbox = document.getElementById("id_next_year");
+    const nextYearLeaveCounts = document.getElementById("next-year-leave-counts");
+    const startDateInput = document.getElementById('start_date');
+    const endDateInput = document.getElementById('end_date');
+
+    // Financial year check
+    const fyEndDateStr = "{{ fy_end_calender|date:'Y-m-d' }}"; 
+    const fyEndDate = new Date(fyEndDateStr);
+    const fyEndMonth = fyEndDate.getMonth() + 1; // JS 0-based → send 1–12
+    const currentDate = new Date();
+
+    // currentDate.getMonth()
+    if (2 === fyEndDate.getMonth()) {
+        // Show checkbox only in last month of FY
+        nextYearOption.style.display = "block";
+    }
+
+    // When user checks Next Year
+    nextYearCheckbox.addEventListener("change", function () {
+        if (this.checked) {
+
+            // Pass fy_end_month as query parameter
+            fetch(`{% url 'get_next_year_leave_counts' %}?fy_end_year=${fyEndDateStr}&employee_id={{ employee.id }}`, {
+                method: "GET",
+                headers: {
+                    "X-CSRFToken": document.querySelector("[name=csrfmiddlewaretoken]").value
+                }
+            })
+            .then(res => res.json())
+            .then(data => {
+                // Update leave type select with new counts
+                leaveTypeSelect.innerHTML = `
+                    <option value="Casual Leave" ${data.remaining_casual_leaves <= 0 ? "disabled" : ""}>
+                        Casual Leave (${data.remaining_casual_leaves} left)
+                    </option>
+                    <option value="Floating Leave" ${data.remaining_floating_leaves <= 0 ? "disabled" : ""}>
+                        Floating Leave (${data.remaining_floating_leaves} left)
+                    </option>
+                `;
+                leaveTypeSelect.disabled = (data.remaining_casual_leaves <= 0 && data.remaining_floating_leaves <= 0);
+
+            })
+            .catch(err => {
+                console.error("Error fetching next year leave counts:", err);
+                nextYearLeaveCounts.textContent = "Could not load next year leave counts."; // means either holiday or floating holiday is not mentioned
+                // Disable date fields inputs properly
+                if (startDateInput._flatpickr) {
+                    startDateInput._flatpickr.input.setAttribute("disabled", true);     // hidden original
+                    startDateInput._flatpickr.altInput.setAttribute("disabled", true);  // visible input
+                }
+                if (endDateInput._flatpickr) {
+                    endDateInput._flatpickr.input.setAttribute("disabled", true);
+                    endDateInput._flatpickr.altInput.setAttribute("disabled", true);
+                }
+            });
+        } else {
+            // Restore current year counts (just reload the page to reset)
+            window.location.reload();
+        }
+    });
 });
 </script>
 
