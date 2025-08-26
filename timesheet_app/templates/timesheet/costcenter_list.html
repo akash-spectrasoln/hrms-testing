@@ -106,7 +106,7 @@
         <!-- Header -->
         <div class="card-header">
           <h2 class="card-title mb-0">Cost Center List</h2>
-          <a href="{% url 'costcenter_create' %}" class="btn btn-success btn-sm ms-2 me-3">
+          <a href="{% url 'costcenter_create' %}?next={{ request.get_full_path|urlencode }}" class="btn btn-success btn-sm ms-2 me-3">
             <i class="fas fa-plus"></i> Add Cost Center
           </a>
           <a href="{% url 'admin_index' %}" class="btn-close btn-close-white" aria-label="Close"></a>
@@ -122,11 +122,12 @@
   </div>
   <div class="col-auto" style="width: 200px;">
     <label for="statusSelect" class="form-label">Status</label>
-    <select id="statusSelect" name="is_active" class="form-select">
-      <option value="">All</option>
-      <option value="active" {% if is_active_filter == 'active' %}selected{% endif %}>Active</option>
-      <option value="inactive" {% if is_active_filter == 'inactive' %}selected{% endif %}>Inactive</option>
-    </select>
+   <select id="statusSelect" name="is_active" class="form-select">
+    <option value="active" {% if is_active_filter == 'active' or not is_active_filter %}selected{% endif %}>Active</option>
+    <option value="inactive" {% if is_active_filter == 'inactive' %}selected{% endif %}>Inactive</option>
+    <option value="all" {% if is_active_filter == 'all' %}selected{% endif %}>All</option>
+  </select>
+
   </div>
   <div class="col-auto">
     <button type="submit" class="btn btn-primary">
@@ -161,7 +162,7 @@
                   </td>
                   <td>
                     <div class="d-flex gap-2">
-                      <a href="{% url 'costcenter_update' cc.pk %}" class="btn btn-sm btn-primary" title="Edit">
+                      <a href="{% url 'costcenter_update' cc.pk %}?next={{ request.get_full_path|urlencode }}" class="btn btn-sm btn-primary" title="Edit">
                         <i class="fas fa-edit"></i>
                       </a>
                     </div>

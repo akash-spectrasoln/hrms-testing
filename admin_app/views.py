@@ -218,7 +218,7 @@ def export_employees_to_excel(request):
         'Created On', 'Modified On', 'Is Deleted', 
         'Resignation Date',
         'Incentive', 'Joining Bonus', 'PAN Card', 'Aadhaar', 'Bank Name', 
-        'Bank Branch', 'Bank Branch Address', 'Bank Account', 'IFSC Code'
+        'Bank Branch', 'Bank Branch Address', 'Bank Account', 'IFSC Code','Cost Center'
     ]
 
     # Write the header row to the sheet
@@ -277,7 +277,8 @@ def export_employees_to_excel(request):
             employee.enc_bank_branch,       # Using encrypted property
             employee.enc_bank_branch_address,  # Using encrypted property
             employee.enc_bank_account,      # Using encrypted property
-            employee.enc_ifsc_code          # Using encrypted property
+            employee.enc_ifsc_code ,         # Using encrypted property
+            employee.cost_center.costcenter_name if employee.cost_center else ''  # ✅ Cost center ID
         ]
 
         for col_num, cell_value in enumerate(row, 1):
@@ -697,7 +698,7 @@ class EmployeeExcelCreateView(View):
             'Valid From(mm/dd/yyyy)', 'Valid To(mm/dd/yyyy)', 'Country Code', 'State Code',
             'Home City','State Code','Date Of Birth(mm/dd/yyyy)',
             'Department ID',
-            'Bank Name', 'Bank Account', 'IFSC Code'
+            'Bank Name', 'Bank Account', 'IFSC Code','Cost Center ID' 
         ]
 
         try:
@@ -777,6 +778,8 @@ class EmployeeExcelCreateView(View):
                             manager = None
                         else:
                             manager = Employees.objects.get(employee_id=manager_val)
+                        # ✅ Required Cost Center lookup by cost_center_id field
+                        cost_center = CostCenter.objects.get(cost_center_id=row['Cost Center ID'].strip())
                     except Exception as e:
                         debug_info = traceback.format_exc()
                         print(f"[DEBUG] Row {excel_row_num}: Foreign key error:\n{debug_info}")
@@ -832,6 +835,7 @@ class EmployeeExcelCreateView(View):
                                 manager=manager,
                                 resignation_date=parse_date_field(row['Resignation Date']) if 'Resignation Date' in row else None,
                                 emergency_contact_email=parse(row['Emergency Contact Email']) if 'Emergency Contact Email' in row else None,
+                                cost_center = cost_center
                             )
                             
                             # Set encrypted fields using the properties
@@ -1066,6 +1070,14 @@ class EmployeeExcelUpdateView(View):
                     employee.valid_to = row.get('valid_to', employee.valid_to)
                     employee.country_id = row.get('country_id', employee.country_id)
                     employee.state_id = row.get('state_id', employee.state_id)
+                    # ✅ New: update cost center if provided
+                    cost_center_id = row.get('cost_center_id')
+                    if pd.notna(cost_center_id):
+                        try:
+                            cost_center = CostCenter.objects.get(cost_center_id=str(cost_center_id).strip())
+                            employee.cost_center = cost_center
+                        except CostCenter.DoesNotExist:
+                            messages.warning(request, f"Invalid Cost Center ID {cost_center_id} for employee {employee_id}. Skipping cost center update.")
 
                     employee.save()
                 except Employees.DoesNotExist:

@@ -53,10 +53,11 @@ def tsheet_index(request):
 
 
 def client_list(request):
-    """List all clients with search, filter, and sorting."""
+    """List all clients with search, filter, sorting, and status."""
     search = request.GET.get('search', '').strip()
     alias = request.GET.get('alias', '')
     country = request.GET.get('country', '')
+    status = request.GET.get('status', 'active')  # Default active
     sort = request.GET.get('sort', 'client_name')
 
     allowed_sorts = [
@@ -68,9 +69,16 @@ def client_list(request):
     sort = sort if sort in allowed_sorts else 'client_name'
 
     # Base queryset
-    clients = Client.objects.select_related('country')
+    clients = Client.objects.select_related('country').all()
 
-    # Filters
+    # Status filter
+    if status == 'active':
+        clients = clients.filter(is_active=True)
+    elif status == 'inactive':
+        clients = clients.filter(is_active=False)
+    # else '' → show all
+
+    # Other filters
     if search:
         clients = clients.filter(
             Q(client_name__icontains=search) |
@@ -82,6 +90,7 @@ def client_list(request):
     if country:
         clients = clients.filter(country_id=country)
 
+    # Sorting
     clients = clients.order_by(sort)
 
     context = {
@@ -89,6 +98,7 @@ def client_list(request):
         'search_query': search,
         'alias_filter': alias,
         'country_filter': country,
+        'status_filter': status,  # Pass to template
         'sort_field': sort,
         'sort_options': [
             ('client_name', 'Name (A-Z)'),
@@ -100,59 +110,72 @@ def client_list(request):
         ],
         'abbreviations': Client.objects.values_list('client_alias', flat=True).distinct(),
         'countries': Country.objects.all(),
+        "querystring": request.GET.urlencode(),  # 🔑 preserve filters
     }
 
     return render(request, 'timesheet/client_list.html', context)
-    
 
 
 
 def client_create(request):
+    query_params = request.GET.copy()
+    next_url = query_params.get('next', reverse('client_list'))
+
     form = ClientForm(request.POST or None)
     if request.method == 'POST' and form.is_valid():
         client = form.save(commit=False)
 
-        # store created_by correctly
         if hasattr(request.user, "employee_profile"):
-            client.created_by = request.user.employee_profile  # assign object
+            client.created_by = request.user.employee_profile
 
         client.save()
-        return redirect('client_list')
+        return redirect(next_url)  # 🔑 go back with filters
 
-    return render(request, 'timesheet/client_form.html', {'form': form})
-
-
-
+    return render(request, 'timesheet/client_form.html', {
+        'form': form,
+        'next': next_url,
+    })
 
 def client_update(request, pk):
     client = get_object_or_404(Client, pk=pk)
-    form = ClientForm(request.POST or None, instance=client)
 
-    if request.method == 'POST' and form.is_valid():
-        client = form.save(commit=False)
+    query_params = request.GET.copy()
+    next_url = query_params.get("next") or reverse("client_list")
 
-        # store updated_by correctly (same style as create)
-        if hasattr(request.user, "employee_profile"):
-            client.updated_by = request.user.employee_profile  # assign object
+    if request.method == 'POST':
+        form = ClientForm(request.POST, instance=client)
+        if form.is_valid():
+            client = form.save(commit=False)
+            if hasattr(request.user, "employee_profile"):
+                client.updated_by = request.user.employee_profile
+            if 'is_active' in form.cleaned_data:
+                client.is_active = form.cleaned_data['is_active']
+            client.save()
+            messages.success(request, "Client updated successfully!")
+            return redirect(next_url)
+    else:
+        form = ClientForm(instance=client)
 
-        client.save()
-        return redirect('client_list')
-
-    return render(request, 'timesheet/client_form.html', {'form': form})
-
-
-
+    return render(request, 'timesheet/client_form.html', {
+        'form': form,
+        'next': next_url,
+    })
 
 def client_delete(request, pk):
-    """Delete a client."""
     client = get_object_or_404(Client, pk=pk)
+
+    query_params = request.GET.copy()
+    next_url = query_params.get("next") or reverse("client_list")
+
     if request.method == 'POST':
-        client.delete()
-        return redirect('client_list')
-    return render(request, 'timesheet/client_confirm_delete.html', {'client': client})
+        client.is_active = False
+        client.save(update_fields=['is_active'])
+        return redirect(next_url)  # 🔑 preserve filters
 
-
-
+    return render(request, 'timesheet/client_confirm_delete.html', {
+        'client': client,
+        'next': next_url,
+    })
 
 
 
@@ -189,7 +212,8 @@ def project_list(request):
     if status_filter == 'current':
         projects = projects.filter(valid_from__lte=today, valid_to__gte=today)
     elif status_filter == 'expired':
-        projects = projects.filter(valid_to__lt=today)
+        projects = projects.filter(Q(valid_to__lt=today) | Q(is_deleted=True))
+
     elif status_filter == 'future':
         projects = projects.filter(valid_from__gt=today)
     elif status_filter == 'all':
@@ -267,55 +291,80 @@ def project_list(request):
     return render(request, 'timesheet/project_list.html', context)
 
 def project_create(request):
-    """
-    Create a new project. Show form (GET) or save data (POST).
-    """
     form = ProjectForm(request.POST or None)
-    if request.method == 'POST' and form.is_valid():
-        project = form.save(commit=False)  # Don't save yet
 
-        # assign created_by
+    # Get the 'next' URL, or default to the base list view
+    next_url = request.GET.get('next', reverse('project_list'))
+
+    if request.method == 'POST' and form.is_valid():
+        project = form.save(commit=False)
+
         if hasattr(request.user, "employee_profile"):
             project.created_by = request.user.employee_profile
 
-        project.save()  # now save with created_by
-        return redirect('project_list')
+        project.save()
+        
+        # Redirect to the 'next' URL, preserving filters
+        return redirect(next_url)
 
-    return render(request, 'timesheet/project_form.html', {'form': form})
+    # Pass the 'next' URL to the template for the cancel/back button
+    context = {
+        'form': form,
+        'next': next_url,
+    }
+    return render(request, 'timesheet/project_form.html', context)
+
+from django.shortcuts import redirect, get_object_or_404, render
+from django.urls import reverse
+
+from urllib.parse import urlencode
 
 def project_update(request, pk):
-    """
-    Update an existing project. Show prefilled form or save changes.
-    """
     project = get_object_or_404(Project, pk=pk)
-    form = ProjectForm(request.POST or None, instance=project)
-    if request.method == 'POST' and form.is_valid():
-        project = form.save(commit=False)  # Don't save yet
 
-        # assign updated_by
-        if hasattr(request.user, "employee_profile"):
-            project.updated_by = request.user.employee_profile
+    # Get the 'next' URL, or default to the base list view
+    next_url = request.GET.get('next', reverse('project_list'))
+    
+    if request.method == 'POST':
+        form = ProjectForm(request.POST, instance=project)
+        if form.is_valid():
+            project = form.save(commit=False)
+            if hasattr(request.user, "employee_profile"):
+                project.updated_by = request.user.employee_profile
+            project.save()
+            # Redirect to the 'next' URL, preserving filters
+            return redirect(next_url)
+    else:
+        form = ProjectForm(instance=project)
 
-        project.save()  # now save with updated_by
-        return redirect('project_list')
-
-    return render(request, 'timesheet/project_form.html', {'form': form, 'project': project})
-
+    # Pass the 'next' URL to the template for the cancel/back button
+    context = {
+        'form': form,
+        'project': project,
+        'next': next_url,
+    }
+    return render(request, 'timesheet/project_form.html', context)
 
 
 def project_delete_view(request, pk):
-
-    """
-    Soft delete a project after confirmation.
-    """
     project = get_object_or_404(Project, pk=pk)
+
+    # Get the 'next' URL, or default to the base list view
+    next_url = request.GET.get('next', reverse('project_list'))
 
     if request.method == 'POST':
         project.soft_delete()
         messages.success(request, "Project deactivated (soft-deleted) successfully!")
-        return redirect('project_list')
+        
+        # Redirect to the 'next' URL, preserving filters
+        return redirect(next_url)
 
-    return render(request, 'timesheet/project_confirm_delete.html', {'project': project})
+    # Pass the 'next' URL and project to the template
+    context = {
+        'project': project,
+        'next': next_url,
+    }
+    return render(request, 'timesheet/project_confirm_delete.html', context)
 
 
 @require_GET
@@ -386,50 +435,53 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-
 class AssignProjectCreateView(CreateView):
     model = AssignProject
-    template_name = 'timesheet/assignproject_form.html'
     form_class = AssignProjectCreateForm
-    success_url = reverse_lazy('assign-project-list')
+    template_name = 'timesheet/assignproject_form.html'
+
+    def get_success_url(self):
+        next_url = self.request.GET.get('next')
+        if next_url:
+            return next_url
+        return reverse_lazy('assign-project-list')
 
     def form_valid(self, form):
-        assign_project = form.save(commit=False)  # Don't save yet
-
-        # Set created_by from request.user
+        assign_project = form.save(commit=False)
         if hasattr(self.request.user, "employee_profile"):
             assign_project.created_by = self.request.user.employee_profile
-
-        assign_project.save()  # Now save
+        assign_project.save()
         messages.success(self.request, "Project assigned successfully!")
         return super().form_valid(form)
 
-    def form_invalid(self, form):
-        messages.error(self.request, "Please correct the errors below.")
-        return super().form_invalid(form)
+from django.urls import reverse
+from django.utils.http import urlencode
+
 class AssignProjectUpdateView(UpdateView):
     model = AssignProject
     form_class = AssignProjectUpdateForm
     template_name = 'timesheet/assignproject_form.html'
-    success_url = reverse_lazy('assign-project-list')
+
+    def get_success_url(self):
+        next_url = self.request.GET.get('next')
+        if next_url:
+            return next_url
+        return reverse_lazy('assign-project-list')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        # Pass the 'next' URL directly to the template
+        context['next'] = self.request.GET.get('next', reverse('assign-project-list'))
+        return context
 
     def form_valid(self, form):
-        assign_project = form.save(commit=False)  # Don't save yet
-
-        # Set updated_by from request.user
+        assign_project = form.save(commit=False)
         if hasattr(self.request.user, "employee_profile"):
             assign_project.updated_by = self.request.user.employee_profile
-
-        assign_project.save()  # Now save
+        assign_project.save()
         messages.success(self.request, "Assignment updated successfully!")
         return super().form_valid(form)
-
-    def form_invalid(self, form):
-        messages.error(self.request, "Please correct the errors below.")
-        return super().form_invalid(form)
-
-
-
+    
 def load_projects(request):
     """
     AJAX view to load project list for a given client
@@ -478,7 +530,9 @@ class AssignProjectListView(ListView):
         if status_filter == 'current':
             qs = qs.filter(start_date__lte=today, end_date__gte=today)
         elif status_filter == 'expired':
-            qs = qs.filter(end_date__lt=today)
+    # Include assignments that are either expired OR deleted
+            qs = qs.filter(Q(end_date__lt=today) | Q(is_deleted=True))
+
         elif status_filter == 'future':
             qs = qs.filter(start_date__gt=today)
         elif status_filter == 'all':
@@ -531,19 +585,25 @@ class AssignProjectListView(ListView):
         return context
 
 
+
 class AssignProjectDeleteView(View):
     def get(self, request, pk):
         assignment = get_object_or_404(AssignProject, pk=pk)
-        return render(request, 'timesheet/assignproject_confirm_delete.html', {'assignment': assignment})
+        next_url = request.GET.get('next', reverse('assign-project-list'))
+        context = {
+            'assignment': assignment,
+            'next': next_url,
+        }
+        return render(request, 'timesheet/assignproject_confirm_delete.html', context)
 
     def post(self, request, pk):
         assignment = get_object_or_404(AssignProject, pk=pk)
-        assignment.is_active = False
+        next_url = request.GET.get('next', reverse('assign-project-list'))
+        assignment.is_deleted = True
         assignment.save()
         messages.success(request, "Assignment removed successfully.")
-        return redirect('assign-project-list')
-
-  
+        return redirect(next_url)
+    
 class CostCenterListView(ListView):
     model = CostCenter
     template_name = 'timesheet/costcenter_list.html'
@@ -554,19 +614,19 @@ class CostCenterListView(ListView):
         query = self.request.GET.get('search', '').strip()
         is_active_filter = self.request.GET.get('is_active', '').strip().lower()
 
-        # Default queryset: only active cost centers
-        qs = CostCenter.objects.filter(is_active=True)
+        qs = CostCenter.objects.all()  # start with all
 
-        # Search by name
-        if query:
-            qs = qs.filter(costcenter_name__icontains=query)
-
-        # Active/inactive filter (overrides default if explicitly set)
-        if is_active_filter == 'active':
+        if not is_active_filter or is_active_filter == 'active':
+            # Default or "active" filter → show only active
             qs = qs.filter(is_active=True)
         elif is_active_filter == 'inactive':
             qs = qs.filter(is_active=False)
-        # else: default already active, no change
+        elif is_active_filter == 'all':
+            pass  # no filter → show all
+
+        # Apply search filter
+        if query:
+            qs = qs.filter(costcenter_name__icontains=query)
 
         return qs.order_by('costcenter_id')
 
@@ -576,29 +636,60 @@ class CostCenterListView(ListView):
             'search_query': self.request.GET.get('search', '').strip(),
             'is_active_filter': self.request.GET.get('is_active', '').strip().lower(),
             'status_options': [
+                ('', 'Active (default)'),  # default shows active
                 ('active', 'Active'),
                 ('inactive', 'Inactive'),
+                ('all', 'All'),
             ]
         })
         return context
 
 
 
+from django.urls import reverse_lazy, reverse
+from django.shortcuts import redirect
+
 class CostCenterCreateView(CreateView):
     model = CostCenter
     form_class = CostCenterForm
     template_name = 'timesheet/costcenter_form.html'
-    success_url = reverse_lazy('costcenter_list')
 
+    def get_success_url(self):
+        # Use the 'next' URL parameter if it exists; otherwise, use the default list URL.
+        next_url = self.request.GET.get('next')
+        if next_url:
+            return next_url
+        return reverse_lazy('costcenter_list')
+
+    def form_valid(self, form):
+        # Optional: Add created_by or other logic here
+        return super().form_valid(form)
+#Employee App Features 
+from django.urls import reverse_lazy, reverse
+from django.shortcuts import redirect
 
 class CostCenterUpdateView(UpdateView):
     model = CostCenter
     form_class = CostCenterForm
     template_name = 'timesheet/costcenter_form.html'
-    success_url = reverse_lazy('costcenter_list')
+
+    def get_success_url(self):
+        next_url = self.request.GET.get('next')
+        if next_url:
+            return next_url
+        return reverse_lazy('costcenter_list')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        # Pass the full path to the template to be used by the "Back" button.
+        context['next'] = self.request.GET.get('next')
+        return context
+
+    def form_valid(self, form):
+        # Optional: Add updated_by or other logic here
+        return super().form_valid(form)
 
 
-#Employee App Features 
 
 import calendar
 
@@ -625,12 +716,18 @@ def timesheet_calendar(request):
     is_manager = Employees.objects.filter(manager=employee).exists()
     today = timezone.localdate()
 
-    # ---------------- 1️⃣ Config ----------------
-    # Hardcode the earliest month and year an employee can navigate to.
-    EARLIEST_NAV_MONTH = 7  # July
-    EARLIEST_NAV_YEAR = 2025
+    # 1️⃣ Determine the earliest valid date for the employee
+    # Correctly use the enc_valid_from property to get the decrypted joining date
+    joining_date = employee.enc_valid_from
+    print(joining_date)
+    
+    # Set the fixed new start date
+    new_start_date_of_calendar = date(2025, 8, 1)
 
-    # ---------------- 2️⃣ Month & Year selection ----------------
+    # The effective start date for this employee is the later of their joining date or the fixed start date
+    effective_start_date = max(joining_date, new_start_date_of_calendar)
+    
+    # 2️⃣ Month & Year selection
     try:
         month = int(request.GET.get('month', today.month))
         year = int(request.GET.get('year', today.year))
@@ -641,18 +738,16 @@ def timesheet_calendar(request):
     month = max(1, min(12, month))
     year = max(2000, min(2100, year))
 
-    # ---------------- 3️⃣ Apply Navigation Limits ----------------
-    # Limit backward navigation to the fixed earliest date.
+    # 3️⃣ Apply Navigation Limits
+    # Limit backward navigation to the effective start date.
     current_date_obj = date(year, month, 1)
-    earliest_date_obj = date(EARLIEST_NAV_YEAR, EARLIEST_NAV_MONTH, 1)
-
-    if current_date_obj < earliest_date_obj:
-        month, year = EARLIEST_NAV_MONTH, EARLIEST_NAV_YEAR
+    
+    if current_date_obj < date(effective_start_date.year, effective_start_date.month, 1):
+        month, year = effective_start_date.month, effective_start_date.year
     
     # The forward navigation limit will be applied later in the context.
-    # No need to change the month/year here.
 
-    # ---------------- 4️⃣ Timesheet items ----------------
+    # 4️⃣ Timesheet items
     timesheet_qs = TimesheetItem.objects.filter(
         hdr__employee=employee,
         wrk_date__year=year,
@@ -668,7 +763,7 @@ def timesheet_calendar(request):
     timesheet_dates = set(timesheet_hours.keys())
     approved_dates = {entry['wrk_date'] for entry in timesheet_qs if entry['approved_count'] > 0}
 
-    # ---------------- 5️⃣ Holidays & Leave ----------------
+    # 5️⃣ Holidays & Leave
     holidays_qs = Holiday.objects.filter(
         country=employee.country,
         date__year=year,
@@ -700,7 +795,7 @@ def timesheet_calendar(request):
             if day.month == month:
                 leave_dates.add(day)
 
-    # ---------------- 6️⃣ Build calendar grid (Corrected) ----------------
+    # 6️⃣ Build calendar grid
     cal = calendar.Calendar(firstweekday=0)
     month_days = cal.monthdatescalendar(year, month)
     calendar_data = []
@@ -719,13 +814,15 @@ def timesheet_calendar(request):
             is_entered = day in timesheet_dates
             is_future = day > today
             is_approved = day in approved_dates
-
+            
+            # --- New Logic: Disable days before effective start date ---
+            is_before_joining_date = day < effective_start_date
+            
             status, hours, is_disabled = "", None, False
 
-            # Disabling logic: Weekends, Holidays, and Leave days are ALWAYS disabled.
-            if is_weekend or is_holiday or on_leave:
-                is_disabled = True
-            elif is_future:
+            # Disabling logic: A day is disabled if it's a special day, in the future,
+            # OR before the employee's effective start date.
+            if is_weekend or is_holiday or on_leave or is_future or is_before_joining_date:
                 is_disabled = True
             else:
                 is_disabled = False
@@ -761,22 +858,21 @@ def timesheet_calendar(request):
             })
         calendar_data.append(week_data)
 
-    # ---------------- 7️⃣ Navigation ----------------
+    # 7️⃣ Navigation
     prev_month, prev_year = adjust_month_year(month, year, -1)
     next_month, next_year = adjust_month_year(month, year, 1)
 
-    # Disable previous navigation if before earliest date
+    # Disable previous navigation if before the effective start date.
     prev_date_obj = date(prev_year, prev_month, 1) if prev_month else None
-    if prev_date_obj and prev_date_obj < earliest_date_obj:
+    if prev_date_obj and prev_date_obj < date(effective_start_date.year, effective_start_date.month, 1):
         prev_month, prev_year = None, None
 
     # Enable next navigation to any month in the current year, but not future years.
-    # This now allows navigation up to December of the current year.
     next_date_obj = date(next_year, next_month, 1) if next_month else None
     if next_date_obj and next_date_obj > date(today.year, 12, 1):
         next_month, next_year = None, None
 
-    # ---------------- 8️⃣ Context ----------------
+    # 8️⃣ Context
     context = {
         'year': year,
         'month': month,
@@ -802,13 +898,15 @@ def timesheet_calendar(request):
         'next_year_only': next_year,
         'current_year': today.year,
         'is_manager': is_manager,
+        'joining_date': joining_date
     }
 
-    # ---------------- 9️⃣ AJAX support ----------------
+    # 9️⃣ AJAX support
     if request.headers.get('x-requested-with') == 'XMLHttpRequest':
         return render(request, 'timesheet/calendar_grid.html', context)
         
     return render(request, 'timesheet/calendar.html', context)
+
 def submit_timesheet(request):
     """
     Create or update a TimesheetHdr (weekly) and TimesheetItem (daily)
@@ -881,7 +979,7 @@ def submit_timesheet(request):
         week_start=week_start,
         week_end=week_end
     )
-
+    
     # 6️⃣ Detect edit mode by entry ID
     entry_id = request.POST.get('entry_id')
     existing_entry = None
@@ -889,17 +987,14 @@ def submit_timesheet(request):
         try:
             existing_entry = TimesheetItem.objects.get(pk=entry_id, hdr__employee=employee)
         except TimesheetItem.DoesNotExist:
-            pass
+            return _error_response(request, "Entry not found.", 404)
 
-    # 7️⃣ Fetch all items for same date in one go (optimize queries)
-    existing_items = list(TimesheetItem.objects.filter(
-        hdr__employee=employee,
-        wrk_date=date_obj
-    ))
-
-    # 8️⃣ Calculate other entries' total (exclude current if editing)
-    other_total = sum(item.wrk_hours for item in existing_items if not existing_entry or item.pk != existing_entry.pk)
+    # 7️⃣ Calculate other entries' total (exclude current if editing)
+    existing_items = TimesheetItem.objects.filter(hdr=hdr, wrk_date=date_obj)
+    current_entry_hours = existing_entry.wrk_hours if existing_entry else 0
+    other_total = sum(item.wrk_hours for item in existing_items) - current_entry_hours
     new_total = other_total + hours_worked
+
     if new_total > 12:
         return _error_response(
             request,
@@ -907,32 +1002,42 @@ def submit_timesheet(request):
             400
         )
 
-    # 9️⃣ Check for duplicates (works in both create & edit mode)
-    for item in existing_items:
-        if existing_entry and item.pk == existing_entry.pk:
-            continue  # skip self
+    # 8️⃣ Check for duplicates based on project or cost center
+    duplicate_qs = TimesheetItem.objects.filter(hdr=hdr, wrk_date=date_obj)
 
-        same_costcenter = (item.costcenter == cost_center and cost_center is not None)
-        same_project = (
-            project_assignment and item.project_assignment
-            and item.project_assignment.project == project_assignment.project
-        )
+    print("=== DEBUG: Duplicate check ===")
+    print("Project assignment:", project_assignment)
+    print("Cost center:", cost_center)
+    print("Existing entry ID:", existing_entry.pk if existing_entry else None)
+    print("Duplicate queryset count:", duplicate_qs.count())
 
-        if same_costcenter or same_project:
-            msg = f"A timesheet for this {'project' if project_assignment else 'cost center'} already exists on {date_obj}."
-            return _error_response(request, msg, 400)
 
-    # 🔟 Save entry
+    if project_assignment:
+        # Filter entries that have this project assignment
+        duplicate_qs = duplicate_qs.filter(project_assignment=project_assignment)
+    else:
+        # Filter entries that have this cost center
+        duplicate_qs = duplicate_qs.filter(costcenter=cost_center, project_assignment__isnull=True)
+
     if existing_entry:
-        existing_entry.project_assignment = project_assignment
-        existing_entry.costcenter = cost_center
-        existing_entry.activity = activity
-        existing_entry.work_location = work_location
-        existing_entry.wrk_hours = hours_worked
-        existing_entry.description = request.POST.get('description', '').strip()
-        existing_entry.save()
-        created = False
+        duplicate_qs = duplicate_qs.exclude(pk=existing_entry.pk)
+
+    if duplicate_qs.exists():
+        msg = f"A timesheet for this {'project' if project_assignment else 'cost center'} already exists on {date_obj}. Please edit the existing entry."
+        return _error_response(request, msg, 400)
+
+
+    # 9️⃣ Save or update entry
+    if existing_entry:
         item = existing_entry
+        item.project_assignment = project_assignment
+        item.costcenter = cost_center
+        item.activity = activity
+        item.work_location = work_location
+        item.wrk_hours = hours_worked
+        item.description = request.POST.get('description', '').strip()
+        item.save()
+        created = False
     else:
         item = TimesheetItem.objects.create(
             hdr=hdr,
@@ -946,11 +1051,12 @@ def submit_timesheet(request):
         )
         created = True
 
-    # ✅ Recalculate totals and delayed status
+    # 🔟 Recalculate totals and delayed status
     hdr.recalc_totals()
     hdr.check_delayed_status()
+    hdr.save()
 
-    # 🔟 Prepare success response
+    # 1️⃣1️⃣ Prepare success response
     response_data = {
         'status': 'success',
         'message': f"Timesheet for {date_obj} {'submitted' if created else 'updated'} successfully.",
@@ -959,8 +1065,8 @@ def submit_timesheet(request):
             'id': item.pk,
             'date': item.wrk_date.strftime('%Y-%m-%d'),
             'hours_worked': item.wrk_hours,
-            'project_id': project_assignment.project.project_id if project_assignment else None,
-            'project_name': project_assignment.project.project_name if project_assignment else (str(cost_center) if cost_center else None),
+            'projectAssignmentId': item.project_assignment.pk if item.project_assignment else None,
+            'project_name': str(item.project_assignment.project) if item.project_assignment else (str(item.costcenter) if item.costcenter else None),
             'activity': item.activity.act_name if item.activity else None,
             'work_location': item.work_location.loc_name if item.work_location else None,
             'is_approved': hdr.is_approved,
@@ -975,6 +1081,10 @@ def submit_timesheet(request):
     return redirect('timesheet_calendar')
 
 def _error_response(request, msg, status=400):
+    print("=== DEBUG: Error response triggered ===")
+    print("Message:", msg)
+    print("Headers:", request.headers)
+
     if request.headers.get('x-silent-refresh') == '1':
         return JsonResponse({'status': 'silent_error', 'message': msg}, status=status)
     if request.headers.get('x-requested-with') == 'XMLHttpRequest':
@@ -1026,6 +1136,19 @@ def calculate_remaining_working_days(employee, start_date, end_date):
 
     return remaining
 
+from django.db.models import Q
+from django.http import JsonResponse
+from django.utils.dateparse import parse_date
+from django.core.serializers.json import DjangoJSONEncoder
+
+# Assuming these models are defined elsewhere
+# from .models import (
+#     TimesheetItem, TimesheetHeader, LeaveRequest,
+#     AssignProject, CostCenter, EmployeeProfile, EmployeeType
+# )
+# from .utils import calculate_remaining_working_days
+# from django.contrib.auth.models import User
+
 def get_timesheet_day_data(request):
     """
     Fetch and return all necessary data for a given day's timesheet entry screen:
@@ -1034,7 +1157,21 @@ def get_timesheet_day_data(request):
       - Leave status for the day
       - Project end date and remaining working days
     """
-    employee = request.user.employee_profile
+    # 🌟 1. CORRECTED: Fetch employee profile and related employee type in one query
+    try:
+        employee = request.user.employee_profile
+        # We need to refresh the object to ensure the related field is loaded
+        # The best practice is to load it upfront with the initial query
+        # Let's assume you've already configured select_related in the view that calls this function.
+        # If not, you might need to do something like this:
+        # employee = EmployeeProfile.objects.select_related('employee_type').get(user=request.user)
+
+    except employee.DoesNotExist:
+        return JsonResponse({"error": "Employee profile not found."}, status=404)
+
+    # 🌟 2. CORRECTED: Get the 'code' field from the related employee_type object
+    employee_type_code = employee.employee_type.code if employee.employee_type else None
+
     date_str = request.GET.get("date")
     date_obj = parse_date(date_str)
 
@@ -1048,7 +1185,7 @@ def get_timesheet_day_data(request):
         status="Approved",
         start_date__lte=date_obj,
         end_date__gte=date_obj
-    ).only("id").exists()  # .only("id") for efficiency
+    ).only("id").exists()
 
     # ✅ 2. Get all timesheet entries for that date (with related fields to avoid N+1 queries)
     items_qs = (
@@ -1065,30 +1202,38 @@ def get_timesheet_day_data(request):
         )
     )
 
+
     # ✅ 3. Build entries list for frontend
     entry_list = []
     for item in items_qs:
-        if item.project_assignment and item.project_assignment.project:
-            # Entry linked to a project
+        # 🌟 FIX: Consistently format the project/cost center name
+        project_name = None
+        project_id = None
+        project_assignment_id = None
+        is_costcenter = False
+
+        if item.project_assignment:
+            # This is a project. Format it as "Client Alias - Project Name"
             proj_obj = item.project_assignment.project
-            project_name = proj_obj.project_name
+            client_alias = proj_obj.client.client_alias if proj_obj.client else "No Client"
+            project_name = f"{client_alias} - {proj_obj.project_name}"
             project_id = proj_obj.project_id
             project_assignment_id = item.project_assignment.pk
-            is_costcenter = False
-        else:
-            # Entry linked to a cost center
+        elif item.costcenter:
+            # This is a cost center. Format it as "CostCenter ID - CostCenter Name"
             costcenter = item.costcenter
-            project_name = costcenter.costcenter_name if costcenter else "Cost Center"
-            project_id = costcenter.costcenter_id if costcenter else None
-            project_assignment_id = f"COSTCENTER-{project_id}" if project_id else None
+            project_name = f"{costcenter.costcenter_id} - {costcenter.costcenter_name}"
+            project_id = costcenter.costcenter_id
+            project_assignment_id = f"COSTCENTER-{project_id}"
             is_costcenter = True
-
+        
+        # 🌟 The rest of the dictionary now uses the new, consistently formatted fields
         entry_list.append({
             "tsheet_item_id": item.pk,
             "date": item.wrk_date,
             "projectAssignmentId": project_assignment_id,
             "project_id": project_id,
-            "project_name": project_name,
+            "project_name": project_name, # This is now the correctly formatted string
             "activity_id": item.activity.act_id if item.activity else None,
             "activity_name": item.activity.act_name if item.activity else "",
             "work_location_id": item.work_location.loc_id if item.work_location else None,
@@ -1098,6 +1243,7 @@ def get_timesheet_day_data(request):
             "is_approved": item.hdr.is_approved,
             "is_costcenter": is_costcenter,
         })
+
 
     # ✅ 4. Fetch active project assignments for that day
     project_assignments = AssignProject.objects.filter(
@@ -1112,42 +1258,41 @@ def get_timesheet_day_data(request):
     has_projects = bool(project_assignments)
 
     for pa in project_assignments:
-        # Calculate remaining working days (if project has an end date)
         remaining_days = None
         if pa.end_date:
             remaining_days = calculate_remaining_working_days(employee, date_obj, pa.end_date)
-            remaining_days = max(0, remaining_days)  # Prevent negative values
+            remaining_days = max(0, remaining_days)
 
         client_alias = pa.project.client.client_alias if pa.project and pa.project.client else ""
 
         projects_list.append({
             "projectAssignmentId": pa.pk,
             "project_id": pa.project.project_id if pa.project else None,
-            "name": pa.project.project_name if pa.project else "",
+            "name": f"{client_alias} - {pa.project.project_name}" if pa.project and pa.project.project_name else "",
             "client_alias": client_alias,
             "is_costcenter": False,
             "selected": False,
-            "assignment_start_date": pa.start_date,   # 🔹 NEW
-            "assignment_end_date": pa.end_date,       # 🔹 NEW
+            "assignment_start_date": pa.start_date,
+            "assignment_end_date": pa.end_date,
             "remaining_days": remaining_days
         })
 
-    # ✅ 5. Add cost center as first option if exists
-    if employee.cost_center:
+    # ✅ 5. Add cost center as first option, but only for employees
+    # 🌟 3. CORRECTED: Check against the `employee_type_code`
+    if employee.cost_center and employee_type_code == 'E':
         projects_list.insert(0, {
             "projectAssignmentId": f"COSTCENTER-{employee.cost_center.costcenter_id}",
             "project_id": employee.cost_center.costcenter_id,
-            "name": employee.cost_center.costcenter_name,
+            "name": f"{employee.cost_center.costcenter_id} - {employee.cost_center.costcenter_name}",
             "client_alias": "Cost Center",
             "is_costcenter": True,
-            "selected": not has_projects,  # Preselect cost center if no projects available
-            "assignment_start_date": None,   # 🔹 NEW
-            "assignment_end_date": None ,      # 🔹 NEW
+            "selected": not has_projects,
+            "assignment_start_date": None,
+            "assignment_end_date": None,
             "remaining_days": None
-
         })
 
-    # ✅ 6. Get first project entry’s end date & remaining working days
+    #  6. Get first project entry’s end date & remaining working days
     first_project_entry = next(
         (e for e in items_qs if e.project_assignment and e.project_assignment.project),
         None
@@ -1165,9 +1310,24 @@ def get_timesheet_day_data(request):
         "is_leave_day": on_leave,
         "projects": projects_list,
         "remaining_working_days": remaining_working_days,
-        "project_end_date": project_end_date
+        "project_end_date": project_end_date,
+        "employee_type_code": employee_type_code, # 🌟 CORRECTED: Pass the code to the frontend
     }, encoder=DjangoJSONEncoder)
 
+from django.views.decorators.csrf import csrf_protect
+from django.views.decorators.http import require_http_methods
+@login_required
+@csrf_protect
+@require_http_methods(["DELETE"])
+def delete_timesheet_entry(request, entry_id):
+    entry = get_object_or_404(TimesheetItem, pk=entry_id)
+
+    # Business rule: only deletable if not approved
+    if getattr(entry, "is_approved", False):
+        return JsonResponse({"error": "Approved entries cannot be deleted."}, status=400)
+
+    entry.delete()
+    return JsonResponse({"success": True})
 
 from django.views.decorators.http import require_POST
 from django.utils.dateparse import parse_date
@@ -1377,13 +1537,11 @@ def copy_timesheet_entries(request):
     """
     Copy selected TimesheetItem entries to multiple target dates,
     allowing copying to weekends and holidays with overlapping approved leave.
+    Leaves on weekends or holidays are ignored.
     """
     employee = request.user.employee_profile
 
-    # Fetch holidays for the employee's country/state
-    holidays_cache = {} # Placeholder for your actual cache
-    emp_holidays = get_all_holidays(employee, holidays_cache)
-
+    # --- Get POST data ---
     item_ids = request.POST.getlist("entry_ids[]", [])
     raw_target_dates = request.POST.getlist("target_dates[]", [])
     target_dates = [d.strip() for td in raw_target_dates for d in td.split(",") if d.strip()]
@@ -1391,23 +1549,10 @@ def copy_timesheet_entries(request):
     if not item_ids or not target_dates:
         return JsonResponse({"error": "Entries and target dates are required"}, status=400)
 
-    items = list(
-        TimesheetItem.objects.filter(
-            id__in=item_ids,
-            hdr__employee=employee
-        ).select_related(
-            "hdr", "project_assignment", "project",
-            "costcenter", "activity", "work_location"
-        )
-    )
-
-    if not items:
-        return JsonResponse({"error": "No valid entries found"}, status=404)
-
-    today = date.today()
+    # --- Parse target dates ---
     parsed_dates = {}
     skipped_details = {}
-
+    today = date.today()
     for td in target_dates:
         date_obj = parse_date(td)
         if not date_obj:
@@ -1420,20 +1565,65 @@ def copy_timesheet_entries(request):
     if not parsed_dates:
         return JsonResponse({"error": "No valid target dates to process"}, status=400)
 
-    leave_dates = set(
-        LeaveRequest.objects.filter(
-            employee_master=employee,
-            status="Approved"
-        ).filter(
-            Q(start_date__lte=max(parsed_dates.values())) &
-            Q(end_date__gte=min(parsed_dates.values()))
-        ).values_list("start_date", "end_date")
+    # --- Fetch timesheet items ---
+    items = list(
+        TimesheetItem.objects.filter(
+            id__in=item_ids,
+            hdr__employee=employee
+        ).select_related(
+            "hdr", "project_assignment", "project",
+            "costcenter", "activity", "work_location"
+        )
     )
+    if not items:
+        return JsonResponse({"error": "No valid entries found"}, status=404)
 
+    # --- Fetch holidays for each month involved ---
+    emp_holidays = {}
+    for date_obj in parsed_dates.values():
+        year = date_obj.year
+        month = date_obj.month
+        holidays_qs = Holiday.objects.filter(
+            country=employee.country,
+            date__year=year,
+            date__month=month
+        ).only('date', 'name')
+        state_holidays_qs = StateHoliday.objects.filter(
+            country=employee.country,
+            state=employee.state,
+            date__year=year,
+            date__month=month
+        ).only('date', 'name')
+        month_holidays = {h.date: h.name for h in holidays_qs}
+        month_holidays.update({sh.date: sh.name for sh in state_holidays_qs})
+        emp_holidays.update(month_holidays)
+
+    print(f"Holidays for employee: {list(emp_holidays.keys())}")
+
+    # --- Fetch approved leave ---
+    leave_ranges = LeaveRequest.objects.filter(
+        employee_master=employee,
+        status="Approved"
+    ).filter(
+        Q(start_date__lte=max(parsed_dates.values())) &
+        Q(end_date__gte=min(parsed_dates.values()))
+    ).values_list("start_date", "end_date")
+
+    # --- Build leave days set, excluding weekends and holidays ---
     leave_days = set()
-    for start, end in leave_dates:
-        leave_days.update([start + timedelta(days=i) for i in range((end - start).days + 1)])
+    for start, end in leave_ranges:
+        for i in range((end - start).days + 1):
+            day = start + timedelta(days=i)
+            if day.weekday() >= 5:
+                print(f"Ignoring leave on {day} because it's a weekend")
+                continue
+            if day in emp_holidays:
+                print(f"Ignoring leave on {day} because it's a holiday")
+                continue
+            leave_days.add(day)
+    print(f"Leave days (working days only): {sorted(leave_days)}")
 
+    # --- Fetch existing entries for target dates ---
     existing_entries = TimesheetItem.objects.filter(
         hdr__employee=employee,
         wrk_date__in=parsed_dates.values()
@@ -1446,12 +1636,17 @@ def copy_timesheet_entries(request):
 
     copied_dates = []
 
+    # --- Process each target date ---
     for td, date_obj in parsed_dates.items():
         is_weekend = date_obj.weekday() >= 5
-        is_holiday = date_obj in emp_holidays  # Now correctly checks if the date is a holiday
+        is_holiday = date_obj in emp_holidays
 
-        if date_obj in leave_days and not is_weekend and not is_holiday:
+        print(f"Processing {td}: weekend={is_weekend}, holiday={is_holiday}, leave={date_obj in leave_days}")
+
+        # Skip leave days only on working days
+        if date_obj in leave_days:
             skipped_details.setdefault(td, []).append("Approved leave on a working day")
+            print(f"Skipping {td}: Approved leave on a working day")
             continue
 
         day_hours = sum(existing_map.get(date_obj, {}).values())
@@ -1472,7 +1667,7 @@ def copy_timesheet_entries(request):
                 key = (item.project_assignment_id, item.costcenter_id)
                 if key in existing_map.get(date_obj, {}):
                     reason = (f"Project '{item.project_assignment.project.project_name}' already exists"
-                                if item.project_assignment else "Cost center entry already exists")
+                              if item.project_assignment else "Cost center entry already exists")
                     skipped_details.setdefault(td, []).append(reason)
                     continue
 
@@ -1493,6 +1688,7 @@ def copy_timesheet_entries(request):
                     skipped_details.setdefault(td, []).append("Copying would exceed 12h limit")
                     continue
 
+                # --- Create timesheet entry ---
                 TimesheetItem.objects.create(
                     hdr=hdr,
                     wrk_date=date_obj,
@@ -1507,8 +1703,10 @@ def copy_timesheet_entries(request):
                 entries_copied += 1
                 day_hours += item.wrk_hours
                 existing_map.setdefault(date_obj, {})[key] = item.wrk_hours
+                print(f"Copied {td}: {item.wrk_hours}h for project {item.project_assignment} / costcenter {item.costcenter}")
 
         if entries_copied > 0:
+            hdr.save()  # update updated_at
             copied_dates.append(td)
         else:
             skipped_details.setdefault(td, []).append("No entries copied for this date")
@@ -1519,13 +1717,6 @@ def copy_timesheet_entries(request):
         "skipped": skipped_details,
         "message": f"Copied to {len(copied_dates)} date(s). Skipped {len(skipped_details)} date(s)."
     })
-
-from datetime import datetime, timedelta
-from django.contrib.auth.decorators import login_required
-from django.db.models import Q, Prefetch
-from django.shortcuts import render
-from django.contrib import messages
-
 
 def get_week_start_end(year: int, week: int):
     """Return Monday and Sunday dates for a given ISO week/year."""
@@ -1679,8 +1870,16 @@ def calculate_timesheet_stats(emp, ts_hdr, week_start, leave_days, holidays_cach
             'holiday_name': holiday_name if is_holiday else None,
             'timesheet_entries': [
                 {
-                    'project_name': e.project.project_name if e.project else None,
-                    'costcenter_name': e.costcenter.costcenter_name if e.costcenter else None,
+                    'project_name': (
+                                    f"{e.project.client.client_alias}-{e.project.project_name}"
+                                    if e.project and e.project.client else
+                                    (e.project.project_name if e.project else None)
+                                    ),
+                    # Costcenter formatting with id
+                    'costcenter_name': (
+                        f"{e.costcenter.costcenter_id}-{e.costcenter.costcenter_name}"
+                        if e.costcenter else None
+                    ),
                     'description': e.description,
                     'hours': e.wrk_hours,
                     'activity': e.activity.act_name if e.activity else 'N/A',
@@ -1729,6 +1928,7 @@ def calculate_timesheet_stats(emp, ts_hdr, week_start, leave_days, holidays_cach
         'tsheet_id': ts_hdr.tsheet_id if has_timesheets else None,
         'detailed_entries': detailed_entries
     }
+
 def build_weeks_list(num_weeks=8):
     """Return a list of `num_weeks` week data for filters, starting from the previous week."""
     today = datetime.now().date()
@@ -1750,11 +1950,17 @@ from django.shortcuts import redirect
 from django.http import HttpRequest
 from django.contrib import messages
 
+from django.shortcuts import redirect
+from django.contrib import messages
+
 def timesheet_unapprove(request: HttpRequest, tsheet_id: int):
+    next_url = request.GET.get('next', '/')  # Default fallback to home page
     try:
         hdr = TimesheetHdr.objects.get(pk=tsheet_id)
         if hdr.is_approved:
             hdr.is_approved = False
+            hdr.approved_by = None
+            hdr.approved_date = None
             hdr.save()
             messages.success(request, f"Timesheet for {hdr.employee.first_name} set to 'Pending Approval'.")
         else:
@@ -1763,6 +1969,9 @@ def timesheet_unapprove(request: HttpRequest, tsheet_id: int):
         messages.error(request, "Timesheet not found.")
     except Exception as e:
         messages.error(request, f"Error: {e}")
+
+    return redirect(next_url)
+
 
     # Check for a 'next' URL parameter and redirect there
     next_url = request.GET.get('next', 'timesheet_approval_list')
@@ -2010,8 +2219,12 @@ def timesheet_week_details(request):
         ).first()
 
         stats = calculate_timesheet_stats(employee, ts_hdr, week_start, leave_days_map, holidays_cache)
+    
+
 
         entries = stats['detailed_entries']
+
+        print(entries)
 
         # 🔹 Remove weekends (Sat=5, Sun=6) if they have no items
         filtered_entries = []

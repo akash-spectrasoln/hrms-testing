@@ -4,28 +4,10 @@
 
 {% block content %}
 <style>
-    .centered-form-container {
-        max-width: 500px;
-        margin: 0 auto;
-    }
-
-    /* Reduce vertical gap between label and input */
-    .form-label {
-        margin-bottom: 2px;
-        font-weight: 500;
-    }
-
-    /* Tighten up spacing inside form */
-    .form-control-sm {
-        padding: 0.3rem 0.5rem;
-        font-size: 0.875rem;
-    }
-
-    /* Center title text in header */
-    .card-header h5 {
-        width: 100%;
-        text-align: center;
-    }
+    .centered-form-container { max-width: 500px; margin: 0 auto; }
+    .form-label { margin-bottom: 2px; font-weight: 500; }
+    .form-control-sm { padding: 0.3rem 0.5rem; font-size: 0.875rem; }
+    .card-header h5 { width: 100%; text-align: center; }
 </style>
 
 <div class="container my-4">
@@ -57,16 +39,24 @@
                     {{ form.client_addr.errors }}
                 </div>
 
-                <div class="mb-3">
+                <div class="mb-2">
                     <label for="id_country" class="form-label">Country</label>
                     {{ form.country|add_class:"form-control form-control-sm" }}
                     {{ form.country.errors }}
                 </div>
 
+                {% if form.instance.pk %}
+                <div class="form-check mb-3">
+                    <input type="checkbox" class="form-check-input" id="id_is_active" name="is_active"
+                        {% if form.instance.is_active %}checked{% endif %}>
+                    <label class="form-check-label" for="id_is_active">Active</label>
+                </div>
+                {% endif %}
+
                 <div class="d-flex justify-content-start gap-4 mt-3">
-                    <a href="{% url 'client_list' %}" class="btn btn-secondary btn-sm">
-                        <i class="fas fa-arrow-left me-1"></i> Back
-                    </a>
+                    <a href="{{ next|default:'' }}" class="btn btn-secondary btn-sm">
+                         <i class="fas fa-arrow-left me-1"></i> Back
+                     </a>
                     <button type="submit" class="btn btn-success btn-sm">
                         <i class="fas fa-save me-1"></i> Save
                     </button>

@@ -303,10 +303,10 @@
                                     <td class="text-center">
                                     <div class="action-buttons">
                                         {% if entry.is_fully_approved %}
-                                            <form action="{% url 'timesheet_unapprove' tsheet_id=entry.tsheet_id %}?next={{ request.get_full_path }}" 
+                                            <form action="{% url 'timesheet_unapprove' tsheet_id=entry.tsheet_id %}?next={{ request.get_full_path|urlencode }}" 
                                                 method="post" style="display:inline;">
                                                 {% csrf_token %}
-                                                <button type="submit" class="btn btn-warning btn-sm">
+                                                <button type="submit" class="btn btn-warning btn-sm unapprove-btn" data-tsheet-id="{{ entry.tsheet_id }}">
                                                     Back to Edit
                                                 </button>
                                             </form>
@@ -503,27 +503,25 @@
 $(document).on('click', '.unapprove-btn', function (e) {
     e.preventDefault();
     const btn = $(this);
-    const form = btn.closest('form');
+    const form = btn.closest('form'); 
     const tsheetId = btn.data('tsheet-id');
 
     btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm"></span>');
 
+    // Use the form's action (which includes ?next=...)
+    const url = form.attr('action');
+
     $.ajax({
-        url: `/timesheet/unapprove/${tsheetId}/`,
+        url: url,
         type: "POST",
+        data: form.serialize(), // includes csrf token
         success: function (resp) {
-            if (resp.success) {
-                // Get the 'next' URL from the form's action attribute and redirect
-                const nextUrl = form.attr('action').split('?next=')[1];
-                if (nextUrl) {
-                    window.location.href = nextUrl;
-                } else {
-                    // Fallback to the default page if no 'next' is found
-                    location.reload();
-                }
+            // Safely get next URL from query params
+            const nextUrl = new URL(url, window.location.origin).searchParams.get('next');
+            if (nextUrl) {
+                window.location.href = decodeURIComponent(nextUrl);
             } else {
-                btn.prop('disabled', false).text('Back to Edit');
-                showToast(resp.message || "Error unapproving", "danger");
+                location.reload();
             }
         },
         error: function () {
@@ -532,7 +530,9 @@ $(document).on('click', '.unapprove-btn', function (e) {
         }
     });
 });
-        // --- View Details ---
+
+
+// --- View Details ---
 
         $(document).on('click', '.view-details-btn', function () {
     const employeeId = $(this).data('employee-id');

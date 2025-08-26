@@ -137,7 +137,7 @@
         <form method="post">
             {% csrf_token %}
             <div class="button-group">
-                 <a href="{% url 'assign-project-list' %}" class="cancel-link">Cancel</a>
+                 <a href="{{ next|default:'' }}" class="cancel-link">Cancel</a>
                 <button type="submit" class="delete-btn">Remove</button>
             </div>
         </form>

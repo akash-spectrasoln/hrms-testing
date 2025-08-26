@@ -497,6 +497,52 @@ input[type="date"] {
     line-height: 38px;       /* Vertically center text */
     vertical-align: middle;  /* Ensure alignment in flex/inline contexts */
 }
+/* Make delete confirmation modal smaller */
+.modal-dialog.modal-sm {
+    max-width: 300px;  /* adjust as needed */
+}
+
+.modal-body {
+    padding: 10px 15px;   /* reduce body padding */
+}
+
+.modal-footer {
+    padding: 8px 15px;    /* reduce footer padding */
+    margin-top: 0;        /* remove extra gap above buttons */
+}
+
+.modal-footer .btn {
+    margin: 0 3px;        /* reduce button spacing */
+}
+
+/* 🔹 Make modal smaller and tighter */
+#deleteConfirmModal .modal-dialog {
+  max-width: 300px;   /* reduce width */
+}
+
+#deleteConfirmModal .modal-content {
+  padding: 0.5rem;   /* reduce inside padding */
+}
+
+#deleteConfirmModal .modal-header,
+#deleteConfirmModal .modal-footer {
+  padding: 0.3rem 0.5rem;  /* tighten header/footer */
+}
+
+#deleteConfirmModal .modal-body {
+  padding: 0.5rem; 
+  font-size: 0.85rem;  /* slightly smaller text */
+}
+
+#deleteConfirmModal h6.modal-title {
+  font-size: 0.9rem;  /* smaller title */
+}
+
+#deleteConfirmModal .btn {
+  padding: 0.2rem 0.6rem;  /* make buttons smaller */
+  font-size: 0.8rem;
+}
+
 
 
 
@@ -509,7 +555,7 @@ input[type="date"] {
 
      <div class="calendar-timesheet-container d-flex flex-wrap justify-content-center gap-2">
        <!-- 📅 Calendar Section -->
-      <div class=" calendar-wrapper">
+      <div class=" calendar-wrapper" data-joining-date="{{ employee.enc_valid_from|date:'Y-m-d' }}">
         <div class="card shadow-sm mb-1">
 
           <!-- Calendar Header with Proper Navigation -->
@@ -726,627 +772,802 @@ input[type="date"] {
 
 <div id="message-container"></div>
 
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteConfirmModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-sm">
+    <div class="modal-content rounded-2 shadow-sm" style="font-size: 13px;">
+      
+      <!-- Header -->
+      <div class="modal-header py-1 px-2">
+        <h6 class="modal-title m-0">Confirm Delete</h6>
+        <button type="button" class="btn-close btn-close-sm" data-bs-dismiss="modal" aria-label="Close" style="font-size: 10px;"></button>
+      </div>
+
+      <!-- Body -->
+      <div class="modal-body py-2 px-3 small">
+        Are you sure you want to delete this timesheet entry?
+      </div>
+
+      <!-- Footer -->
+      <div class="modal-footer py-1 px-2">
+        <button class="btn btn-secondary btn-sm py-1 px-2" data-bs-dismiss="modal">Cancel</button>
+        <button class="btn btn-danger btn-sm d-flex align-items-center py-1 px-2" id="confirmDeleteBtn">
+          <span class="spinner-border spinner-border-sm me-1 d-none" id="deleteSpinner" role="status" aria-hidden="true"></span>
+          Delete
+        </button>
+      </div>
+
+    </div>
+  </div>
+</div>
 
 
 <script>
-  document.addEventListener('DOMContentLoaded', () => {
-    /** -------------------- DOM Elements -------------------- **/
-    const form = document.getElementById('timesheet-form');
-    const formContainer = document.getElementById('timesheet-form-container');
-    const entryIdField = document.getElementById('entry-id');
-    const hoursField = document.getElementById('hours_worked');
-    const projectSelect = document.getElementById('project');
-    const activitySelect = document.getElementById('activity');
-    const workLocSelect = document.getElementById('work_location');
-    const descriptionField = document.getElementById('description');
-    const dateField = document.getElementById('date');
-    const submitBtn = form.querySelector('button[type="submit"]');
-    const remainingDaysInfo = document.getElementById('remaining-days-info');
-    const pasteBtn = document.getElementById('paste-btn');
-    const entryDetails = document.getElementById('entry-details');
-    const detailsDate = document.getElementById('details-date');
-    const detailsBody = document.getElementById('details-body');
-    const calendar = document.querySelector('.calendar-days');
-
-    /** -------------------- State -------------------- **/
-    let selectedEntryIds = [];
-    let targetDates = new Set();
-    let sourceDate = null;
-    let clickedDateTemp = null;
-    let isLeaveDay = false;
-
-    /** -------------------- Helpers (added) -------------------- **/
-    const sleep = (ms) => new Promise(r => setTimeout(r, ms));
-
-    async function fetchDayDataNoCache(date) {
-      const resp = await fetch(
-        `/hrms/employee/ajax/get-timesheet-day-data/?date=${encodeURIComponent(date)}&_=${Date.now()}`,
-        { cache: 'no-store' }
-      );
-      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-      return resp.json();
+    // 🔹 Keep this at the top of your script, outside DOMContentLoaded
+    function getCSRFToken() {
+        let cookieValue = null;
+        const cookies = document.cookie.split(';');
+        for (let cookie of cookies) {
+            cookie = cookie.trim();
+            if (cookie.startsWith('csrftoken=')) {
+                cookieValue = cookie.substring('csrftoken='.length);
+                break;
+            }
+        }
+        return cookieValue;
     }
 
+    // 🔹 Global variable available everywhere
+    const csrfToken = getCSRFToken();
 
+    document.addEventListener('DOMContentLoaded', () => {
+        /** -------------------- DOM Elements -------------------- **/
+        const form = document.getElementById('timesheet-form');
+        const formContainer = document.getElementById('timesheet-form-container');
+        const entryIdField = document.getElementById('entry-id');
+        const hoursField = document.getElementById('hours_worked');
+        const projectSelect = document.getElementById('project');
+        const activitySelect = document.getElementById('activity');
+        const workLocSelect = document.getElementById('work_location');
+        const descriptionField = document.getElementById('description');
+        const dateField = document.getElementById('date');
+        const submitBtn = form.querySelector('button[type="submit"]');
+        const remainingDaysInfo = document.getElementById('remaining-days-info');
+        const pasteBtn = document.getElementById('paste-btn');
+        const entryDetails = document.getElementById('entry-details');
+        const detailsDate = document.getElementById('details-date');
+        const detailsBody = document.getElementById('details-body');
+        // ❌ REMOVED: const calendar = document.querySelector('.calendar-days');
+        // The 'calendar' variable is now obsolete because the element is replaced.
 
-    /** -------------------- Utils -------------------- **/
-    const formatDate = dStr => {
-      const d = new Date(dStr);
-      return `${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}/${d.getFullYear()}`;
-    };
+        // --- Delete modal state & refs ---
+        let entryIdToDelete = null;
+        const deleteModal = new bootstrap.Modal(document.getElementById('deleteConfirmModal'));
+        const confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
 
-    const showToastMessage = (msg, type = 'success') => {
-      const bg = type === 'success' ? 'rgb(123,178,206)' : 'rgb(123,178,206)'; // only success/error are styled
-      let container = document.querySelector('.toast-container');
-      if (!container) {
-        container = document.createElement('div');
-        container.className = 'toast-container position-fixed top-0 end-0 p-3';
-        container.style.zIndex = 9996;
-        container.style.marginTop = '5rem';
-        document.body.appendChild(container);
-      }
-      const toastEl = document.createElement('div');
-      toastEl.className = 'toast mb-2 position-relative';
-      toastEl.style.backgroundColor = bg;
-      toastEl.setAttribute('role', 'alert');
-      toastEl.setAttribute('aria-live', 'assertive');
-      toastEl.setAttribute('aria-atomic', 'true');
-      toastEl.dataset.bsAutohide = 'true';
-      toastEl.dataset.bsDelay = '8000';
-      toastEl.innerHTML = `
-      <button type="button" class="btn-close btn-close-white position-absolute top-0 end-0 mt-2 me-2" data-bs-dismiss="toast" aria-label="Close"></button>
-      <div class="d-flex align-items-center text-white border-0"><div class="toast-body">${msg}</div></div>`;
-      container.appendChild(toastEl);
-      new bootstrap.Toast(toastEl).show();
-    };
+        // Confirm button handler (bound once)
+        confirmDeleteBtn.addEventListener('click', async () => {
+            if (!entryIdToDelete) return;
 
-    const lockForm = (locked, leaveMode = false) => {
-      [projectSelect, activitySelect, workLocSelect, hoursField, descriptionField].forEach(el => {
-        el.disabled = locked;
-        el.style.backgroundColor = locked ? '#f0f0f0' : '';
-      });
-      // submitBtn.disabled = locked;
-      if (locked) {
-          submitBtn.style.display = 'none';   // <-- hide completely
-        } else {
-          submitBtn.style.display = '';       // <-- show it again
-      }
-      if (leaveMode) {
-        form.reset();
-        projectSelect.innerHTML = `<option selected>Select</option>`;
-        hoursField.value = '';
-      }
-    };
+            const day = dateField.value;
+            confirmDeleteBtn.disabled = true;
+            showSpinnerAndDisableButtons();
 
-    const clearForm = (preserveDate = false) => {
-      const currentDate = dateField.value;
-      form.reset();
-      entryIdField.value = '';
-      remainingDaysInfo.textContent = '';
-      formContainer.style.display = 'none';
-      if (preserveDate && currentDate) dateField.value = currentDate;
-    };
+            try {
+                const resp = await fetch(`/hrms/employee/ajax/delete-timesheet-entry/${entryIdToDelete}/`, {
+                    method: 'DELETE',
+                    headers: {
+                        'X-CSRFToken': csrfToken,
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    credentials: 'same-origin'
+                });
 
-    const clearDetails = () => {
-      entryDetails.classList.add('d-none');
-      detailsBody.innerHTML = '<div class="text-center py-2">Loading...</div>';
-    };
+                let result = {};
+                try { result = await resp.json(); } catch (_) {}
 
-    const clearDayHours = cell => { cell?.querySelector('.day-hours')?.remove(); };
+                if (resp.status === 403) {
+                    showToastMessage('Your session expired or CSRF check failed. Please refresh and try again.', 'error');
+                    return;
+                }
 
-    /** -------------------- Initial Setup -------------------- **/
-    formContainer.style.display = 'none';
-    pasteBtn.classList.add('d-none');
-
-    // Disable weekends, holidays, leave days
-    calendar.querySelectorAll('.calendar-day').forEach(d => {
-      if (d.classList.contains('status-weekend') || d.classList.contains('status-holiday') || d.classList.contains('status-leave') || d.classList.contains('leave-day')) {
-        d.classList.add('disabled'); clearDayHours(d); d.classList.remove('status-entered');
-      } else { d.classList.remove('disabled'); }
-    });
-
-    /** -------------------- Mobile Holiday Tooltip -------------------- **/
-    calendar.querySelectorAll('.calendar-day[data-holiday]').forEach(dayEl => {
-      let tooltipEl = null;
-      dayEl.addEventListener('touchstart', e => {
-        e.preventDefault();
-        if (tooltipEl) tooltipEl.remove();
-        const holidayName = dayEl.dataset.holiday;
-        tooltipEl = document.createElement('div');
-        tooltipEl.className = 'holiday-tooltip shadow-sm p-1 rounded';
-        tooltipEl.textContent = holidayName;
-        tooltipEl.style.position = 'absolute';
-        tooltipEl.style.background = '#dc3545';
-        tooltipEl.style.color = 'white';
-        tooltipEl.style.padding = '2px 6px';
-        tooltipEl.style.fontSize = '0.75rem';
-        tooltipEl.style.borderRadius = '4px';
-        tooltipEl.style.zIndex = 9999;
-        document.body.appendChild(tooltipEl);
-        const rect = dayEl.getBoundingClientRect();
-        tooltipEl.style.top = rect.top - tooltipEl.offsetHeight - 4 + 'px';
-        tooltipEl.style.left = rect.left + (rect.width - tooltipEl.offsetWidth) / 2 + 'px';
-        setTimeout(() => { tooltipEl?.remove(); tooltipEl = null; }, 2000);
-      });
-    });
-
-    /** -------------------- Projects Dropdown -------------------- **/
-    /** -------------------- Projects Dropdown (Corrected) -------------------- **/
-      const populateProjects = (projects, selectedProjectId = null) => {
-        projectSelect.innerHTML = '';
-        remainingDaysInfo.textContent = '';
-
-        if (!projects.length) {
-          projectSelect.innerHTML = '<option disabled selected>No projects available</option>';
-          return;
-        }
-
-        const frag = document.createDocumentFragment();
-        projects.forEach(item => {
-          const opt = document.createElement('option');
-          opt.value = item.projectAssignmentId;
-          opt.textContent = item.client_alias ? `${item.client_alias} - ${item.name}` : `${item.name} (Cost Center)`;
-
-
-          // add dataset for start/end date
-          opt.dataset.startDate = item.assignment_start_date || '';
-          opt.dataset.endDate = item.assignment_end_date || '';
-
-          if ((selectedProjectId && item.projectAssignmentId == selectedProjectId) || (!selectedProjectId && item.selected)) {
-            opt.selected = true;
-          }
-          frag.appendChild(opt);
+                if (resp.ok && (result.status === 'success' || !result.error)) {
+                    showToastMessage('Entry deleted successfully!', 'success');
+                    deleteModal.hide();
+                    await Promise.all([
+                        loadDayData(day, true),
+                        refreshCalendarDates([day])
+                    ]);
+                } else {
+                    showToastMessage(result.error || 'Failed to delete entry.', 'error');
+                }
+            } catch (err) {
+                console.error(err);
+                showToastMessage('Error deleting entry. Check console.', 'error');
+            } finally {
+                confirmDeleteBtn.disabled = false;
+                hideSpinnerAndEnableButtons();
+                entryIdToDelete = null;
+            }
         });
-        projectSelect.appendChild(frag);
-        projectSelect.dispatchEvent(new Event('change'));
-      };
 
-      projectSelect.addEventListener('change', () => {
-        const opt = projectSelect.selectedOptions[0];
-        if (opt?.dataset.startDate && opt?.dataset.endDate) {
-          const start = formatDate(opt.dataset.startDate);
-          const end = formatDate(opt.dataset.endDate);
-          remainingDaysInfo.textContent = `Project Validity: ${start} → ${end}`;
-        } else {
-          remainingDaysInfo.textContent = '';
+        /** -------------------- State -------------------- **/
+        let selectedEntryIds = [];
+        let targetDates = new Set();
+        let sourceDate = null;
+        let clickedDateTemp = null;
+        let isLeaveDay = false;
+
+        /** -------------------- Helpers (added) -------------------- **/
+        const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+
+        async function fetchDayDataNoCache(date) {
+            const resp = await fetch(
+                `/hrms/employee/ajax/get-timesheet-day-data/?date=${encodeURIComponent(date)}&_=${Date.now()}`, {
+                    cache: 'no-store'
+                }
+            );
+            if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+            return resp.json();
         }
-      });
 
-    /** -------------------- Populate Form for Edit/View -------------------- **/
-    const populateForm = (entry, readOnly = false) => {
-      entryIdField.value = entry.tsheet_item_id;
-      dateField.value = entry.date;
-      hoursField.value = entry.hours_worked;
-      descriptionField.value = entry.description || '';
-      if (entry.activity_id) activitySelect.value = entry.activity_id;
-      if (entry.work_location_id) workLocSelect.value = entry.work_location_id;
-      if (entry.projectAssignmentId) {
-        if (!projectSelect.querySelector(`option[value="${entry.projectAssignmentId}"]`)) {
-          const opt = document.createElement('option');
-          opt.value = entry.projectAssignmentId;
-          opt.textContent = entry.project_name || entry.cost_center_name || 'Project/Cost Center';
-          opt.selected = true;
-          projectSelect.appendChild(opt);
-        } else projectSelect.value = entry.projectAssignmentId;
-      } else projectSelect.value = null;
-      formContainer.style.display = 'block';
-      lockForm(readOnly);
-      formContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    };
+        /** -------------------- Utils -------------------- **/
+        const formatDate = dStr => {
+            const d = new Date(dStr);
+            return `${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}/${d.getFullYear()}`;
+        };
 
-    /** -------------------- New Entry Button -------------------- **/
-    const addEntryButtonHandler = () => {
-      clearForm(true); lockForm(false);
-      formContainer.style.display = 'block';
-      formContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    };
+        const showToastMessage = (msg, type = 'success') => {
+            const bg = type === 'success' ? 'rgb(123,178,206)' : 'rgb(123,178,206)';
+            let container = document.querySelector('.toast-container');
+            if (!container) {
+                container = document.createElement('div');
+                container.className = 'toast-container position-fixed top-0 end-0 p-3';
+                container.style.zIndex = 9996;
+                container.style.marginTop = '5rem';
+                document.body.appendChild(container);
+            }
+            const toastEl = document.createElement('div');
+            toastEl.className = 'toast mb-2 position-relative';
+            toastEl.style.backgroundColor = bg;
+            toastEl.setAttribute('role', 'alert');
+            toastEl.setAttribute('aria-live', 'assertive');
+            toastEl.setAttribute('aria-atomic', 'true');
+            toastEl.dataset.bsAutohide = 'true';
+            toastEl.dataset.bsDelay = '8000';
+            toastEl.innerHTML = `
+                <button type="button" class="btn-close btn-close-white position-absolute top-0 end-0 mt-2 me-2" data-bs-dismiss="toast" aria-label="Close"></button>
+                <div class="d-flex align-items-center text-white border-0"><div class="toast-body">${msg}</div></div>`;
+            container.appendChild(toastEl);
+            new bootstrap.Toast(toastEl).show();
+        };
 
-    /** -------------------- Load Day Data -------------------- **/
-    const loadDayData = async (date, suppressErrors = false) => {
-    clearForm(true);
-    clearDetails();
-    showSpinnerAndDisableButtons();
-    try {
-        const resp = await fetch(
-            `/hrms/employee/ajax/get-timesheet-day-data/?date=${encodeURIComponent(date)}&_=${Date.now()}`,
-            { cache: 'no-store' }
-        );
-        if (!resp.ok) {
-            if (!suppressErrors) showToastMessage(`HTTP error: ${resp.status}`, "error");
+        const lockForm = (locked, leaveMode = false) => {
+            [projectSelect, activitySelect, workLocSelect, hoursField, descriptionField].forEach(el => {
+                el.disabled = locked;
+                el.style.backgroundColor = locked ? '#f0f0f0' : '';
+            });
+            if (locked) {
+                submitBtn.style.display = 'none';
+            } else {
+                submitBtn.style.display = '';
+            }
+            if (leaveMode) {
+                form.reset();
+                projectSelect.innerHTML = `<option selected>Select</option>`;
+                hoursField.value = '';
+            }
+        };
+
+        const clearForm = (preserveDate = false) => {
+            const currentDate = dateField.value;
+            form.reset();
+            entryIdField.value = '';
+            remainingDaysInfo.textContent = '';
+            formContainer.style.display = 'none';
+            if (preserveDate && currentDate) dateField.value = currentDate;
+        };
+
+        const clearDetails = () => {
+            entryDetails.classList.add('d-none');
+            detailsBody.innerHTML = '<div class="text-center py-2">Loading...</div>';
+        };
+
+        const clearDayHours = cell => {
+            cell?.querySelector('.day-hours')?.remove();
+        };
+
+        /** -------------------- Initial Setup -------------------- **/
+        formContainer.style.display = 'none';
+        pasteBtn.classList.add('d-none');
+
+        // Initial setup for the calendar days on page load.
+        // This is fine here because it runs only once.
+        document.querySelectorAll('.calendar-day').forEach(d => {
+            if (d.classList.contains('status-weekend') || d.classList.contains('status-holiday') || d.classList.contains('status-leave') || d.classList.contains('leave-day')) {
+                d.classList.add('disabled');
+                clearDayHours(d);
+                d.classList.remove('status-entered');
+            } else {
+                d.classList.remove('disabled');
+            }
+        });
+
+        /** -------------------- Mobile Holiday Tooltip -------------------- **/
+        document.querySelectorAll('.calendar-day[data-holiday]').forEach(dayEl => {
+            let tooltipEl = null;
+            dayEl.addEventListener('touchstart', e => {
+                e.preventDefault();
+                if (tooltipEl) tooltipEl.remove();
+                const holidayName = dayEl.dataset.holiday;
+                tooltipEl = document.createElement('div');
+                tooltipEl.className = 'holiday-tooltip shadow-sm p-1 rounded';
+                tooltipEl.textContent = holidayName;
+                tooltipEl.style.position = 'absolute';
+                tooltipEl.style.background = '#dc3545';
+                tooltipEl.style.color = 'white';
+                tooltipEl.style.padding = '2px 6px';
+                tooltipEl.style.fontSize = '0.75rem';
+                tooltipEl.style.borderRadius = '4px';
+                tooltipEl.style.zIndex = 9999;
+                document.body.appendChild(tooltipEl);
+                const rect = dayEl.getBoundingClientRect();
+                tooltipEl.style.top = rect.top - tooltipEl.offsetHeight - 4 + 'px';
+                tooltipEl.style.left = rect.left + (rect.width - tooltipEl.offsetWidth) / 2 + 'px';
+                setTimeout(() => {
+                    tooltipEl?.remove();
+                    tooltipEl = null;
+                }, 2000);
+            });
+        });
+
+        /** -------------------- Projects Dropdown -------------------- **/
+        const populateProjects = (projects, selectedProjectId = null) => {
+            projectSelect.innerHTML = '';
+            remainingDaysInfo.textContent = '';
+            if (!projects.length) {
+                projectSelect.innerHTML = '<option disabled selected>No projects available</option>';
+                return;
+            }
+            const frag = document.createDocumentFragment();
+            if (projects.length > 1) {
+                const placeholder = document.createElement('option');
+                placeholder.textContent = 'Select a Project';
+                placeholder.value = '';
+                placeholder.disabled = true;
+                placeholder.selected = true;
+                frag.appendChild(placeholder);
+            }
+            projects.forEach(item => {
+                const opt = document.createElement('option');
+                opt.value = item.projectAssignmentId;
+                opt.textContent = item.name;
+                if (projects.length === 1) {
+                    opt.selected = true;
+                }
+                opt.dataset.startDate = item.assignment_start_date || '';
+                opt.dataset.endDate = item.assignment_end_date || '';
+                if ((selectedProjectId && item.projectAssignmentId == selectedProjectId) || (!selectedProjectId && item.selected)) {
+                    opt.selected = true;
+                }
+                frag.appendChild(opt);
+            });
+            projectSelect.appendChild(frag);
+            projectSelect.dispatchEvent(new Event('change'));
+        };
+
+        projectSelect.addEventListener('change', () => {
+            const opt = projectSelect.selectedOptions[0];
+            if (opt?.dataset.startDate && opt?.dataset.endDate) {
+                const start = formatDate(opt.dataset.startDate);
+                const end = formatDate(opt.dataset.endDate);
+                remainingDaysInfo.textContent = `Project Validity: ${start} → ${end}`;
+            } else {
+                remainingDaysInfo.textContent = '';
+            }
+        });
+
+        const populateForm = (entry, readOnly = false) => {
+            entryIdField.value = entry.tsheet_item_id;
+            dateField.value = entry.date;
+            hoursField.value = entry.hours_worked;
+            descriptionField.value = entry.description || '';
+            if (entry.activity_id) activitySelect.value = entry.activity_id;
+            if (entry.work_location_id) workLocSelect.value = entry.work_location_id;
+            if (entry.projectAssignmentId) {
+                if (!projectSelect.querySelector(`option[value="${entry.projectAssignmentId}"]`)) {
+                    const opt = document.createElement('option');
+                    opt.value = entry.projectAssignmentId;
+                    opt.textContent = entry.project_name || 'Project/Cost Center';
+                    opt.selected = true;
+                    projectSelect.appendChild(opt);
+                } else {
+                    projectSelect.value = entry.projectAssignmentId;
+                }
+            } else {
+                projectSelect.value = null;
+            }
+            formContainer.style.display = 'block';
+            lockForm(readOnly);
+            formContainer.scrollIntoView({
+                behavior: 'smooth',
+                block: 'start'
+            });
+        };
+
+        /** -------------------- New Entry Button -------------------- **/
+        const addEntryButtonHandler = () => {
+            clearForm(true);
+            lockForm(false);
+            formContainer.style.display = 'block';
+            formContainer.scrollIntoView({
+                behavior: 'smooth',
+                block: 'start'
+            });
+        };
+
+        /** -------------------- Load Day Data -------------------- **/
+        const loadDayData = async (date, suppressErrors = false) => {
+            clearForm(true);
+            clearDetails();
+            showSpinnerAndDisableButtons();
+            try {
+                const resp = await fetch(
+                    `/hrms/employee/ajax/get-timesheet-day-data/?date=${encodeURIComponent(date)}&_=${Date.now()}`, {
+                        cache: 'no-store'
+                    }
+                );
+                if (!resp.ok) {
+                    if (!suppressErrors) showToastMessage(`HTTP error: ${resp.status}`, "error");
+                    return;
+                }
+                let data;
+                try {
+                    data = await resp.json();
+                } catch {
+                    if (!suppressErrors) showToastMessage("Invalid JSON response from server.", "error");
+                    return;
+                }
+                dateField.value = date;
+                detailsDate.textContent = formatDate(date);
+                isLeaveDay = data.is_leave_day;
+                const selectedCell = document.querySelector(`.calendar-day[data-date="${date}"]`);
+                if (isLeaveDay && !selectedCell.classList.contains('status-weekend') && !selectedCell.classList.contains('status-holiday')) {
+                    lockForm(true, true);
+                    if (selectedCell) {
+                        selectedCell.classList.add('disabled', 'status-leave');
+                        clearDayHours(selectedCell);
+                        selectedCell.classList.remove('status-entered');
+                    }
+                } else {
+                    lockForm(false);
+                    if (data.entries?.length) {
+                        entryDetails.classList.remove('d-none');
+                        const tbodyHTML = data.entries.map(entry => {
+                            if (entry.is_approved) {
+                                return `
+                                    <tr style="background:#f8f9fa;">
+                                        <td class="table-checkbox-cell">
+                                            <input type="checkbox" class="entry-checkbox" value="${entry.tsheet_item_id}">
+                                        </td>
+                                        <td>${entry.project_name}</td>
+                                        <td class="text-end">${entry.hours_worked}</td>
+                                        <td>${entry.work_location_name || ''}</td>
+                                        <td class="text-center">
+                                            <button type="button" class="view-entry btn btn-link p-0 approved-tick" data-entry='${JSON.stringify(entry)}'>✔</button>
+                                        </td>
+                                    </tr>`;
+                            } else {
+                                return `
+                                    <tr>
+                                        <td class="table-checkbox-cell">
+                                            <input type="checkbox" class="entry-checkbox" value="${entry.tsheet_item_id}">
+                                        </td>
+                                        <td>${entry.project_name}</td>
+                                        <td class="text-end">${entry.hours_worked}</td>
+                                        <td>${entry.work_location_name || ''}</td>
+                                        <td class="text-center">
+                                            <button type="button" class="edit-entry btn btn-link p-0" data-entry='${JSON.stringify(entry)}'>✏️</button>
+                                            <button type="button" class="delete-entry btn btn-link text-danger p-0 ms-1" data-entry-id="${entry.tsheet_item_id}" title="Delete">🗑️</button>
+                                        </td>
+                                    </tr>`;
+                            }
+                        }).join('');
+                        detailsBody.innerHTML = `
+                            <div class="table-responsive mb-1">
+                                <table class="table table-bordered table-hover table-sm align-middle timesheet-details-table">
+                                    <thead class="table-primary">
+                                        <tr>
+                                            <th class="table-checkbox-cell" style="width:30px;">
+                                                <input type="checkbox" id="select-all">
+                                            </th>
+                                            <th>Project</th>
+                                            <th class="text-end" style="width:30px;">Hours</th>
+                                            <th style="width:80px;">Location</th>
+                                            <th class="text-center" style="width:50px;">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>${tbodyHTML}</tbody>
+                                </table>
+                            </div>`;
+                        initCheckboxLogic();
+                        detailsBody.querySelectorAll('.edit-entry').forEach(btn =>
+                            btn.addEventListener('click', e => populateForm(JSON.parse(e.currentTarget.dataset.entry), false))
+                        );
+                        detailsBody.querySelectorAll('.view-entry').forEach(btn =>
+                            btn.addEventListener('click', e => populateForm(JSON.parse(e.currentTarget.dataset.entry), true))
+                        );
+                        detailsBody.querySelectorAll('.delete-entry').forEach(btn =>
+                            btn.addEventListener('click', e => {
+                                entryIdToDelete = e.currentTarget.dataset.entryId;
+                                deleteModal.show();
+                            })
+                        );
+                        document.getElementById('add-entry-btn').addEventListener('click', addEntryButtonHandler);
+                    } else {
+                        formContainer.style.display = 'block';
+                        lockForm(false);
+                    }
+                }
+                populateProjects(data.projects);
+                if (selectedCell && (selectedCell.classList.contains('status-weekend') || selectedCell.classList.contains('status-holiday') || selectedCell.classList.contains('status-leave'))) {
+                    selectedCell.classList.add('disabled');
+                    clearDayHours(selectedCell);
+                    selectedCell.classList.remove('status-entered');
+                }
+                return data;
+            } catch (err) {
+                console.error("loadDayData error:", err);
+                if (!suppressErrors) showToastMessage("Failed to load day data. Please check your connection.", "error");
+            } finally {
+                hideSpinnerAndEnableButtons();
+            }
+        };
+
+        /** -------------------- Debounce Utility -------------------- **/
+        const debounce = (fn, delay = 200) => {
+            let timer;
+            return (...args) => {
+                clearTimeout(timer);
+                timer = setTimeout(() => fn(...args), delay);
+            };
+        };
+
+        /** -------------------- Calendar Click Logic (UPDATED) -------------------- **/
+        // 🌟 CRITICAL FIX: The function now works on any calendar-day element
+const handleCalendarClick = async (e) => {
+    const btn = e.target.closest('.calendar-day');
+    if (!btn || !btn.dataset.date) return;
+
+    const date = btn.dataset.date; // always YYYY-MM-DD from dataset
+    const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+
+    // Joining date might include time (e.g. "2025-08-25 21:25:20")
+    let joiningDate = document.querySelector('.calendar-wrapper')?.dataset.joiningDate;
+    console.log(joiningDate)
+    // 🚫 Block future dates
+    if (date > today) {
+        return showToastMessage("Cannot select future dates.", "error");
+    }
+
+    // 🚫 Block before joining date
+    if (joiningDate && date < joiningDate) {
+        return showToastMessage(`Invalid date: before your joining date (${joiningDate})`, "error");
+    }
+
+    // ✅ Normal flow
+    const currentCalendar = document.querySelector('.calendar-days');
+    if (currentCalendar) {
+        currentCalendar.querySelectorAll('.calendar-day')
+            .forEach(d => d.classList.remove('clicked-date'));
+    }
+    btn.classList.add('clicked-date');
+
+    if (!sourceDate) {
+        if (clickedDateTemp === date) {
+            resetSelection();
             return;
         }
-        let data;
+        clickedDateTemp = date;
+        await loadDayData(date);
+        return;
+    }
+    if (date === sourceDate) {
+        resetSelection();
+        return;
+    }
+    if (targetDates.has(date)) {
+        targetDates.delete(date);
+        btn.classList.remove('selected-target-date');
+    } else {
+        targetDates.add(date);
+        btn.classList.add('selected-target-date');
+    }
+    toggleActionButtons();
+};
+
+        /** -------------------- Calendar Navigation (UPDATED) -------------------- **/
+        function loadCalendar(month, year) {
+            showSpinnerAndDisableButtons();
+            const url = new URL(window.location.href);
+            url.searchParams.set('month', month);
+            url.searchParams.set('year', year);
+            fetch(url, {
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                })
+                .then(response => response.text())
+                .then(html => {
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(html, 'text/html');
+                    const newCalendar = doc.querySelector('.calendar-wrapper');
+                    const oldCalendar = document.querySelector('.calendar-wrapper');
+                    if (newCalendar && oldCalendar) {
+                        oldCalendar.replaceWith(newCalendar);
+                        attachNavHandlers(); // Re-attach click handlers for nav
+                        bindCalendarDayListener(); // 🌟 CRITICAL FIX: Re-attach click handlers for days
+                    }
+                })
+                .catch(err => console.error('Error loading calendar:', err))
+                .finally(() => hideSpinnerAndEnableButtons());
+        }
+
+        // Attach click handlers to navigation buttons
+        function attachNavHandlers() {
+            document.querySelectorAll('.calendar-nav').forEach(btn => {
+                btn.addEventListener('click', event => {
+                    event.preventDefault();
+                    const month = btn.dataset.month;
+                    const year = btn.dataset.year;
+                    if (!month || !year || btn.disabled) return;
+                    loadCalendar(month, year);
+                });
+            });
+        }
+        
+        // 🌟 NEW FUNCTION: Binds the click listener for the calendar grid
+        function bindCalendarDayListener() {
+            const calendar = document.querySelector('.calendar-days');
+            if (calendar) {
+                calendar.addEventListener('click', debounce(handleCalendarClick, 200));
+            }
+        }
+        
+        // Initialize
+        attachNavHandlers();
+        bindCalendarDayListener(); // 🌟 CRITICAL FIX: Initial binding for the calendar days
+        
+        /** -------------------- Calendar refresh (SAFE) -------------------- **/
+        async function refreshCalendarDates(dates, maxRetries = 4, baseDelay = 250) {
+            const tasks = [...new Set(dates)].map(async (d) => {
+                const cell = document.querySelector(`.calendar-day[data-date="${d}"]`);
+                for (let attempt = 0; attempt < maxRetries; attempt++) {
+                    try {
+                        const data = await fetchDayDataNoCache(d);
+                        const totalHrs = data.entries?.reduce((a, e) => a + parseFloat(e.hours_worked || 0), 0) || 0;
+                        if (!cell) return;
+                        cell.querySelector('.day-hours')?.remove();
+                        cell.classList.remove('updating');
+                        if (cell.classList.contains('status-weekend') || cell.classList.contains('status-holiday') || data.is_leave_day) {
+                            cell.classList.add('disabled');
+                            cell.classList.remove('status-entered', 'status-not-entered');
+                            return;
+                        }
+                        if (totalHrs > 0) {
+                            const hoursEl = document.createElement('span');
+                            hoursEl.className = 'day-hours';
+                            hoursEl.textContent = totalHrs + 'h';
+                            cell.appendChild(hoursEl);
+                            cell.classList.add('status-entered');
+                            cell.classList.remove('status-not-entered', 'disabled');
+                            return;
+                        } else {
+                            if (attempt < maxRetries - 1) {
+                                await sleep(baseDelay * (attempt + 1));
+                                continue;
+                            } else {
+                                cell.classList.remove('status-entered');
+                                cell.classList.add('status-not-entered');
+                                cell.classList.remove('disabled');
+                                return;
+                            }
+                        }
+                    } catch (err) {
+                        if (attempt < maxRetries - 1) {
+                            await sleep(baseDelay * (attempt + 1));
+                            continue;
+                        } else {
+                            console.error('refreshCalendarDates error for', d, err);
+                            cell?.classList.remove('updating');
+                            return;
+                        }
+                    }
+                }
+            });
+            await Promise.all(tasks);
+        }
+
+        /** -------------------- Checkbox & Paste Logic -------------------- **/
+        const initCheckboxLogic = () => {
+            const checkboxes = document.querySelectorAll('.entry-checkbox');
+            const selectAll = document.getElementById('select-all');
+            const updateSelection = () => {
+                selectedEntryIds = [...checkboxes].filter(cb => cb.checked && cb.value !== '').map(cb => cb.value);
+                const sourceBtn = document.querySelector(`[data-date="${clickedDateTemp}"]`);
+                if (!sourceDate && selectedEntryIds.length > 0 && clickedDateTemp) {
+                    sourceDate = clickedDateTemp;
+                    sourceBtn?.classList.add('selected-source-date');
+                }
+                if (selectedEntryIds.length === 0 && sourceDate) {
+                    document.querySelector(`[data-date="${sourceDate}"]`)?.classList.remove('selected-source-date');
+                    sourceDate = null;
+                }
+                toggleActionButtons();
+            };
+            checkboxes.forEach(cb => cb.addEventListener('change', updateSelection));
+            selectAll?.addEventListener('change', () => {
+                checkboxes.forEach(cb => {
+                    if (!cb.disabled) cb.checked = selectAll.checked;
+                });
+                updateSelection();
+            });
+            updateSelection();
+        };
+
+        const toggleActionButtons = () => {
+            pasteBtn.classList.toggle('d-none', selectedEntryIds.length === 0 || targetDates.size === 0);
+        };
+
+        const resetSelection = () => {
+            sourceDate = null;
+            clickedDateTemp = null;
+            selectedEntryIds = [];
+            targetDates.clear();
+            const calendar = document.querySelector('.calendar-days');
+            if (calendar) {
+                calendar.querySelectorAll('.calendar-day').forEach(d => {
+                    d.classList.remove('selected-source-date', 'selected-target-date', 'clicked-date');
+                    if (d.classList.contains('status-weekend') || d.classList.contains('status-holiday') || d.classList.contains('status-leave') || d.classList.contains('leave-day')) {
+                        d.classList.add('disabled');
+                    } else {
+                        d.classList.remove('disabled');
+                    }
+                });
+            }
+            pasteBtn.classList.add('d-none');
+            formContainer.style.display = 'none';
+            entryDetails.classList.add('d-none');
+        };
+
+        /** -------------------- Paste Entries (fixed) -------------------- **/
+        pasteBtn.addEventListener('click', async () => {
+            if (!selectedEntryIds.length || !targetDates.size) {
+                return showToastMessage("Select at least one entry and one target date.", "error");
+            }
+            const payload = new FormData();
+            selectedEntryIds.forEach(id => payload.append('entry_ids[]', id));
+            [...targetDates].forEach(date => payload.append('target_dates[]', date));
+            showSpinnerAndDisableButtons();
+            await new Promise(requestAnimationFrame);
+            try {
+                const resp = await fetch("{% url 'copy_timesheet_entries' %}", {
+                    method: 'POST',
+                    body: payload,
+                    headers: {
+                        'X-CSRFToken': '{{ csrf_token }}'
+                    }
+                });
+                const data = await resp.json();
+                if (data.status === 'success') {
+                    let msg = '';
+                    if (data.copied?.length) msg += `Copied to: ${data.copied.join(', ')}.<br>`;
+                    if (data.skipped && Object.keys(data.skipped).length) {
+                        msg += 'Skipped: <ul style="margin:0;padding-left:18px;">';
+                        for (const [date, reasons] of Object.entries(data.skipped)) {
+                            msg += `<li><strong>${date}</strong>: ${reasons.join('; ')}</li>`;
+                        }
+                        msg += '</ul>';
+                    }
+                    showToastMessage(msg, data.copied?.length ? 'success' : 'error');
+                    (data.copied || []).forEach(date => {
+                        const cell = document.querySelector(`.calendar-day[data-date="${date}"]`);
+                        if (!cell) return;
+                        const isWeekendOrHoliday = cell.classList.contains('status-weekend') || cell.classList.contains('status-holiday');
+                        clearDayHours(cell);
+                        cell.classList.remove('status-not-entered');
+                        cell.classList.add('status-entered', 'updating');
+                        cell.classList.remove('disabled');
+                        if (!isWeekendOrHoliday) {
+                            const tick = document.createElement('span');
+                            tick.className = 'day-hours';
+                            tick.textContent = '✓';
+                            cell.appendChild(tick);
+                        }
+                    });
+                    await refreshCalendarDates([...(data.copied || []), ...Object.keys(data.skipped || {})]);
+                    resetSelection();
+                } else {
+                    showToastMessage(data.error || "Copy failed.", "error");
+                }
+            } catch (err) {
+                console.error('Copy timesheet entries error:', err);
+                showToastMessage("Copy request failed.", "error");
+            } finally {
+                hideSpinnerAndEnableButtons();
+            }
+        });
+
+        /** -------------------- Form Submission (safe refresh) -------------------- **/
+        form.addEventListener('submit', async e => {
+    e.preventDefault();
+    showSpinnerAndDisableButtons();
+
+    const formData = new FormData(form);
+    formData.delete('project');
+    formData.append('project', projectSelect.value);
+
+    let success = false;
+
+    try {
+        const resp = await fetch("{% url 'submit_timesheet' %}", {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRFToken': '{{ csrf_token }}'
+            }
+        });
+
+        let data = {};
         try {
             data = await resp.json();
         } catch {
-            if (!suppressErrors) showToastMessage("Invalid JSON response from server.", "error");
+            showToastMessage("Invalid server response.", "error");
             return;
         }
 
-        dateField.value = date;
-        detailsDate.textContent = formatDate(date);
-        isLeaveDay = data.is_leave_day; // Keep track of leave status
+        // Handle success
+        if (resp.ok && data.status === 'success') {
+            success = true;
+            showToastMessage(data.message || "Timesheet saved.", "success");
 
-        const selectedCell = document.querySelector(`.calendar-day[data-date="${date}"]`);
+            const cell = document.querySelector(`.calendar-day[data-date="${data.date}"]`);
+            if (cell) {
+                cell.classList.remove('status-not-entered');
+                cell.classList.add('status-entered');
+                clearDayHours(cell);
 
-        // IMPORTANT: Check for leave status from server data, but only apply the leave class
-        // and lock the form if it's NOT a weekend or holiday.
-        if (isLeaveDay && !selectedCell.classList.contains('status-weekend') && !selectedCell.classList.contains('status-holiday')) {
-            lockForm(true, true);
-            if (selectedCell) {
-                selectedCell.classList.add('disabled', 'status-leave');
-                clearDayHours(selectedCell);
-                selectedCell.classList.remove('status-entered');
+                const el = document.createElement('span');
+                el.className = 'day-hours';
+                el.textContent = data.entry.hours_worked + 'h';
+                cell.appendChild(el);
             }
+
+            const submitBtn = document.getElementById('submit-timesheet-btn');
+            if (submitBtn && data.entry.is_approved) {
+                submitBtn.disabled = true;
+            }
+
+            try { await refreshCalendarDates([data.date]); } catch (e) { console.error(e); }
+            try { await loadDayData(data.date, true); } catch (e) { console.error(e); }
+
         } else {
-            // For all other days (regular days, weekends, holidays), enable the form.
-            lockForm(false);
-            if (data.entries?.length) {
-                entryDetails.classList.remove('d-none');
-                // ... your existing code to display entries ...
-                const tbodyHTML = data.entries.map(entry => `
-                    <tr ${entry.is_approved ? 'style="background:#f8f9fa;"' : ''}>
-                        <td class="table-checkbox-cell">
-                            <input type="checkbox" class="entry-checkbox" value="${entry.tsheet_item_id}">
-                        </td>
-                        <td>${entry.project_name}</td>
-                        <td class="text-end">${entry.hours_worked}</td>
-                        <td>${entry.work_location_name || ''}</td>
-                        <td class="text-center">
-                            ${entry.is_approved
-                              ? `<button type="button" class="view-entry btn btn-link p-0 approved-tick" data-entry='${JSON.stringify(entry)}'>✔</button>`
-                              : `<button type="button" class="edit-entry btn btn-link p-0" data-entry='${JSON.stringify(entry)}'>✏️</button>`}
-                        </td>
-                    </tr>`).join('');
-                detailsBody.innerHTML = `
-                <div class="table-responsive mb-1">
-                    <table class="table table-bordered table-hover table-sm align-middle timesheet-details-table">
-                        <thead class="table-primary">
-                            <tr>
-                                <th class="table-checkbox-cell" style="width:30px;">
-                                    <input type="checkbox" id="select-all">
-                                </th>
-                                <th>Project</th>
-                                <th class="text-end" style="width:60px;">Hours</th>
-                                <th style="width:80px;">Location</th>
-                                <th class="text-center" style="width:40px;">Action</th>
-                            </tr>
-                        </thead>
-                        <tbody>${tbodyHTML}</tbody>
-                    </table>
-                </div>`;
-                initCheckboxLogic();
-                detailsBody.querySelectorAll('.edit-entry').forEach(btn =>
-                    btn.addEventListener('click', e => populateForm(JSON.parse(e.currentTarget.dataset.entry), false))
-                );
-                detailsBody.querySelectorAll('.view-entry').forEach(btn =>
-                    btn.addEventListener('click', e => populateForm(JSON.parse(e.currentTarget.dataset.entry), true))
-                );
-                document.getElementById('add-entry-btn').addEventListener('click', addEntryButtonHandler);
-            } else {
-                formContainer.style.display = 'block';
-                lockForm(false);
-            }
+            // Handle error even if HTTP status is 400/403
+            const errMsg = data.message || data.error || "Submission failed.";
+            showToastMessage(errMsg, "error");
         }
 
-        populateProjects(data.projects);
-
-        // Keep the original disabled logic for the initial setup.
-        if (selectedCell && (
-            selectedCell.classList.contains('status-weekend') ||
-            selectedCell.classList.contains('status-holiday') ||
-            selectedCell.classList.contains('status-leave')
-        )) {
-            selectedCell.classList.add('disabled');
-            clearDayHours(selectedCell);
-            selectedCell.classList.remove('status-entered');
-        }
-
-        return data;
     } catch (err) {
-        console.error("loadDayData error:", err);
-        if (!suppressErrors) showToastMessage("Failed to load day data. Please check your connection.", "error");
+        console.error(err);
+        if (!success) showToastMessage("Submission failed.", "error");
     } finally {
         hideSpinnerAndEnableButtons();
     }
-};
-    /** -------------------- Debounce Utility -------------------- **/
-    const debounce = (fn, delay = 200) => {
-      let timer;
-      return (...args) => { clearTimeout(timer); timer = setTimeout(() => fn(...args), delay); };
-    };
+});
 
-    /** -------------------- Calendar Click Logic -------------------- **/
-    const handleCalendarClick = async (e) => {
-      const btn = e.target.closest('.calendar-day'); if (!btn || !btn.dataset.date) return;
-      const date = btn.dataset.date; const today = new Date().toISOString().split('T')[0];
-      if (date > today) return showToastMessage("Cannot select future dates.", "error");
-
-      calendar.querySelectorAll('.calendar-day').forEach(d => d.classList.remove('clicked-date'));
-      btn.classList.add('clicked-date');
-
-      if (!sourceDate) {
-        if (clickedDateTemp === date) { resetSelection(); return; }
-        clickedDateTemp = date; await loadDayData(date); return;
-      }
-
-      if (date === sourceDate) { resetSelection(); return; }
-      if (targetDates.has(date)) { targetDates.delete(date); btn.classList.remove('selected-target-date'); }
-      else { targetDates.add(date); btn.classList.add('selected-target-date'); }
-
-      toggleActionButtons();
-    };
-
-    calendar.addEventListener('click', debounce(handleCalendarClick, 200));
-
-
-
-    function loadCalendar(month, year) {
-  showSpinnerAndDisableButtons(); // Show spinner before request
-
-  const url = new URL(window.location.href);
-  url.searchParams.set('month', month);
-  url.searchParams.set('year', year);
-
-  fetch(url, {
-    headers: { 'X-Requested-With': 'XMLHttpRequest' }
-  })
-    .then(response => response.text())
-    .then(html => {
-      const parser = new DOMParser();
-      const doc = parser.parseFromString(html, 'text/html');
-      const newCalendar = doc.querySelector('.calendar-wrapper');
-      const oldCalendar = document.querySelector('.calendar-wrapper');
-
-      if (newCalendar && oldCalendar) {
-        oldCalendar.replaceWith(newCalendar);
-        attachNavHandlers(); // Re-attach click handlers
-      }
-    })
-    .catch(err => console.error('Error loading calendar:', err))
-    .finally(() => hideSpinnerAndEnableButtons()); // Hide spinner when done
-}
-
-    // Attach click handlers to navigation buttons
-    function attachNavHandlers() {
-      document.querySelectorAll('.calendar-nav').forEach(btn => {
-        btn.addEventListener('click', event => {
-          event.preventDefault();
-
-          const month = btn.dataset.month;
-          const year = btn.dataset.year;
-
-          if (!month || !year || btn.disabled) return;
-
-          loadCalendar(month, year);
-        });
-      });
-    }
-
-    // Initialize
-    attachNavHandlers();
-    /** -------------------- Calendar refresh (SAFE) -------------------- **/
-    async function refreshCalendarDates(dates, maxRetries = 4, baseDelay = 250) {
-      const tasks = [...new Set(dates)].map(async (d) => {
-        const cell = document.querySelector(`.calendar-day[data-date="${d}"]`);
-        for (let attempt = 0; attempt < maxRetries; attempt++) {
-          try {
-            const data = await fetchDayDataNoCache(d);
-            const totalHrs = data.entries?.reduce((a, e) => a + parseFloat(e.hours_worked || 0), 0) || 0;
-
-            if (!cell) return;
-
-            cell.querySelector('.day-hours')?.remove();
-            cell.classList.remove('updating');
-
-            if (cell.classList.contains('status-weekend') || cell.classList.contains('status-holiday') || data.is_leave_day) {
-              cell.classList.add('disabled');
-              cell.classList.remove('status-entered', 'status-not-entered');
-              return;
-            }
-
-            if (totalHrs > 0) {
-              const hoursEl = document.createElement('span');
-              hoursEl.className = 'day-hours';
-              hoursEl.textContent = totalHrs + 'h';
-              cell.appendChild(hoursEl);
-              cell.classList.add('status-entered');
-              cell.classList.remove('status-not-entered', 'disabled');
-              return;
-            } else {
-              if (attempt < maxRetries - 1) {
-                await sleep(baseDelay * (attempt + 1));
-                continue;
-              } else {
-                cell.classList.remove('status-entered');
-                cell.classList.add('status-not-entered');
-                cell.classList.remove('disabled');
-                return;
-              }
-            }
-          } catch (err) {
-            if (attempt < maxRetries - 1) {
-              await sleep(baseDelay * (attempt + 1));
-              continue;
-            } else {
-              console.error('refreshCalendarDates error for', d, err);
-              cell?.classList.remove('updating');
-              return;
-            }
-          }
-        }
-      });
-      await Promise.all(tasks);
-    }
-
-    /** -------------------- Checkbox & Paste Logic -------------------- **/
-    const initCheckboxLogic = () => {
-      const checkboxes = document.querySelectorAll('.entry-checkbox');
-      const selectAll = document.getElementById('select-all');
-
-      const updateSelection = () => {
-        selectedEntryIds = [...checkboxes].filter(cb => cb.checked && cb.value !== '').map(cb => cb.value);
-        const sourceBtn = document.querySelector(`[data-date="${clickedDateTemp}"]`);
-        if (!sourceDate && selectedEntryIds.length > 0 && clickedDateTemp) { sourceDate = clickedDateTemp; sourceBtn?.classList.add('selected-source-date'); }
-        if (selectedEntryIds.length === 0 && sourceDate) { document.querySelector(`[data-date="${sourceDate}"]`)?.classList.remove('selected-source-date'); sourceDate = null; }
-        toggleActionButtons();
-      };
-
-      checkboxes.forEach(cb => cb.addEventListener('change', updateSelection));
-      selectAll?.addEventListener('change', () => { checkboxes.forEach(cb => { if (!cb.disabled) cb.checked = selectAll.checked; }); updateSelection(); });
-      updateSelection();
-    };
-
-    const toggleActionButtons = () => { pasteBtn.classList.toggle('d-none', selectedEntryIds.length === 0 || targetDates.size === 0); };
-
-    const resetSelection = () => {
-      sourceDate = null; clickedDateTemp = null; selectedEntryIds = []; targetDates.clear();
-      calendar.querySelectorAll('.calendar-day').forEach(d => {
-        d.classList.remove('selected-source-date', 'selected-target-date', 'clicked-date');
-        if (d.classList.contains('status-weekend') || d.classList.contains('status-holiday') || d.classList.contains('status-leave') || d.classList.contains('leave-day')) { d.classList.add('disabled'); }
-        else { d.classList.remove('disabled'); }
-      });
-      pasteBtn.classList.add('d-none'); formContainer.style.display = 'none'; entryDetails.classList.add('d-none');
-    };
-
-    /** -------------------- Paste Entries (fixed) -------------------- **/
-    pasteBtn.addEventListener('click', async () => {
-      if (!selectedEntryIds.length || !targetDates.size) {
-        return showToastMessage("Select at least one entry and one target date.", "error");
-      }
-
-      const payload = new FormData();
-      selectedEntryIds.forEach(id => payload.append('entry_ids[]', id));
-      [...targetDates].forEach(date => payload.append('target_dates[]', date));
-
-      // Let the spinner paint before the network request
-      showSpinnerAndDisableButtons();
-      await new Promise(requestAnimationFrame);
-
-      try {
-        const resp = await fetch("{% url 'copy_timesheet_entries' %}", {
-          method: 'POST',
-          body: payload,
-          headers: { 'X-CSRFToken': '{{ csrf_token }}' }
-        });
-
-        const data = await resp.json();
-
-        if (data.status === 'success') {
-          let msg = '';
-          if (data.copied?.length) msg += `Copied to: ${data.copied.join(', ')}.<br>`;
-          if (data.skipped && Object.keys(data.skipped).length) {
-            msg += 'Skipped: <ul style="margin:0;padding-left:18px;">';
-            for (const [date, reasons] of Object.entries(data.skipped)) {
-              msg += `<li><strong>${date}</strong>: ${reasons.join('; ')}</li>`;
-            }
-            msg += '</ul>';
-          }
-          showToastMessage(msg, data.copied?.length ? 'success' : 'error');
-
-          (data.copied || []).forEach(date => {
-            const cell = document.querySelector(`.calendar-day[data-date="${date}"]`);
-            if (!cell) return;
-            const isWeekendOrHoliday = cell.classList.contains('status-weekend') || cell.classList.contains('status-holiday');
-            clearDayHours(cell);
-            cell.classList.remove('status-not-entered');
-            cell.classList.add('status-entered', 'updating');
-            cell.classList.remove('disabled');
-            if (!isWeekendOrHoliday) {
-              const tick = document.createElement('span');
-              tick.className = 'day-hours';
-              tick.textContent = '✓';
-              cell.appendChild(tick);
-            }
-          });
-
-          await refreshCalendarDates([...(data.copied || []), ...Object.keys(data.skipped || {})]);
-          resetSelection();
-
-        } else {
-          showToastMessage(data.error || "Copy failed.", "error");
-        }
-
-      } catch (err) {
-        console.error('Copy timesheet entries error:', err);
-        showToastMessage("Copy request failed.", "error");
-
-      } finally {
-        hideSpinnerAndEnableButtons();
-      }
-    });
-
-    /** -------------------- Form Submission (safe refresh) -------------------- **/
-    form.addEventListener('submit', async e => {
-      e.preventDefault();
-      showSpinnerAndDisableButtons();
-
-      const formData = new FormData(form);
-      formData.delete('project');
-      formData.append('project', projectSelect.value);
-
-      let success = false;
-      try {
-        const resp = await fetch("{% url 'submit_timesheet' %}", {
-          method: 'POST',
-          body: formData,
-          headers: {
-            'X-Requested-With': 'XMLHttpRequest',
-            'X-CSRFToken': '{{ csrf_token }}'
-          }
-        });
-
-        if (!resp.ok) {
-          const text = await resp.text();
-          console.error("HTTP error:", resp.status, text);
-          showToastMessage("Submission failed.", "error");
-          return;
-        }
-
-
-        let data;
-        try { data = await resp.json(); }
-        catch { showToastMessage("Invalid server response.", "error"); return; }
-
-        if (data.status === 'success') {
-          success = true;
-          showToastMessage(data.message || "Timesheet saved.", "success");
-
-          const cell = document.querySelector(`.calendar-day[data-date="${data.date}"]`);
-          if (cell) {
-            cell.classList.remove('status-not-entered');
-            cell.classList.add('status-entered');
-            clearDayHours(cell);
-            const el = document.createElement('span');
-            el.className = 'day-hours';
-            el.textContent = data.entry.hours_worked + 'h';
-            cell.appendChild(el);
-          }
-
-          // Disable or hide the submit button if approved
-          const submitBtn = document.getElementById('submit-timesheet-btn');
-          if (submitBtn && data.entry.is_approved) {
-            submitBtn.disabled = true;  
-            // OR: submitBtn.disabled = true;  // Disable instead
-          }
-
-          // Refresh & reload (isolated from failure toast)
-          try { await refreshCalendarDates([data.date]); } catch (e) { console.error(e); }
-          try { await loadDayData(data.date, true); } catch (e) { console.error(e); }
-        } else {
-          const err = Array.isArray(data.message) ? data.message.join(', ') : data.message;
-          showToastMessage(err || "Error saving timesheet.", "error");
-        }
-      } catch (err) {
-        console.error(err);
-        if (!success) showToastMessage("Submission failed.", "error");
-      } finally {
-        hideSpinnerAndEnableButtons();
-      }
-    });
-  });
+   });
 </script>
-
 
 <script>
   const legendBtn = document.getElementById('legend-btn');

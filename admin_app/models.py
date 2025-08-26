@@ -822,7 +822,7 @@ class Client(models.Model):
         on_delete=models.PROTECT,  # prevent accidental deletion
         related_name='clients'
     )
-    is_deleted = models.BooleanField(default=False)
+    is_active = models.BooleanField(default=True)
     created_by = models.ForeignKey(
         'Employees',
         on_delete=models.SET_NULL,
@@ -837,13 +837,18 @@ class Client(models.Model):
         blank=True,
         related_name="clients_updated"
     )
+    from django.utils import timezone
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
 
     class Meta:
         db_table = 'client'
         ordering = ['client_name']
         indexes = [
             models.Index(fields=['client_alias']),
-            models.Index(fields=['is_deleted']),
+            models.Index(fields=['is_active']),
         ]
         verbose_name = 'Client'
         verbose_name_plural = 'Clients'
@@ -894,6 +899,7 @@ class Project(models.Model):
     )
 
     is_active = models.BooleanField(default=True)
+    is_deleted = models.BooleanField(default=False)
 
     # Optional audit fields
     created_at = models.DateTimeField(auto_now_add=True)
@@ -976,8 +982,8 @@ class Project(models.Model):
 
     def soft_delete(self):
         """Marks the project as inactive instead of deleting it."""
-        self.is_active = False
-        self.save(update_fields=['is_active'])
+        self.is_deleted= True
+        self.save(update_fields=['is_deleted'])
 
     def restore(self):
         """Restores the project to active state."""
@@ -1031,6 +1037,7 @@ class AssignProject(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     is_active = models.BooleanField(default=True)
+    is_deleted = models.BooleanField(default=False)
     created_by = models.ForeignKey(
     'Employees',
     on_delete=models.SET_NULL,
@@ -1058,6 +1065,22 @@ class AssignProject(models.Model):
             models.Index(fields=['start_date']),
             models.Index(fields=['end_date']),
         ]
+    def save(self, *args, **kwargs):
+        """
+        Override save() to automatically set is_active based on project validity:
+        - Current project: is_active=True
+        - Expired or future: is_active=False
+        """
+        today = timezone.now().date()
+
+        if self.start_date > today:
+            self.is_active = False  # future project
+        elif self.end_date < today:
+            self.is_active = False  # expired project
+        else:
+            self.is_active = True   # current project
+
+        super().save(*args, **kwargs)
 
     def clean(self):
         project = getattr(self, 'project', None)
@@ -1140,6 +1163,8 @@ class CostCenter(models.Model):
 
     def __str__(self):
         return f"{self.costcenter_id} - {self.costcenter_name}"
+
+
 from django.db import models
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.core.exceptions import ValidationError
@@ -1193,6 +1218,7 @@ class TimesheetHdr(models.Model):
         self.save(update_fields=["is_delayed"])
 
 
+
     def recalc_totals(self):
         work_hours_per_day = getattr(self.employee.country, "working_hours", 9)
         items = list(self.timesheet_items.all())
@@ -1220,6 +1246,9 @@ class TimesheetHdr(models.Model):
             day_items = [i for i in items if i.wrk_date == current_date]
             total_daily_work_hours = sum(i.wrk_hours for i in day_items)
 
+            # Check if the day is a weekend (Saturday = 5, Sunday = 6)
+            is_weekend = current_date.weekday() >= 5
+            
             is_holiday = current_date in all_holidays
             is_leave = LeaveRequest.objects.filter(
                 employee_master=self.employee,
@@ -1230,18 +1259,15 @@ class TimesheetHdr(models.Model):
 
             if is_holiday:
                 if total_daily_work_hours > 0:
-                    # Scenario 1 & 2: Hours are entered on a holiday
                     if total_daily_work_hours < work_hours_per_day:
-                        # Entry < minimum hours: credit minimum hours
                         self.tot_hol_hrs += work_hours_per_day
                     else:
-                        # Entry >= minimum hours: credit entered hours
                         self.tot_hol_hrs += total_daily_work_hours
                 else:
-                    # Scenario 3: No entry on a holiday
                     self.tot_hol_hrs += work_hours_per_day
-            elif is_leave:
-                # Leave day logic
+            # Add the `is_weekend` check here
+            elif is_leave and not is_weekend:
+                # Leave day logic, but only if it's not a weekend
                 self.tot_lev_hrs += work_hours_per_day
             else:
                 # Regular weekday or weekend logic

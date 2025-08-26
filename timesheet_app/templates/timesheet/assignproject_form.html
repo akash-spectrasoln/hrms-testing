@@ -55,6 +55,9 @@
   padding-left: 0;
   font-weight: 200;
 }
+#project-validity {
+  display: none !important;
+}
 
   .content-wrapper {
     margin-left: 250px;
@@ -84,7 +87,7 @@
         <form method="post" novalidate id="assign-form">
           {% csrf_token %}
           {{ form.non_field_errors }}
-
+          <input type="hidden" name="query_string" value="{{ query_string }}">
           {% for field in form %}
             {% if field.name != 'start_date' and field.name != 'end_date' %}
               <div class="mb-1">
@@ -125,7 +128,8 @@
           </div>
 
           <div class="d-flex justify-content-start gap-4 mt-2 ">
-            <a href="{% url 'assign-project-list' %}" class="btn btn-secondary btn-sm"><i class="fas fa-arrow-left me-1"></i> Back</a>
+            <a href="{{ next }}" class="btn btn-secondary btn-sm"><i class="fas fa-arrow-left me-1"></i> Back</a>
+           
             <button type="submit" class="btn btn-success btn-sm me-2">
               <i class="fas fa-save"></i> Save
             </button>
@@ -143,17 +147,16 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-  // === GET ELEMENTS ===
   const clientSel = document.getElementById('id_client');
   const projSel = document.getElementById('id_project');
-  const empSel = document.getElementById('id_employee'); // Added for employee search
+  const empSel = document.getElementById('id_employee');
   const startIn = document.getElementById('id_start_date');
   const endIn = document.getElementById('id_end_date');
   const validityBox = document.getElementById('project-validity');
   const vf = document.getElementById('valid-from');
   const vt = document.getElementById('valid-to');
 
-  // === HELPER FUNCTIONS ===
+  // --- Helper Functions ---
   function formatDate(isoDateStr) {
     const date = new Date(isoDateStr);
     const mm = String(date.getMonth() + 1).padStart(2, '0');
@@ -172,22 +175,29 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
-    startIn.min = endIn.min = option.dataset.validFrom;
-    startIn.max = endIn.max = option.dataset.validTo;
+    startIn.min = option.dataset.validFrom;
+    endIn.min = option.dataset.validFrom;
+    startIn.max = option.dataset.validTo;
+    endIn.max = option.dataset.validTo;
+
+    // Ensure end date >= start date
+    if (startIn.value && endIn.value && endIn.value < startIn.value) {
+      endIn.value = startIn.value;
+    }
+
     vf.textContent = formatDate(option.dataset.validFrom);
     vt.textContent = formatDate(option.dataset.validTo);
     validityBox.classList.remove('d-none');
   }
 
   function loadProjects(clientId, selectedId = null) {
+    projSel.disabled = true;
     projSel.innerHTML = '<option>Loading...</option>';
+
     fetch("{% url 'ajax_load_projects' %}?client_id=" + clientId)
       .then(res => res.json())
       .then(data => {
-        // Destroy previous Select2 instance if it exists
-        if ($(projSel).data('select2')) {
-            $(projSel).select2('destroy');
-        }
+        if ($(projSel).data('select2')) $(projSel).select2('destroy');
 
         projSel.innerHTML = '<option value="">Select Project</option>';
         data.projects.forEach(project => {
@@ -198,41 +208,50 @@ document.addEventListener('DOMContentLoaded', () => {
           projSel.appendChild(option);
         });
 
-        // ✨ NEW: Initialize Select2 on the project dropdown to make it searchable
         $(projSel).select2({
-            placeholder: 'Select Or Search Project',
-            width: '100%'
+          placeholder: 'Select Or Search Project',
+          width: '100%'
         });
 
         setDateLimits(projSel.selectedOptions[0]);
       })
-      .catch(() => alert("Failed to load projects"));
+      .catch(err => {
+        console.error(err);
+        projSel.innerHTML = '<option value="">Failed to load projects</option>';
+      })
+      .finally(() => {
+        projSel.disabled = false;
+      });
   }
 
-  // === EVENT LISTENERS & INITIALIZATIONS ===
-
-  // Listen for changes on the project dropdown
+  // --- Event Listeners ---
   $(projSel).on('change', () => {
     setDateLimits(projSel.selectedOptions[0]);
   });
 
-  // ✨ NEW: Initialize Select2 for Employee Search
-  $(empSel).select2({
-      placeholder: 'Search Or Select Employee',
-      allowClear: true,
-      width: '100%',
-      ajax: {
-          url: '{% url "employee_search" %}', // NOTE: You must create this URL and view
-          dataType: 'json',
-          delay: 250,
-          data: params => ({ term: params.term }),
-          processResults: data => ({ results: data.results }),
-          cache: true
-      }
+  startIn.addEventListener('change', () => {
+    if (startIn.value && endIn.value && endIn.value < startIn.value) {
+      endIn.value = startIn.value;
+    }
+    endIn.min = startIn.value;
   });
 
+  // Initialize Select2 for Employees
+  $(empSel).select2({
+    placeholder: 'Search Or Select Employee',
+    allowClear: true,
+    width: '100%',
+    ajax: {
+      url: '{% url "employee_search" %}',
+      dataType: 'json',
+      delay: 250,
+      data: params => ({ term: params.term }),
+      processResults: data => ({ results: data.results }),
+      cache: true
+    }
+  });
 
-  // Initialize Select2 for Client Search
+  // Initialize Select2 for Clients
   $(clientSel).select2({
     placeholder: 'Search Or Select Client',
     allowClear: true,
@@ -246,19 +265,15 @@ document.addEventListener('DOMContentLoaded', () => {
       cache: true
     }
   }).on('change', function() {
-    // When client changes, load their projects
     loadProjects(this.value);
   });
 
-
-  // On page load, if a client is already selected (i.e., on an edit page), load their projects.
-  const selectedProject = projSel.value;
+  // On edit page, pre-load projects
   if (clientSel.value) {
-    loadProjects(clientSel.value, selectedProject);
+    loadProjects(clientSel.value, projSel.value);
   } else {
     setDateLimits(null);
   }
-
 });
 </script>
 

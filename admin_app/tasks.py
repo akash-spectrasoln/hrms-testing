@@ -1,9 +1,10 @@
 from celery import shared_task
-from .models import Employees, Communication
+from .models import Employees, Communication,TimesheetHdr, Employees, Holiday, StateHoliday, LeaveRequest,Project,AssignProject
 from datetime import datetime, timedelta
 from django.core.mail import send_mail
 from django.conf import settings
-
+from datetime import date
+from django.db.models import Q
 @shared_task
 def send_birthday_emails():
     # Get today's date
@@ -159,3 +160,124 @@ def send_anniversary_emails():
             # Skip employees with invalid data
             print(f"Error processing employee {employee.id}: {e}")
             continue
+
+
+import logging
+
+logger = logging.getLogger(__name__)
+
+@shared_task
+def check_project_and_assignment_status():
+    """
+    Checks the valid_to and end_date of projects and assignments
+    and deactivates them if they have expired.
+    This task is designed to be run daily.
+    """
+
+    today = date.today()
+
+    # -----------------------------------------------------------
+    # Task 1: Deactivate expired projects
+    # -----------------------------------------------------------
+    expired_projects_q = Q(is_active=True) & (Q(valid_to__lt=today) | Q(valid_from__gt=today))
+    updated_projects = Project.objects.filter(expired_projects_q).update(is_active=False)
+    logger.info(f"Deactivated {updated_projects} expired projects.")
+
+    # -----------------------------------------------------------
+    # Task 2: Deactivate expired project assignments
+    # -----------------------------------------------------------
+    expired_assignments_q = Q(is_active=True) & (Q(end_date__lt=today) | Q(start_date__gt=today))
+    updated_assignments = AssignProject.objects.filter(expired_assignments_q).update(is_active=False)
+    logger.info(f"Deactivated {updated_assignments} expired project assignments.")
+
+
+from django.db.models import Sum, Q
+
+from django.utils import timezone
+@shared_task
+def send_timesheet_reminder(day_type='friday'):
+    """
+    day_type: 'friday' or 'monday'
+    - Friday: Check current week
+    - Monday: Check previous week
+    Sends a reminder email to employees with incomplete timesheets.
+    """
+
+    today = timezone.localdate()
+    
+    if day_type == 'friday':
+        # Current week (Monday-Sunday)
+        week_start = today - timedelta(days=today.weekday())
+        week_end = week_start + timedelta(days=6)
+        logger.info(f"[Friday Reminder] Checking timesheets for {week_start} to {week_end}")
+    elif day_type == 'monday':
+        # Previous week
+        week_start = today - timedelta(days=today.weekday() + 7)
+        week_end = week_start + timedelta(days=6)
+        logger.info(f"[Monday Reminder] Checking timesheets for {week_start} to {week_end}")
+    else:
+        logger.warning(f"Invalid day_type: {day_type}")
+        return
+
+    employees = Employees.objects.filter(is_active=True, user__is_active=True)
+
+    for emp in employees:
+        try:
+            # --- Fetch holidays and leave days ---
+            holidays = set(Holiday.objects.filter(
+                country=emp.country, date__range=(week_start, week_end)
+            ).values_list('date', flat=True)) | set(StateHoliday.objects.filter(
+                country=emp.country, state=emp.state, date__range=(week_start, week_end)
+            ).values_list('date', flat=True))
+
+            leave_days = set()
+            for leave in LeaveRequest.objects.filter(
+                employee_master=emp,
+                status='Approved',
+                start_date__lte=week_end,
+                end_date__gte=week_start
+            ):
+                for d in range((leave.end_date - leave.start_date).days + 1):
+                    day = leave.start_date + timedelta(days=d)
+                    if day.weekday() < 5 and day not in holidays:
+                        leave_days.add(day)
+
+            # --- Check if employee is fully exempt ---
+            working_days = [week_start + timedelta(days=i) for i in range(5)]
+            working_days = [d for d in working_days if d not in holidays and d not in leave_days]
+            if not working_days:
+                continue  # Fully exempt
+
+            # --- Fetch or create timesheet header ---
+            ts_hdr = TimesheetHdr.objects.filter(employee=emp, week_start=week_start).first()
+            incomplete = False
+
+            if not ts_hdr:
+                incomplete = True
+            else:
+                min_hours = getattr(emp.country, 'working_hours', 9) or 9
+                for day in working_days:
+                    total_hours = ts_hdr.timesheet_items.filter(wrk_date=day).aggregate(
+                        total=Sum('wrk_hours')
+                    )['total'] or 0
+                    if total_hours < min_hours:
+                        incomplete = True
+                        break
+
+            if incomplete:
+                # --- Send reminder email ---
+                subject = f"Reminder: Timesheet Incomplete ({week_start} to {week_end})"
+                message = f"Hello {emp.first_name},\n\nPlease submit your timesheet for the week {week_start} to {week_end}.\n\nBest regards,\nYour LMS"
+                send_mail(
+                    subject,
+                    message,
+                    settings.DEFAULT_FROM_EMAIL,
+                    ['rtgpes2020@gmail.com'],
+                    fail_silently=False
+                )
+                logger.info(f"Sent reminder to {'rtgpes2020@gmail.com'} for week {week_start} - {week_end}")
+
+        except Exception as e:
+            logger.error(f"Error checking timesheet for {emp.first_name} ({emp.employee_id}): {e}")
+
+    logger.info("Timesheet reminder task finished.")
