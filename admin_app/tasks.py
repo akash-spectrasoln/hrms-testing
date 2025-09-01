@@ -169,115 +169,102 @@ logger = logging.getLogger(__name__)
 @shared_task
 def check_project_and_assignment_status():
     """
-    Checks the valid_to and end_date of projects and assignments
-    and deactivates them if they have expired.
-    This task is designed to be run daily.
+    Daily task to:
+    1️⃣ Deactivate expired projects/assignments.
+    2️⃣ Activate projects/assignments that are currently valid.
     """
 
-    today = date.today()
+    today = timezone.now().date()  # timezone-aware current date
 
     # -----------------------------------------------------------
-    # Task 1: Deactivate expired projects
+    # Projects
     # -----------------------------------------------------------
+    # Deactivate expired or not-yet-started projects
     expired_projects_q = Q(is_active=True) & (Q(valid_to__lt=today) | Q(valid_from__gt=today))
-    updated_projects = Project.objects.filter(expired_projects_q).update(is_active=False)
-    logger.info(f"Deactivated {updated_projects} expired projects.")
+    Project.objects.filter(expired_projects_q).update(is_active=False)
+
+    # Activate current projects
+    active_projects_q = Q(is_active=False) & Q(valid_from__lte=today) & Q(valid_to__gte=today)
+    Project.objects.filter(active_projects_q).update(is_active=True)
 
     # -----------------------------------------------------------
-    # Task 2: Deactivate expired project assignments
+    # Project Assignments
     # -----------------------------------------------------------
+    # Deactivate expired or not-yet-started assignments
     expired_assignments_q = Q(is_active=True) & (Q(end_date__lt=today) | Q(start_date__gt=today))
-    updated_assignments = AssignProject.objects.filter(expired_assignments_q).update(is_active=False)
-    logger.info(f"Deactivated {updated_assignments} expired project assignments.")
+    AssignProject.objects.filter(expired_assignments_q).update(is_active=False)
 
-
-from django.db.models import Sum, Q
-
+    # Activate current assignments
+    active_assignments_q = Q(is_active=False) & Q(start_date__lte=today) & Q(end_date__gte=today)
+    AssignProject.objects.filter(active_assignments_q).update(is_active=True)
 from django.utils import timezone
+from django.db.models import Sum, Q
 @shared_task
 def send_timesheet_reminder(day_type='friday'):
-    """
-    day_type: 'friday' or 'monday'
-    - Friday: Check current week
-    - Monday: Check previous week
-    Sends a reminder email to employees with incomplete timesheets.
-    """
-
     today = timezone.localdate()
-    
-    if day_type == 'friday':
-        # Current week (Monday-Sunday)
+
+    if day_type.lower() == 'friday':
         week_start = today - timedelta(days=today.weekday())
         week_end = week_start + timedelta(days=6)
-        logger.info(f"[Friday Reminder] Checking timesheets for {week_start} to {week_end}")
-    elif day_type == 'monday':
-        # Previous week
+    elif day_type.lower() == 'monday':
         week_start = today - timedelta(days=today.weekday() + 7)
         week_end = week_start + timedelta(days=6)
-        logger.info(f"[Monday Reminder] Checking timesheets for {week_start} to {week_end}")
     else:
-        logger.warning(f"Invalid day_type: {day_type}")
+        print("Invalid day_type provided")
         return
 
-    employees = Employees.objects.filter(is_active=True, user__is_active=True)
+    employees = Employees.objects.filter(is_deleted=False, user__is_active=True).order_by('employee_id')
+    print(f"Total employees to process: {employees.count()}")
+
+    holidays = set(Holiday.objects.filter(date__range=(week_start, week_end)).values_list('date', flat=True))
+    holidays |= set(StateHoliday.objects.filter(date__range=(week_start, week_end)).values_list('date', flat=True))
 
     for emp in employees:
         try:
-            # --- Fetch holidays and leave days ---
-            holidays = set(Holiday.objects.filter(
-                country=emp.country, date__range=(week_start, week_end)
-            ).values_list('date', flat=True)) | set(StateHoliday.objects.filter(
-                country=emp.country, state=emp.state, date__range=(week_start, week_end)
-            ).values_list('date', flat=True))
+            print(f"\nProcessing employee: {emp.first_name} (ID: {emp.employee_id})")
 
             leave_days = set()
-            for leave in LeaveRequest.objects.filter(
-                employee_master=emp,
-                status='Approved',
-                start_date__lte=week_end,
-                end_date__gte=week_start
-            ):
-                for d in range((leave.end_date - leave.start_date).days + 1):
-                    day = leave.start_date + timedelta(days=d)
+            for leave in LeaveRequest.objects.filter(employee_master=emp, status='Approved',
+                                                     start_date__lte=week_end, end_date__gte=week_start):
+                start = max(leave.start_date, week_start)
+                end = min(leave.end_date, week_end)
+                for i in range((end - start).days + 1):
+                    day = start + timedelta(days=i)
                     if day.weekday() < 5 and day not in holidays:
                         leave_days.add(day)
 
-            # --- Check if employee is fully exempt ---
-            working_days = [week_start + timedelta(days=i) for i in range(5)]
+            working_days = [week_start + timedelta(days=i) for i in range(7) if (week_start + timedelta(days=i)).weekday() < 5]
             working_days = [d for d in working_days if d not in holidays and d not in leave_days]
-            if not working_days:
-                continue  # Fully exempt
 
-            # --- Fetch or create timesheet header ---
+            if not working_days:
+                print(f"Employee {emp.first_name} is fully exempt this week. Skipping.")
+                continue
+
             ts_hdr = TimesheetHdr.objects.filter(employee=emp, week_start=week_start).first()
             incomplete = False
 
             if not ts_hdr:
+                print(f"No timesheet found for {emp.first_name}. Marking as incomplete.")
                 incomplete = True
             else:
                 min_hours = getattr(emp.country, 'working_hours', 9) or 9
                 for day in working_days:
-                    total_hours = ts_hdr.timesheet_items.filter(wrk_date=day).aggregate(
-                        total=Sum('wrk_hours')
-                    )['total'] or 0
+                    total_hours = ts_hdr.timesheet_items.filter(wrk_date=day).aggregate(total=Sum('wrk_hours'))['total'] or 0
                     if total_hours < min_hours:
+                        print(f"Employee {emp.first_name} worked {total_hours} hours on {day}, which is less than {min_hours}.")
                         incomplete = True
                         break
 
             if incomplete:
-                # --- Send reminder email ---
-                subject = f"Reminder: Timesheet Incomplete ({week_start} to {week_end})"
-                message = f"Hello {emp.first_name},\n\nPlease submit your timesheet for the week {week_start} to {week_end}.\n\nBest regards,\nYour LMS"
+                print(f"Sending reminder email to {emp.first_name} ({emp.user.email})")
                 send_mail(
-                    subject,
-                    message,
+                    f"Reminder: Timesheet Incomplete ({week_start} to {week_end})",
+                    f"Hello {emp.first_name},\n\nPlease submit your timesheet for the week {week_start} to {week_end}.\n\nBest regards,\nYour LMS",
                     settings.DEFAULT_FROM_EMAIL,
-                    ['rtgpes2020@gmail.com'],
+                    ['rahulthekkumtharayilrajendran@gmail.com'],  # your test email
                     fail_silently=False
                 )
-                logger.info(f"Sent reminder to {'rtgpes2020@gmail.com'} for week {week_start} - {week_end}")
 
         except Exception as e:
-            logger.error(f"Error checking timesheet for {emp.first_name} ({emp.employee_id}): {e}")
-
-    logger.info("Timesheet reminder task finished.")
+            print(f"Error processing {emp.first_name}: {e}")
+            continue

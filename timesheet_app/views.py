@@ -12,8 +12,7 @@ from django.db import IntegrityError, transaction
 from django.contrib import messages
 from datetime import datetime, timedelta
 from django.db.models import Q
-
-
+from django.views.decorators.http import require_POST
 from django.db import transaction, IntegrityError
 from admin_app.models import Holiday, StateHoliday, LeaveRequest, Activity, WrkLocation
 from django.contrib.auth.decorators import login_required
@@ -494,9 +493,6 @@ def load_projects(request):
         client_id=client_id, is_active=True
     ).values('project_id', 'project_name', 'valid_from', 'valid_to').order_by('project_name')
 
-    # Optional: logger.debug for production instead of print
-    logger.debug(f"AJAX client_id={client_id}, projects={list(projects)}")
-
     return JsonResponse({'projects': [
         {
             'project_id': p['project_id'],
@@ -719,7 +715,6 @@ def timesheet_calendar(request):
     # 1️⃣ Determine the earliest valid date for the employee
     # Correctly use the enc_valid_from property to get the decrypted joining date
     joining_date = employee.enc_valid_from
-    print(joining_date)
     
     # Set the fixed new start date
     new_start_date_of_calendar = date(2025, 8, 1)
@@ -998,19 +993,12 @@ def submit_timesheet(request):
     if new_total > 12:
         return _error_response(
             request,
-            f"Total hours for {date_obj} exceed 12. (Existing total: {other_total}, Attempted: {hours_worked})",
+            f"Total hours for {date_obj} exceed 12",
             400
         )
 
     # 8️⃣ Check for duplicates based on project or cost center
     duplicate_qs = TimesheetItem.objects.filter(hdr=hdr, wrk_date=date_obj)
-
-    print("=== DEBUG: Duplicate check ===")
-    print("Project assignment:", project_assignment)
-    print("Cost center:", cost_center)
-    print("Existing entry ID:", existing_entry.pk if existing_entry else None)
-    print("Duplicate queryset count:", duplicate_qs.count())
-
 
     if project_assignment:
         # Filter entries that have this project assignment
@@ -1081,9 +1069,6 @@ def submit_timesheet(request):
     return redirect('timesheet_calendar')
 
 def _error_response(request, msg, status=400):
-    print("=== DEBUG: Error response triggered ===")
-    print("Message:", msg)
-    print("Headers:", request.headers)
 
     if request.headers.get('x-silent-refresh') == '1':
         return JsonResponse({'status': 'silent_error', 'message': msg}, status=status)
@@ -1157,7 +1142,7 @@ def get_timesheet_day_data(request):
       - Leave status for the day
       - Project end date and remaining working days
     """
-    # 🌟 1. CORRECTED: Fetch employee profile and related employee type in one query
+    # 1. CORRECTED: Fetch employee profile and related employee type in one query
     try:
         employee = request.user.employee_profile
         # We need to refresh the object to ensure the related field is loaded
@@ -1169,17 +1154,17 @@ def get_timesheet_day_data(request):
     except employee.DoesNotExist:
         return JsonResponse({"error": "Employee profile not found."}, status=404)
 
-    # 🌟 2. CORRECTED: Get the 'code' field from the related employee_type object
+    #  2. CORRECTED: Get the 'code' field from the related employee_type object
     employee_type_code = employee.employee_type.code if employee.employee_type else None
 
     date_str = request.GET.get("date")
     date_obj = parse_date(date_str)
 
-    # ❌ Invalid date check
+    #  Invalid date check
     if not date_obj:
         return JsonResponse({"error": "Invalid date"}, status=400)
 
-    # ✅ 1. Check if the employee is on approved leave that day
+    #  1. Check if the employee is on approved leave that day
     on_leave = LeaveRequest.objects.filter(
         employee_master=employee,
         status="Approved",
@@ -1187,7 +1172,7 @@ def get_timesheet_day_data(request):
         end_date__gte=date_obj
     ).only("id").exists()
 
-    # ✅ 2. Get all timesheet entries for that date (with related fields to avoid N+1 queries)
+    #  2. Get all timesheet entries for that date (with related fields to avoid N+1 queries)
     items_qs = (
         TimesheetItem.objects
         .filter(hdr__employee=employee, wrk_date=date_obj)
@@ -1203,7 +1188,7 @@ def get_timesheet_day_data(request):
     )
 
 
-    # ✅ 3. Build entries list for frontend
+    #  3. Build entries list for frontend
     entry_list = []
     for item in items_qs:
         # 🌟 FIX: Consistently format the project/cost center name
@@ -1245,7 +1230,7 @@ def get_timesheet_day_data(request):
         })
 
 
-    # ✅ 4. Fetch active project assignments for that day
+    # 4. Fetch active project assignments for that day
     project_assignments = AssignProject.objects.filter(
         employee=employee,
         start_date__lte=date_obj,
@@ -1277,8 +1262,8 @@ def get_timesheet_day_data(request):
             "remaining_days": remaining_days
         })
 
-    # ✅ 5. Add cost center as first option, but only for employees
-    # 🌟 3. CORRECTED: Check against the `employee_type_code`
+    #  5. Add cost center as first option, but only for employees
+    #🌟 3. CORRECTED: Check against the `employee_type_code`
     if employee.cost_center and employee_type_code == 'E':
         projects_list.insert(0, {
             "projectAssignmentId": f"COSTCENTER-{employee.cost_center.costcenter_id}",
@@ -1328,209 +1313,6 @@ def delete_timesheet_entry(request, entry_id):
 
     entry.delete()
     return JsonResponse({"success": True})
-
-from django.views.decorators.http import require_POST
-from django.utils.dateparse import parse_date
-
-
-
-
-# @login_required
-# @require_POST
-# def copy_timesheet_entries(request):
-#     """
-#     Copy selected TimesheetItem entries to multiple target dates for the current employee.
-
-#     Rules:
-#     - Target date cannot be in the future.
-#     - Target date cannot be an approved leave day.
-#     - Each date may have max 12 hours total.
-#     - Only one entry per (costcenter, date) OR (project_assignment, date).
-#     - Project assignments must be valid on the target date.
-#     - Prevents creating duplicates (bulk checked for efficiency).
-
-#     Optimizations:
-#     - Flattened date parsing.
-#     - Preloads all existing TimesheetItems for target dates in a single query.
-#     - Groups validation and duplication checks to avoid repeated DB hits.
-#     """
-#     employee = request.user.employee_profile
-
-#     # Parse POST data: entry_ids[] and target_dates[]
-#     item_ids = request.POST.getlist("entry_ids[]", [])
-#     raw_target_dates = request.POST.getlist("target_dates[]", [])
-
-#     # Flatten comma-separated dates
-#     target_dates = [d.strip() for td in raw_target_dates for d in td.split(",") if d.strip()]
-
-#     if not item_ids or not target_dates:
-#         return JsonResponse({"error": "Entries and target dates are required"}, status=400)
-
-#     # Fetch selected timesheet items for this employee
-#     items = list(
-#         TimesheetItem.objects.filter(
-#             id__in=item_ids,
-#             hdr__employee=employee
-#         ).select_related(
-#             "hdr", "project_assignment", "project",
-#             "costcenter", "activity", "work_location"
-#         )
-#     )
-
-#     if not items:
-#         return JsonResponse({"error": "No valid entries found"}, status=404)
-
-#     today = date.today()
-#     parsed_dates = {}
-
-#     # Pre-parse dates and filter invalid ones early
-#     skipped_details = []
-#     for td in target_dates:
-#         date_obj = parse_date(td)
-#         if not date_obj:
-#             skipped_details.append({"date": td, "reason": "Invalid date"})
-#         elif date_obj > today:
-#             skipped_details.append({"date": td, "reason": "Cannot copy to future dates"})
-#         else:
-#             parsed_dates[td] = date_obj
-
-#     if not parsed_dates:
-#         return JsonResponse({"error": "No valid target dates to process"}, status=400)
-
-#     # Pre-fetch leaves for all relevant dates
-#     leave_dates = set(
-#         LeaveRequest.objects.filter(
-#             employee_master=employee,
-#             status="Approved"
-#         ).filter(
-#             Q(start_date__lte=max(parsed_dates.values())) &
-#             Q(end_date__gte=min(parsed_dates.values()))
-#         ).values_list("start_date", "end_date")
-#     )
-
-#     # Expand leave date ranges into a set for faster lookup
-#     leave_days = set()
-#     for start, end in leave_dates:
-#         leave_days.update([start + timedelta(days=i) for i in range((end - start).days + 1)])
-
-#     # Pre-fetch all existing entries for target dates (avoid .exists() per loop)
-#     existing_entries = TimesheetItem.objects.filter(
-#         hdr__employee=employee,
-#         wrk_date__in=parsed_dates.values()
-#     ).select_related("project_assignment", "costcenter")
-
-#     # Map: date_obj -> {(project_assignment_id, costcenter_id): wrk_hours}
-#     existing_map = {}
-#     for entry in existing_entries:
-#         key = (entry.project_assignment_id, entry.costcenter_id)
-#         existing_map.setdefault(entry.wrk_date, {})[key] = entry.wrk_hours
-
-#     copied_dates = []
-
-#     for td, date_obj in parsed_dates.items():
-#         if date_obj in leave_days:
-#             skipped_details.append({"date": td, "reason": "Approved leave"})
-#             continue
-
-#         # Get total hours already logged for the day
-#         day_hours = sum(existing_map.get(date_obj, {}).values())
-
-#         entries_copied = 0
-
-#         with transaction.atomic():
-#             # Find week boundaries for header
-#             week_start = date_obj - timedelta(days=date_obj.weekday())
-#             week_end = week_start + timedelta(days=6)
-
-#             hdr, _ = TimesheetHdr.objects.get_or_create(
-#                 employee=employee,
-#                 week_start=week_start,
-#                 week_end=week_end,
-#                 defaults={"is_approved": False}
-#             )
-
-#             for item in items:
-#                 key = (item.project_assignment_id, item.costcenter_id)
-
-#                 # Skip if duplicate for this date
-#                 if key in existing_map.get(date_obj, {}):
-#                     reason = (f"Project '{item.project_assignment.project.project_name}' already exists"
-#                               if item.project_assignment else "Cost center entry already exists")
-#                     skipped_details.append({"date": td, "reason": reason})
-#                     continue
-
-#                 # Validate project date range
-#                 if item.project_assignment:
-#                     valid_project = AssignProject.objects.filter(
-#                         pk=item.project_assignment.pk,
-#                         start_date__lte=date_obj
-#                     ).filter(
-#                         Q(end_date__gte=date_obj) | Q(end_date__isnull=True)
-#                     ).exists()
-#                     if not valid_project:
-#                         skipped_details.append({
-#                             "date": td,
-#                             "reason": f"Project '{item.project_assignment.project.project_name}' invalid for this date"
-#                         })
-#                         continue
-
-#                 # Check daily 12h limit
-#                 if day_hours + item.wrk_hours > 12:
-#                     skipped_details.append({"date": td, "reason": "Copying would exceed 12h limit"})
-#                     continue
-
-#                 # Create new item
-#                 TimesheetItem.objects.create(
-#                     hdr=hdr,
-#                     wrk_date=date_obj,
-#                     project_assignment=item.project_assignment,
-#                     costcenter=item.costcenter,
-#                     activity=item.activity,
-#                     work_location=item.work_location,
-#                     wrk_hours=item.wrk_hours,
-#                     description=item.description or ""
-#                 )
-
-#                 # Update tracking structures
-#                 entries_copied += 1
-#                 day_hours += item.wrk_hours
-#                 existing_map.setdefault(date_obj, {})[key] = item.wrk_hours
-
-#         if entries_copied > 0:
-#             copied_dates.append(td)
-#         else:
-#             skipped_details.append({"date": td, "reason": "No entries copied for this date"})
-
-#     # Group skip reasons by date
-#     skipped_summary = {}
-#     for s in skipped_details:
-#         skipped_summary.setdefault(s["date"], []).append(s["reason"])
-
-#     return JsonResponse({
-#         "status": "success",
-#         "copied": copied_dates,
-#         "skipped": skipped_summary,
-#         "message": f"Copied to {len(copied_dates)} date(s). Skipped {len(skipped_summary)} date(s)."
-#     })
-import datetime
-from datetime import timedelta, date
-from django.db.models import Q
-from django.http import JsonResponse
-from django.views.decorators.http import require_POST
-from django.db import transaction
-from django.utils.dateparse import parse_date
-
-# Assuming you have imported necessary modules and models
-from django.utils.dateparse import parse_date
-from datetime import date, timedelta
-from django.db.models import Q
-from django.db import transaction
-from django.http import JsonResponse
-from django.views.decorators.http import require_POST
-
-# Make sure you have your get_all_holidays and any necessary cache/model imports
-# from your_app.utils import get_all_holidays, holidays_cache
-# from your_app.models import TimesheetItem, TimesheetHdr, LeaveRequest, AssignProject
 
 @require_POST
 def copy_timesheet_entries(request):
@@ -1598,7 +1380,7 @@ def copy_timesheet_entries(request):
         month_holidays.update({sh.date: sh.name for sh in state_holidays_qs})
         emp_holidays.update(month_holidays)
 
-    print(f"Holidays for employee: {list(emp_holidays.keys())}")
+
 
     # --- Fetch approved leave ---
     leave_ranges = LeaveRequest.objects.filter(
@@ -1615,14 +1397,10 @@ def copy_timesheet_entries(request):
         for i in range((end - start).days + 1):
             day = start + timedelta(days=i)
             if day.weekday() >= 5:
-                print(f"Ignoring leave on {day} because it's a weekend")
                 continue
             if day in emp_holidays:
-                print(f"Ignoring leave on {day} because it's a holiday")
                 continue
             leave_days.add(day)
-    print(f"Leave days (working days only): {sorted(leave_days)}")
-
     # --- Fetch existing entries for target dates ---
     existing_entries = TimesheetItem.objects.filter(
         hdr__employee=employee,
@@ -1641,12 +1419,11 @@ def copy_timesheet_entries(request):
         is_weekend = date_obj.weekday() >= 5
         is_holiday = date_obj in emp_holidays
 
-        print(f"Processing {td}: weekend={is_weekend}, holiday={is_holiday}, leave={date_obj in leave_days}")
+
 
         # Skip leave days only on working days
         if date_obj in leave_days:
             skipped_details.setdefault(td, []).append("Approved leave on a working day")
-            print(f"Skipping {td}: Approved leave on a working day")
             continue
 
         day_hours = sum(existing_map.get(date_obj, {}).values())
@@ -1703,7 +1480,6 @@ def copy_timesheet_entries(request):
                 entries_copied += 1
                 day_hours += item.wrk_hours
                 existing_map.setdefault(date_obj, {})[key] = item.wrk_hours
-                print(f"Copied {td}: {item.wrk_hours}h for project {item.project_assignment} / costcenter {item.costcenter}")
 
         if entries_copied > 0:
             hdr.save()  # update updated_at
@@ -1782,14 +1558,6 @@ def get_all_holidays(emp, holidays_cache):
     holidays = holidays_cache.get(key, [])
     # Convert Holiday/StateHoliday objects into {date: name}
     return {h.date: getattr(h, "name", "Holiday") for h in holidays}
-
-
-
-from datetime import timedelta
-
-from datetime import timedelta
-
-from datetime import timedelta
 
 def calculate_timesheet_stats(emp, ts_hdr, week_start, leave_days, holidays_cache):
     """
@@ -1907,11 +1675,6 @@ def calculate_timesheet_stats(emp, ts_hdr, week_start, leave_days, holidays_cach
                 can_approve = False
                 break
 
-    print(emp.id, emp.first_name, "<<<   number of leaves", len(leave_dates))
-    print(emp.id, emp.first_name, "<<<< holiday count", len(emp_holidays))
-    print(emp.id, emp.first_name, "<<<< total hours", total_hours)
-
-
     # --- 6. Return result ---
     return {
         'employee': emp,
@@ -1972,11 +1735,6 @@ def timesheet_unapprove(request: HttpRequest, tsheet_id: int):
 
     return redirect(next_url)
 
-
-    # Check for a 'next' URL parameter and redirect there
-    next_url = request.GET.get('next', 'timesheet_approval_list')
-    return redirect(next_url)
-
 from django.db.models import Prefetch, Q
 from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
@@ -2026,7 +1784,7 @@ def timesheet_approval_list(request):
     # --- 2. Get Subordinates ---
     subordinates = Employees.objects.filter(manager=manager).select_related(
         'country', 'state'
-    ).order_by('first_name')
+    ).order_by('employee_id','first_name','last_name')
 
     if search_query:
         subordinates = subordinates.filter(
@@ -2100,24 +1858,21 @@ from datetime import date
 @require_POST
 def approve_timesheet(request):
     """Approve a single employee's weekly timesheet."""
-    print("Hittting the single approval view ")
     emp_id = request.POST.get('employee_id')
     year = request.POST.get('year')
     week = request.POST.get('week')
-    print(emp_id,"-",year,"-",week)
 
     try:
         week_start = date.fromisocalendar(int(year), int(week), 1)  # Monday
         week_end = date.fromisocalendar(int(year), int(week), 7)    # Sunday
 
-        print(week_start,"-",week_end)
 
         hdr = TimesheetHdr.objects.get(
             employee_id=emp_id,
             week_start=week_start,
             week_end=week_end
         )
-        print(hdr)
+
         if hdr.is_approved:
             return JsonResponse({'success': False, 'message': 'Already approved.'})
 
@@ -2223,8 +1978,6 @@ def timesheet_week_details(request):
 
 
         entries = stats['detailed_entries']
-
-        print(entries)
 
         # 🔹 Remove weekends (Sat=5, Sun=6) if they have no items
         filtered_entries = []

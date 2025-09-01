@@ -5,6 +5,20 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 
 <style>
+  /* Keep content clear of fixed sidebar and header */
+  .content-wrapper { 
+    margin-left: 70px; /* space for fixed sidebar */
+    padding-top: 32px; /* reduced space for fixed header */
+    transition: margin-left 0.3s;
+  }
+
+  @media (max-width: 575.98px) {
+    .content-wrapper { 
+      margin-left: 70px;
+      padding-top: 28px; 
+    }
+  }
+
   .container {
     width: 100%;
     max-width: none;
@@ -114,6 +128,7 @@
 {% endblock %}
 
 {% block content %}
+<div class="content-wrapper">
 <div class="container">
   <div class="row justify-content-center">
     <div class="col-12 col-lg-11 col-xl-10">
@@ -212,5 +227,6 @@
       </div>
     </div>
   </div>
+</div>
 </div>
 {% endblock %}
