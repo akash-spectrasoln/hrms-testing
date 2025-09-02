@@ -377,7 +377,7 @@
             </div>
             <div class="form-group" id="start-date-group">
     <label class="form-label" for="id_start_date">Start Date</label>
-    <input type="date" id="id_start_date" name="start_date" class="form-input"
+    <input type="date" id="id_start_date" name="start_date" class="form-input" placeholder="mm-dd-yyyy"
            value="{{ form.start_date.value|default:'' }}" required autocomplete="off">
     {% if form.start_date.errors %}
     <div class="error-message">
@@ -390,7 +390,7 @@
 
 <div class="form-group" id="end-date-group">
     <label class="form-label" for="id_end_date">End Date</label>
-    <input type="date" id="id_end_date" name="end_date" class="form-input"
+    <input type="date" id="id_end_date" name="end_date" class="form-input" placeholder="mm-dd-yyyy"
            value="{{ form.end_date.value|default:'' }}" required autocomplete="off">
     {% if form.end_date.errors %}
     <div class="error-message">
@@ -440,7 +440,7 @@
 {% endblock %}
 
 {% block scripts %}
-<script>
+<!-- <script>
 document.addEventListener('DOMContentLoaded', function () {
     const startInput = document.getElementById('id_start_date');
     const endInput = document.getElementById('id_end_date');
@@ -478,7 +478,7 @@ document.addEventListener('DOMContentLoaded', function () {
     // Step 3: When user changes start date, auto-fix end date if needed
     startInput.addEventListener('change', setEndDateMinBasedOnStart);
 });
-</script>
+</script> -->
 
 <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 <script>
@@ -586,8 +586,8 @@ document.addEventListener("DOMContentLoaded", function () {
             let startDate = startDateInput.value;
 
             if (startDate) {
-                // ✅ use flatpickr API, not just .value
-                endDatePicker.setDate(startDate, true);
+                //  use flatpickr API, not just .value
+                endDatePicker.set("minDate", startDateInput.value);
             }
         }
     }
@@ -599,6 +599,24 @@ document.addEventListener("DOMContentLoaded", function () {
             endDatePicker.jumpToDate(startDateInput.value);
         }
     });
+
+// --- Keep end date synced with start date ---
+        startDateInput.addEventListener("change", function () {
+            if (dayTypeSelect.value === "multiple") {
+                const startDate = startDateInput.value;
+                if (startDate) {
+                    
+                    // endDateInput.value = "";
+                    // endDatePicker.clear();
+                    endDatePicker.set("minDate", startDateInput.value);
+
+                }
+            } else {
+                endDateInput.value = startDateInput.value;
+            }
+        });
+
+
 
     // --- Inline date error ---
     function showInlineError(message) {
@@ -630,10 +648,24 @@ document.addEventListener("DOMContentLoaded", function () {
 
     if (startDateValue && endDateValue && startDateValue > endDateValue) {
         event.preventDefault();
-        hideSpinnerAndEnableButtons();  // ✅ Hide spinner if validation fails
+        event.stopImmediatePropagation(); // stop the spinner
         showInlineError("Start Date cannot be after End Date.");
         return;
     }
+
+    if (startDateValue.trim() === '') {
+        event.preventDefault(); // Stop the form submission
+        event.stopImmediatePropagation(); // stop the spinner
+        showInlineError("start Date is required for leaves.");
+        return; // Exit the function early
+    } 
+
+    if (dayTypeSelect.value === "multiple" && endDateValue.trim() === '') {
+        event.preventDefault(); // Stop the form submission
+        event.stopImmediatePropagation(); // stop the spinner
+        showInlineError("End Date is required for multiple day leaves.");
+        return; // Exit the function early
+    } 
 
     // Always fill end date for one-day BEFORE AJAX or submit
     if (dayTypeSelect.value === "one") {
@@ -648,7 +680,7 @@ document.addEventListener("DOMContentLoaded", function () {
         const leaveType = leaveTypeSelect.value;
 
         if (!startDate || !endDate) {
-            hideSpinnerAndEnableButtons();  // ✅ Show/hide in all early returns
+            hideSpinnerAndEnableButtons();  //  Show/hide in all early returns
             leaveForm.submit();
             return;
         }
@@ -667,13 +699,13 @@ document.addEventListener("DOMContentLoaded", function () {
             const floatingNotApplied = data.floating_holiday_not_applied || [];
 
             if (conflictDates.length > 0) {
-                hideSpinnerAndEnableButtons();  // ✅ Hide spinner on conflict
+                hideSpinnerAndEnableButtons();  //  Hide spinner on conflict
                 alert("A leave is already applied for these date(s):\n" + conflictDates.join('\n'));
                 return;
             }
 
             if (floatingNotApplied.length > 0 && leaveType.trim().toLowerCase() === "casual leave") {
-                hideSpinnerAndEnableButtons();  // ✅ Hide before modal
+                hideSpinnerAndEnableButtons();  //  Hide before modal
                 const formattedDates = floatingNotApplied.map(formatDate).join('<br>');
                 const message = `
                     <b>Your leave request includes ${floatingNotApplied.length} floating holiday(s):</b><br>
@@ -690,14 +722,14 @@ document.addEventListener("DOMContentLoaded", function () {
                     leaveForm.submit();
                 }, function() {
                     // User canceled modal → no submit, spinner off
-                    hideSpinnerAndEnableButtons();  // ✅ Spinner off here too
+                    hideSpinnerAndEnableButtons();  //  Spinner off here too
                 });
             } else {
                 leaveForm.submit();
             }
         })
         .catch(err => {
-            hideSpinnerAndEnableButtons();  // ✅ On error
+            hideSpinnerAndEnableButtons();  //  On error
             alert("Error checking leave conflicts!");
             leaveForm.submit(); // fallback submit
         });
@@ -706,7 +738,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
     const nextYearCheckbox = document.getElementById("id_next_year");
 
-    // Function to update pickers
+    // Function to update pickers for next year
     function updateDatePickersForNextYear(enabled) {
         if (enabled) {
             const startNext = new Date(fyEndDate);
@@ -714,7 +746,7 @@ document.addEventListener("DOMContentLoaded", function () {
             startNext.setMonth(startNext.getMonth() + 1);
 
             // Calculate last day of that month // 0th day of next month = last day of current month
-            const endNext = new Date(startNext.getFullYear(), startNext.getMonth() + 2, 0); 
+            const endNext = new Date(startNext.getFullYear(), startNext.getMonth() + 9, 0);  // 9 means upto december starting from april
             
 
             startDatePicker.set('minDate', startNext);
@@ -723,8 +755,6 @@ document.addEventListener("DOMContentLoaded", function () {
             endDatePicker.set('maxDate', endNext);
 
             // prefill values 
-            startDatePicker.setDate(startNext, true);  
-            endDatePicker.setDate(startNext, true);
         } else {
             startDatePicker.set('minDate', "today");
             startDatePicker.set('maxDate', fyEndDate);
@@ -794,7 +824,6 @@ document.addEventListener("DOMContentLoaded", function () {
     // Financial year check
     const fyEndDateStr = "{{ fy_end_calender|date:'Y-m-d' }}"; 
     const fyEndDate = new Date(fyEndDateStr);
-    const fyEndMonth = fyEndDate.getMonth() + 1; // JS 0-based → send 1–12
     const currentDate = new Date();
 
     // currentDate.getMonth()

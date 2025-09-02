@@ -611,6 +611,8 @@ class EmployeeUpdateView(UpdateView):
                 user_obj.is_staff = is_admin
                 user_obj.first_name=employee.first_name
                 user_obj.last_name=employee.last_name
+                user_obj.username= employee.company_email
+                user_obj.email= employee.company_email
                 user_obj.save()
             # ------------------------------------------
 
@@ -1232,25 +1234,29 @@ def accept_leave_request(request, leave_request_id):
         floating_holiday_policy = leave_details['allowed_floating_holiday_policy']
         emp_leave_details = LeaveDetails.objects.get(employee=employee,year=current_year)
 
-        
+
+        fy_start, fy_end = get_financial_year_dates(request, employee.country)
+        fy_end_extended = fy_end + relativedelta(months=9) # for fetching next years holidays 
 
         # Fetch policy for floating holidays
         floating_entitlement = floating_holiday_policy
 
         # Get all holiday dates for efficiency
-        holiday_dates = set(Holiday.objects.values_list('date', flat=True))
+        holiday_dates = set(Holiday.objects.filter(date__range=(fy_start, fy_end_extended)).values_list('date', flat=True))
         state_holiday_dates = set(
             StateHoliday.objects.filter(
-                state=employee.state
+                state=employee.state,
+                date__range=(fy_start, fy_end_extended)
             ).values_list('date', flat=True)
         )
         #combine both 
         holiday_dates |= state_holiday_dates
 
-        floating_dates = set(FloatingHoliday.objects.values_list('date', flat=True))
+        floating_dates = set(FloatingHoliday.objects.filter(date__range=(fy_start, fy_end_extended)).values_list('date', flat=True))
         state_excluded = set(
         StateHoliday.objects.filter(
-            country=employee.country
+            country=employee.country,
+            date__range=(fy_start, fy_end_extended)
         ).exclude(
             state=employee.state
         ).values_list('date', flat=True)
@@ -1733,7 +1739,7 @@ def admin_leave_requests(request):
     fy_start, fy_end = get_financial_year_dates(request, country_obj, reference_date=reference_date)
 
     leave_requests = LeaveRequest.objects.select_related('employee_user', 'employee_master').filter(
-        start_date__lte=fy_end + relativedelta(months=2),
+        start_date__lte=fy_end + relativedelta(months=9), 
         end_date__gte=fy_start,
         employee_master__country=country_obj,
     )
