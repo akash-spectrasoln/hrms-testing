@@ -563,8 +563,8 @@ def request_leave(request):
     # Helper: get all holidays as sets (avoids repeat queries)
     def get_holidays(employee, fy_start, fy_end):
 
-        # fy_end extended because it is needed when span two years (for example: march 2025 - april 2025)
-        fy_end_extended = fy_end + relativedelta(months=2)
+        # fy_end extended because it is needed for next year leave request from current year
+        fy_end_extended = fy_end + relativedelta(months=9) 
 
 
         # Dates from country-based holidays
@@ -674,7 +674,7 @@ def request_leave(request):
             
             holidays, floating_holidays = get_holidays(employee, fy_start, fy_end)
             # Pre-batch all leaves once
-            all_leaves = get_leave_requests(request.user, fy_start, fy_end + relativedelta(months=2))
+            all_leaves = get_leave_requests(request.user, fy_start, fy_end + relativedelta(months=9))
             used_casual_leaves = emp_leave_details.casual_leaves_used if emp_leave_details else 0
             used_floating_leaves = emp_leave_details.floating_holidays_used if emp_leave_details else 0
             pending_casual_leaves = emp_leave_details.pending_casual if emp_leave_details else 0
@@ -860,7 +860,7 @@ def request_leave(request):
         holidays, floating_holidays = get_holidays(employee, fy_start, fy_end)
 
         # Only call DB for all leaves ONCE!
-        all_leaves = get_leave_requests(request.user, fy_start, fy_end + relativedelta(months=2))
+        all_leaves = get_leave_requests(request.user, fy_start, fy_end + relativedelta(months=9))
 
         used_casual_leaves = employee_leaves.casual_leaves_used if employee_leaves else 0
         used_floating_leaves = employee_leaves.floating_holidays_used if employee_leaves else 0
@@ -1025,7 +1025,7 @@ def check_leave_conflicts(request):
         leave_qs = LeaveRequest.objects.filter(
             employee_user=request.user,
             status__in=['Pending', 'Approved'],
-            start_date__lte=fy_end_date + relativedelta(months=2),
+            start_date__lte=fy_end_date + relativedelta(months=9),
             end_date__gte=fy_start_date,
         )
 
@@ -1042,13 +1042,13 @@ def check_leave_conflicts(request):
         floating_holidays = set(FloatingHoliday.objects.filter(
             country=country,
             date__gte=fy_start_date,
-            date__lte=fy_end_date + relativedelta(months=2)
+            date__lte=fy_end_date + relativedelta(months=9)
         ).values_list('date', flat=True))
         state_excluded = set(
         StateHoliday.objects.filter(
             country=country,
             date__gte=fy_start_date,
-            date__lte=fy_end_date + relativedelta(months=2)
+            date__lte=fy_end_date + relativedelta(months=9)
         ).exclude(
             state=employee_profile.state
         ).values_list('date', flat=True)
@@ -1595,7 +1595,7 @@ def manager_leave_requests(request):
     # Base leave requests filtered by subordinates and financial year overlap
     leave_requests = LeaveRequest.objects.filter(
         employee_master__in=subordinates,
-        start_date__lte=fy_end + relativedelta(months=2),
+        start_date__lte=fy_end + relativedelta(months=9),
         end_date__gte=fy_start,
     )
 
@@ -1744,20 +1744,24 @@ def manage_leave_request(request, leave_request_id):
 
         current_date = start_date
 
+        fy_start, fy_end = get_financial_year_dates(request, employee)
+        fy_end_extended = fy_end + relativedelta(months=9) # for fetching next years holidays 
 
-        holidays = set(Holiday.objects.values_list('date', flat=True))
+        holidays = set(Holiday.objects.filter(date__range=(fy_start, fy_end_extended)).values_list('date', flat=True))
         state_holiday_dates = set(
             StateHoliday.objects.filter(
-                state=employee.state
+                state=employee.state,
+                date__range=(fy_start, fy_end_extended)
             ).values_list('date', flat=True)
         )
         #combine both 
         holidays |= state_holiday_dates
 
-        floating_holidays = set(FloatingHoliday.objects.values_list('date', flat=True))
+        floating_holidays = set(FloatingHoliday.objects.filter(date__range=(fy_start, fy_end_extended)).values_list('date', flat=True))
         state_excluded = set(
         StateHoliday.objects.filter(
-            country=employee.country
+            country=employee.country,
+            date__range=(fy_start, fy_end_extended)
         ).exclude(
             state=employee.state
         ).values_list('date', flat=True)
@@ -1996,12 +2000,17 @@ def allocate_leave(request, employee_id):
     subordinates = Employees.objects.filter(manager=manager)
     is_manager = subordinates.exists()
 
+    # Calculate financial year start and end dates
+    financial_year_start, financial_year_end = get_financial_year_dates(request, employee, reference_date=today)
+    fy_end_extended = financial_year_end + relativedelta(months=9)
+
     # Get fixed holidays (exclude floating holidays)
     # regular_holidays = set(Holiday.objects.filter(country=employee.country, year=current_year).values_list('date', flat=True))
     # floating_holiday_dates = set(FloatingHoliday.objects.filter(country=employee.country, year=current_year).values_list('date', flat=True))
     country_holiday_dates = set(
         Holiday.objects.filter(
             country=employee.country,
+            date__range=(financial_year_start, fy_end_extended)
         ).values_list('date', flat=True)
     )
 
@@ -2009,6 +2018,7 @@ def allocate_leave(request, employee_id):
     state_holiday_dates = set(
         StateHoliday.objects.filter(
             state=employee.state,
+            date__range=(financial_year_start, fy_end_extended)
         ).values_list('date', flat=True)
     )
 
@@ -2017,20 +2027,21 @@ def allocate_leave(request, employee_id):
     floating_holidays = set(
         FloatingHoliday.objects.filter(
             country=employee.country,
+            date__range=(financial_year_start, fy_end_extended)
         ).values_list('date', flat=True)
     )
 
     state_excluded = set(
     StateHoliday.objects.filter(
         country=employee.country,
+        date__range=(financial_year_start, fy_end_extended)
     ).exclude(
         state=employee.state
     ).values_list('date', flat=True)
     )
 
     floating_holiday_dates=floating_holidays | state_excluded
-    # Calculate financial year start and end dates
-    financial_year_start, financial_year_end = get_financial_year_dates(request, employee, reference_date=today)
+
 
     # --- Calculate LEAVE POLICY ---
     experience_years = (today - employee.enc_valid_from).days // 365 if employee.enc_valid_from else 0
