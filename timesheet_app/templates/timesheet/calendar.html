@@ -1062,13 +1062,14 @@ input[type="date"] {
         });
 
         /** -------------------- Mobile Holiday Tooltip -------------------- **/
-        document.querySelectorAll('.calendar-day[data-holiday]').forEach(dayEl => {
-            let tooltipEl = null;
-            dayEl.addEventListener('touchstart', e => {
-                e.preventDefault();
-                if (tooltipEl) tooltipEl.remove();
-                const holidayName = dayEl.dataset.holiday;
-                tooltipEl = document.createElement('div');
+         /** -------------------- Mobile Holiday Tooltip -------------------- **/
+        (function initHolidayTooltipDelegation(){
+            let hideTimer = null;
+            const showTooltip = (dayEl) => {
+                document.querySelectorAll('.holiday-tooltip').forEach(el => el.remove());
+                const holidayName = dayEl?.dataset?.holiday;
+                if (!holidayName) return;
+                const tooltipEl = document.createElement('div');
                 tooltipEl.className = 'holiday-tooltip shadow-sm p-1 rounded';
                 tooltipEl.textContent = holidayName;
                 tooltipEl.style.position = 'absolute';
@@ -1080,14 +1081,25 @@ input[type="date"] {
                 tooltipEl.style.zIndex = 9999;
                 document.body.appendChild(tooltipEl);
                 const rect = dayEl.getBoundingClientRect();
-                tooltipEl.style.top = rect.top - tooltipEl.offsetHeight - 4 + 'px';
-                tooltipEl.style.left = rect.left + (rect.width - tooltipEl.offsetWidth) / 2 + 'px';
-                setTimeout(() => {
-                    tooltipEl?.remove();
-                    tooltipEl = null;
-                }, 2000);
+                const top = rect.top + window.scrollY - tooltipEl.offsetHeight - 4;
+                const left = rect.left + window.scrollX + (rect.width - tooltipEl.offsetWidth) / 2;
+                tooltipEl.style.top = Math.max(4, top) + 'px';
+                tooltipEl.style.left = Math.max(4, left) + 'px';
+                clearTimeout(hideTimer);
+                hideTimer = setTimeout(() => { tooltipEl.remove(); }, 2000);
+            };
+            document.addEventListener('touchstart', (e) => {
+                const dayEl = e.target.closest('.calendar-day[data-holiday]');
+                if (!dayEl) return;
+                showTooltip(dayEl);
+            }, { passive: true });
+            document.addEventListener('click', (e) => {
+                const dayEl = e.target.closest('.calendar-day[data-holiday]');
+                if (!dayEl) return;
+                showTooltip(dayEl);
             });
-        });
+        })();
+
 
         /** -------------------- Projects Dropdown -------------------- **/
         const populateProjects = (projects, selectedProjectId = null) => {

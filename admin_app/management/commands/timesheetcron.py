@@ -3,70 +3,70 @@ from django_celery_beat.models import PeriodicTask, CrontabSchedule
 import json
 
 class Command(BaseCommand):
-    help = "Set up timesheet reminder tasks: Friday 4PM + Monday 9AM"
+    help = "Set up timesheet reminder tasks for India & US employees (UTC schedule)"
 
     def handle(self, *args, **options):
-        # --- Friday 4PM schedule ---
-        friday_schedule, created = CrontabSchedule.objects.get_or_create(
-            minute='0',
-            hour='16',          # 4 PM
-            day_of_week='5',    # Friday
-            day_of_month='*',
-            month_of_year='*'
-        )
-        if created:
-            self.stdout.write("Created Friday 4PM crontab schedule.")
+        # UTC times corresponding to local times:
+        # India 4 PM IST → 10:30 AM UTC
+        # US 5 PM ET → 9 PM UTC
+        schedules = [
+            # Friday
+            {
+                "name": "Timesheet Reminder Friday India",
+                "hour": "10",
+                "minute": "30",
+                "day_of_week": "5",
+                "timezone": "UTC",
+                "args": ["friday", 1],  # India
+            },
+            {
+                "name": "Timesheet Reminder Friday US",
+                "hour": "21",
+                "minute": "0",
+                "day_of_week": "5",
+                "timezone": "UTC",
+                "args": ["friday", 2],  # US
+            },
+            # Monday
+            {
+                "name": "Timesheet Reminder Monday India",
+                "hour": "3",
+                "minute": "30",
+                "day_of_week": "1",
+                "timezone": "UTC",
+                "args": ["monday", 1],
+            },
+            {
+                "name": "Timesheet Reminder Monday US",
+                "hour": "13",
+                "minute": "0",
+                "day_of_week": "1",
+                "timezone": "UTC",
+                "args": ["monday", 2],
+            },
+        ]
 
-        PeriodicTask.objects.update_or_create(
-            name="Timesheet Reminder Friday 4PM",
-            defaults={
-                'crontab': friday_schedule,
-                'task': 'admin_app.tasks.send_timesheet_reminder',
-                'args': json.dumps(['friday']),
-                'enabled': True
-            }
-        )
-        self.stdout.write(self.style.SUCCESS("Friday 4PM reminder task created/updated."))
+        for sched in schedules:
+            crontab, created = CrontabSchedule.objects.get_or_create(
+                minute=sched.get("minute", "0"),
+                hour=sched["hour"],
+                day_of_week=sched["day_of_week"],
+                day_of_month="*",
+                month_of_year="*",
+                timezone=sched["timezone"],
+            )
+            if created:
+                self.stdout.write(f"Created crontab: {sched['name']}")
 
-        # --- Monday 9AM schedule ---
-        monday_schedule, created = CrontabSchedule.objects.get_or_create(
-            minute='0',
-            hour='9',           # 9 AM
-            day_of_week='1',    # Monday
-            day_of_month='*',
-            month_of_year='*'
-        )
-        if created:
-            self.stdout.write("Created Monday 9AM crontab schedule.")
+            PeriodicTask.objects.update_or_create(
+                name=sched["name"],
+                defaults={
+                    "crontab": crontab,
+                    "task": "admin_app.tasks.send_timesheet_reminder",
+                    "args": json.dumps(sched["args"]),
+                    "enabled": True,
+                },
+            )
+            self.stdout.write(self.style.SUCCESS(f"Task created/updated: {sched['name']}"))
 
-        PeriodicTask.objects.update_or_create(
-            name="Timesheet Reminder Monday 9AM",
-            defaults={
-                'crontab': monday_schedule,
-                'task': 'admin_app.tasks.send_timesheet_reminder',
-                'args': json.dumps(['monday']),
-                'enabled': True
-            }
-        )
-        self.stdout.write(self.style.SUCCESS("Monday 9AM reminder task created/updated."))
-
-        # --- Optional: Every-minute test schedule (for testing only) ---
-        test_schedule, created = CrontabSchedule.objects.get_or_create(
-            minute='*',
-            hour='*',
-            day_of_week='*',
-            day_of_month='*',
-            month_of_year='*'
-        )
-        PeriodicTask.objects.update_or_create(
-            name="Timesheet Reminder Test Every Minute",
-            defaults={
-                'crontab': test_schedule,
-                'task': 'admin_app.tasks.send_timesheet_reminder',
-                'args': json.dumps(['friday']),
-                'enabled': True
-            }
-        )
-        self.stdout.write(self.style.SUCCESS("Every-minute test reminder task created (for testing only)."))
-
-        self.stdout.write(self.style.SUCCESS("✅ Timesheet reminder tasks setup completed successfully."))
+        self.stdout.write(self.style.SUCCESS("✅ All timesheet reminder tasks created successfully."))

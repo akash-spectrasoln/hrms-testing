@@ -197,74 +197,138 @@ def check_project_and_assignment_status():
     # Activate current assignments
     active_assignments_q = Q(is_active=False) & Q(start_date__lte=today) & Q(end_date__gte=today)
     AssignProject.objects.filter(active_assignments_q).update(is_active=True)
+
 from django.utils import timezone
 from django.db.models import Sum, Q
+
 @shared_task
-def send_timesheet_reminder(day_type='friday'):
+def send_timesheet_reminder(day_type="friday", country_id=None):
+    """
+    Send reminder emails to employees with incomplete timesheets.
+    Works for Monday and Friday separately.
+    """
+
     today = timezone.localdate()
 
-    if day_type.lower() == 'friday':
+    # Determine week range based on the day_type
+    if day_type.lower() == "friday":
+        # Current week: Monday → Sunday
         week_start = today - timedelta(days=today.weekday())
         week_end = week_start + timedelta(days=6)
-    elif day_type.lower() == 'monday':
+        message_text = f"It is time to submit your timesheet for the week {week_start} to {week_end}."
+    elif day_type.lower() == "monday":
+        # Previous week: Monday → Sunday
         week_start = today - timedelta(days=today.weekday() + 7)
         week_end = week_start + timedelta(days=6)
+        message_text = f"Friendly reminder: submit your timesheet for last week {week_start} to {week_end}."
     else:
-        print("Invalid day_type provided")
+        logger.error("Invalid day_type provided: %s", day_type)
         return
 
-    employees = Employees.objects.filter(is_deleted=False, user__is_active=True).order_by('employee_id')
-    print(f"Total employees to process: {employees.count()}")
+    # Filter active employees
+    employees = Employees.objects.filter(is_deleted=False, user__is_active=True)
+    if country_id:
+        employees = employees.filter(country_id=country_id)
 
-    holidays = set(Holiday.objects.filter(date__range=(week_start, week_end)).values_list('date', flat=True))
-    holidays |= set(StateHoliday.objects.filter(date__range=(week_start, week_end)).values_list('date', flat=True))
+    logger.info("Processing employees (country %s): %s", country_id, employees.count())
+
+    # Collect holidays
+    holidays = set(Holiday.objects.filter(date__range=(week_start, week_end)).values_list("date", flat=True))
+    holidays |= set(StateHoliday.objects.filter(date__range=(week_start, week_end)).values_list("date", flat=True))
 
     for emp in employees:
         try:
-            print(f"\nProcessing employee: {emp.first_name} (ID: {emp.employee_id})")
-
+            # Determine leave days
             leave_days = set()
-            for leave in LeaveRequest.objects.filter(employee_master=emp, status='Approved',
-                                                     start_date__lte=week_end, end_date__gte=week_start):
+            leaves = LeaveRequest.objects.filter(
+                employee_master=emp,
+                status="Approved",
+                start_date__lte=week_end,
+                end_date__gte=week_start,
+            )
+            for leave in leaves:
                 start = max(leave.start_date, week_start)
                 end = min(leave.end_date, week_end)
                 for i in range((end - start).days + 1):
                     day = start + timedelta(days=i)
-                    if day.weekday() < 5 and day not in holidays:
+                    # Only weekdays count
+                    if day.weekday() < 5:
                         leave_days.add(day)
 
-            working_days = [week_start + timedelta(days=i) for i in range(7) if (week_start + timedelta(days=i)).weekday() < 5]
-            working_days = [d for d in working_days if d not in holidays and d not in leave_days]
+            # Determine working days: Mon-Fri excluding leave & holidays
+            working_days = [
+                week_start + timedelta(days=i) 
+                for i in range(5)  # Only Monday → Friday
+                if (week_start + timedelta(days=i)) not in holidays
+                and (week_start + timedelta(days=i)) not in leave_days
+            ]
 
             if not working_days:
-                print(f"Employee {emp.first_name} is fully exempt this week. Skipping.")
+                logger.debug("Skipping %s, no working days left", emp.first_name)
                 continue
 
+            # Get timesheet header for the week
             ts_hdr = TimesheetHdr.objects.filter(employee=emp, week_start=week_start).first()
             incomplete = False
+            min_hours = getattr(emp.country, "working_hours", 9) or 9
 
             if not ts_hdr:
-                print(f"No timesheet found for {emp.first_name}. Marking as incomplete.")
                 incomplete = True
+                logger.debug("No timesheet found for %s", emp.first_name)
             else:
-                min_hours = getattr(emp.country, 'working_hours', 9) or 9
+                # Check each working day
                 for day in working_days:
-                    total_hours = ts_hdr.timesheet_items.filter(wrk_date=day).aggregate(total=Sum('wrk_hours'))['total'] or 0
+                    total_hours = ts_hdr.timesheet_items.filter(wrk_date=day).aggregate(total=Sum("wrk_hours"))["total"] or 0
                     if total_hours < min_hours:
-                        print(f"Employee {emp.first_name} worked {total_hours} hours on {day}, which is less than {min_hours}.")
                         incomplete = True
                         break
 
+            # Send email if incomplete
             if incomplete:
-                print(f"Sending reminder email to {emp.first_name} ({emp.user.email})")
+                subject = "Timesheet Reminder"
+                plain_message = f"Dear {emp.first_name},\n\n{message_text}\n\nBest regards,\nSpectra HR Team"
+                html_message = f"""
+                <html>
+                <body style="font-family: Arial, sans-serif; color:#333333; line-height:1.6; font-weight: normal;">
+                <div style="max-width:600px; margin:0; padding:20px; border:1px solid #ddd; border-radius:8px; background:#fafafa;">
+
+                    <!-- Greeting -->
+                    <p style="font-weight: normal;">
+                    Dear <span style="font-weight: normal;">{emp.first_name}</span>,
+                    </p>
+
+                    <!-- Main message -->
+                    <p style="font-weight: normal;">{message_text}</p>
+
+                    <!-- Week block -->
+                    <p style="margin:15px 0; padding:10px; background:#f0f8ff; border-left:4px solid #0073e6; font-weight: normal;">
+                    <span style="font-weight: normal;">Wee&#8203;k&#58;</span> {week_start} to {week_end}
+                    </p>
+
+                    <!-- Footer -->
+                    <p style="font-weight: normal;">
+                    Best regards,<br>
+                    <span style="font-weight: normal;">Spectra&nbsp;HR&nbsp;Te&#8203;am</span>
+                    </p>
+
+                </div>
+                </body>
+                </html>
+                """
+
+
+
+
                 send_mail(
-                    f"Reminder: Timesheet Incomplete ({week_start} to {week_end})",
-                    f"Hello {emp.first_name},\n\nPlease submit your timesheet for the week {week_start} to {week_end}.\n\nBest regards,\nYour LMS",
+                    subject,
+                    plain_message,
                     settings.DEFAULT_FROM_EMAIL,
-                    ['rahulthekkumtharayilrajendran@gmail.com'],  # your test email
-                    fail_silently=False
+                    [emp.company_email],
+                    html_message=html_message,
+                    fail_silently=False,
                 )
+                logger.info("Reminder sent to %s", emp.first_name)
 
         except Exception as e:
-            print(f"Error processing {emp.first_name}: {e}")
+            logger.exception("Error processing %s: %s", emp.first_name, e)
             continue

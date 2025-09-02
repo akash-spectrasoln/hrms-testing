@@ -24,6 +24,17 @@ from django.http import JsonResponse
 from django.db.models import Q
 from django.utils.timezone import now
 from django.views.generic import ListView,UpdateView,CreateView
+from django.utils.decorators import method_decorator
+from functools import wraps
+
+# 🔹 Use the employee app decorator
+def employee_signin_required(view_func):
+    from employee_app import views as employee_views   # local import avoids circular import
+    return employee_views.signin_required(view_func)
+
+def admin_signin_required(view_func):
+    from admin_app import views as admin_views
+    return admin_views.signin_required(view_func)
 
 # index view to seperate timesheet app 
 def tsheet_index(request):
@@ -50,7 +61,7 @@ def tsheet_index(request):
 
 
 
-
+@admin_signin_required
 def client_list(request):
     """List all clients with search, filter, sorting, and status."""
     search = request.GET.get('search', '').strip()
@@ -115,7 +126,7 @@ def client_list(request):
     return render(request, 'timesheet/client_list.html', context)
 
 
-
+@admin_signin_required
 def client_create(request):
     query_params = request.GET.copy()
     next_url = query_params.get('next', reverse('client_list'))
@@ -128,13 +139,13 @@ def client_create(request):
             client.created_by = request.user.employee_profile
 
         client.save()
-        return redirect(next_url)  # 🔑 go back with filters
+        return redirect(next_url)  #  go back with filters
 
     return render(request, 'timesheet/client_form.html', {
         'form': form,
         'next': next_url,
     })
-
+@admin_signin_required
 def client_update(request, pk):
     client = get_object_or_404(Client, pk=pk)
 
@@ -159,7 +170,7 @@ def client_update(request, pk):
         'form': form,
         'next': next_url,
     })
-
+@admin_signin_required
 def client_delete(request, pk):
     client = get_object_or_404(Client, pk=pk)
 
@@ -186,7 +197,7 @@ from django.views.decorators.http import require_GET
 
 
 
-
+@admin_signin_required
 def project_list(request):
     """
     List and filter projects with:
@@ -288,7 +299,7 @@ def project_list(request):
     }
 
     return render(request, 'timesheet/project_list.html', context)
-
+@admin_signin_required
 def project_create(request):
     form = ProjectForm(request.POST or None)
 
@@ -317,7 +328,7 @@ from django.shortcuts import redirect, get_object_or_404, render
 from django.urls import reverse
 
 from urllib.parse import urlencode
-
+@admin_signin_required
 def project_update(request, pk):
     project = get_object_or_404(Project, pk=pk)
 
@@ -344,7 +355,7 @@ def project_update(request, pk):
     }
     return render(request, 'timesheet/project_form.html', context)
 
-
+@admin_signin_required
 def project_delete_view(request, pk):
     project = get_object_or_404(Project, pk=pk)
 
@@ -599,7 +610,7 @@ class AssignProjectDeleteView(View):
         assignment.save()
         messages.success(request, "Assignment removed successfully.")
         return redirect(next_url)
-    
+
 class CostCenterListView(ListView):
     model = CostCenter
     template_name = 'timesheet/costcenter_list.html'
@@ -703,7 +714,7 @@ def adjust_month_year(month, year, delta):
 
 # ---------------- 1️⃣ Config ----------------
 
-
+@employee_signin_required
 def timesheet_calendar(request):
     """
     Renders the timesheet calendar with dynamic navigation and data.
@@ -717,7 +728,7 @@ def timesheet_calendar(request):
     joining_date = employee.enc_valid_from
     
     # Set the fixed new start date
-    new_start_date_of_calendar = date(2025, 8, 1)
+    new_start_date_of_calendar = date(2025, 9, 1)
 
     # The effective start date for this employee is the later of their joining date or the fixed start date
     effective_start_date = max(joining_date, new_start_date_of_calendar)
@@ -902,6 +913,7 @@ def timesheet_calendar(request):
         
     return render(request, 'timesheet/calendar.html', context)
 
+@employee_signin_required
 def submit_timesheet(request):
     """
     Create or update a TimesheetHdr (weekly) and TimesheetItem (daily)
@@ -1715,7 +1727,7 @@ from django.contrib import messages
 
 from django.shortcuts import redirect
 from django.contrib import messages
-
+@employee_signin_required
 def timesheet_unapprove(request: HttpRequest, tsheet_id: int):
     next_url = request.GET.get('next', '/')  # Default fallback to home page
     try:
@@ -1743,8 +1755,7 @@ from django.contrib import messages
 
 # Assume all helper functions (get_week_start_end, build_leave_days,
 # build_holidays_cache, calculate_timesheet_stats, build_weeks_list) are available.
-
-@login_required
+@employee_signin_required
 def timesheet_approval_list(request):
     """
     Manages the timesheet approval list for a manager.
@@ -1854,7 +1865,7 @@ from django.contrib.auth.decorators import login_required
 from django.utils import timezone
 from datetime import date
 
-@login_required
+@employee_signin_required
 @require_POST
 def approve_timesheet(request):
     """Approve a single employee's weekly timesheet."""
@@ -1890,7 +1901,7 @@ def approve_timesheet(request):
         return JsonResponse({'success': False, 'message': str(e)})
 
 
-@login_required
+@employee_signin_required
 @require_POST
 def approve_selected_timesheets(request):
     """Approve multiple employees' weekly timesheets at once."""
@@ -1943,14 +1954,9 @@ from django.db.models import Q
 
 
 
-# The corrected calculate_timesheet_stats must be imported or in the same file.
-# This function is crucial as it provides the structured detailed_entries list.
-# from .timesheet_app.views import calculate_timesheet_stats
 
-from datetime import datetime, timedelta
-from django.contrib.auth.decorators import login_required
 
-@login_required
+@employee_signin_required
 def timesheet_week_details(request):
     try:
         emp_id = int(request.GET.get('employee_id'))
