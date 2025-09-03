@@ -31,17 +31,16 @@ thead th {
 
 .custom-container {
   max-width: 1200px;  /* slightly bigger than 1140px */
-  margin: 0 auto;     /* center it */
 }
 
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="container-fluid custom-container">
+<div class="container custom-container">
     <div class="main-content">
         <!-- Filter Form -->
-        <form method="GET" action="{% url 'employee_list' %}" class="form-inline mb-3" id="employeeFilterForm" style="margin-left: 20px;">
+        <form method="GET" action="{% url 'employee_list' %}" class="form-inline" id="employeeFilterForm" style="margin-left: 20px;">
             <!-- Country Filter -->
             <div class="form-group mr-2">
                 <select name="country_id" class="form-control form-control-sm form-select" id="countrySelect">

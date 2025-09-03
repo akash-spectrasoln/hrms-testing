@@ -111,7 +111,6 @@
                     <h3>Leave management</h3>
                 </div>
             </a>
-            {% comment %} 
             {% if request.user.is_authenticated and request.user.is_manager %}
                 <a href="{% url 'tsheet_index' %}" class="card">
                     <div class="card-content">
@@ -127,7 +126,6 @@
                     </div>
                 </a>
             {% endif %}
-            {% endcomment %} 
         </div>
     </div>
 </div>
