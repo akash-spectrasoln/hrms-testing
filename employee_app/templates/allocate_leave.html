@@ -305,8 +305,8 @@ document.addEventListener("DOMContentLoaded", function () {
     const fyEndMonth = fyEndDate.getMonth() + 1; // JS 0-based → send 1–12
     const currentDate = new Date();
 
-    // currentDate.getMonth()
-    if (2 === fyEndDate.getMonth()) {
+    // 
+    if (currentDate.getMonth() === fyEndDate.getMonth()) {
         // Show checkbox only in last month of FY
         nextYearOption.style.display = "block";
     }
