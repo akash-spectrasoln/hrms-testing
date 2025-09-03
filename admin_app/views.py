@@ -782,8 +782,8 @@ class EmployeeExcelCreateView(View):
                             manager = None
                         else:
                             manager = Employees.objects.get(employee_id=manager_val)
-                        # ✅ Required Cost Center lookup by cost_center_id field
-                        cost_center = CostCenter.objects.get(cost_center_id=row['Cost Center ID'].strip())
+                        # ✅ Required Cost Center lookup by costcenter_id field
+                        cost_center = CostCenter.objects.get(costcenter_id=row['Cost Center ID'].strip())
                     except Exception as e:
                         debug_info = traceback.format_exc()
                         print(f"[DEBUG] Row {excel_row_num}: Foreign key error:\n{debug_info}")
@@ -1074,14 +1074,14 @@ class EmployeeExcelUpdateView(View):
                     employee.valid_to = row.get('valid_to', employee.valid_to)
                     employee.country_id = row.get('country_id', employee.country_id)
                     employee.state_id = row.get('state_id', employee.state_id)
-                    # ✅ New: update cost center if provided
-                    cost_center_id = row.get('cost_center_id')
-                    if pd.notna(cost_center_id):
+                    #  New: update cost center if provided
+                    costcenter_id = row.get('costcenter_id')
+                    if pd.notna(costcenter_id):
                         try:
-                            cost_center = CostCenter.objects.get(cost_center_id=str(cost_center_id).strip())
+                            cost_center = CostCenter.objects.get(costcenter_id=str(costcenter_id).strip())
                             employee.cost_center = cost_center
                         except CostCenter.DoesNotExist:
-                            messages.warning(request, f"Invalid Cost Center ID {cost_center_id} for employee {employee_id}. Skipping cost center update.")
+                            messages.warning(request, f"Invalid Cost Center ID {costcenter_id} for employee {employee_id}. Skipping cost center update.")
 
                     employee.save()
                 except Employees.DoesNotExist:

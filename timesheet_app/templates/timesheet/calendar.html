@@ -587,12 +587,28 @@
   min-height: 50px;
   resize: none;
 }
+/* Consistent date input styling across all devices */
 input[type="date"] {
-    text-align: left;        /* Horizontal: align text to the left */
-    padding-left: 8px;       /* Adjust the gap from the left */
-    height: 38px;            /* Match your input height */
-    line-height: 38px;       /* Vertically center text */
-    vertical-align: middle;  /* Ensure alignment in flex/inline contexts */
+    text-align: left;
+    padding: 0.25rem 0.5rem;
+    height: 28px;
+    font-size: 0.7rem;
+    line-height: 1;
+    vertical-align: middle;
+    font-family: inherit;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+}
+
+/* Mobile-specific date input adjustments */
+@media (max-width: 576px) {
+    input[type="date"] {
+        height: 22px;
+        font-size: 0.6rem;
+        padding: 0 0.15rem;
+        line-height: 1;
+    }
 }
 /* Make delete confirmation modal smaller */
 .modal-dialog.modal-sm {

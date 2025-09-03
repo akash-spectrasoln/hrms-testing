@@ -1673,19 +1673,31 @@ def calculate_timesheet_stats(emp, ts_hdr, week_start, leave_days, holidays_cach
 
     # --- 5. Approval logic ---
     can_approve = has_timesheets
-    if can_approve:
-        for i in range(5):  # only Mon–Fri
-            current_date = week_start + timedelta(days=i)
-            entered_hours_for_day = sum(item.wrk_hours for item in timesheet_items if item.wrk_date == current_date)
 
+    for i in range(5):  # Monday–Friday
+        current_date = week_start + timedelta(days=i)
+        entered_hours_for_day = sum(
+            item.wrk_hours for item in timesheet_items if item.wrk_date == current_date
+        )
+        
+        if emp.employee_type and emp.employee_type.code == 'C':
+            # Contractor: only check that they have entered some hours on each working day
             day_is_complete = (
-                entered_hours_for_day >= min_daily_hours or 
-                current_date in leave_dates or 
+                entered_hours_for_day > 0 or
+                current_date in leave_dates or
                 current_date in emp_holidays
             )
-            if not day_is_complete:
-                can_approve = False
-                break
+        else:
+            # Regular Employee or Intern: check for min_daily_hours
+            day_is_complete = (
+                entered_hours_for_day >= min_daily_hours or
+                current_date in leave_dates or
+                current_date in emp_holidays
+            )
+        
+        if not day_is_complete:
+            can_approve = False
+            break
 
     # --- 6. Return result ---
     return {
