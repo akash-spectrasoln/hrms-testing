@@ -68,6 +68,7 @@ def signin_required(fn):
 def index(request):
     return render(request,'index.html')
 
+@signin_required
 def admin_index(request):
     return render(request,'admin_index.html')
 

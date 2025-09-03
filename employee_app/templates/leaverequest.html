@@ -13,6 +13,7 @@
     min-height: calc(100vh - 72px); /* Adjust for top navbar if present */
     margin-top: 72px;
     overflow: auto;
+    margin-left: 0 !important;
         }
 
         .form-container {
@@ -440,45 +441,6 @@
 {% endblock %}
 
 {% block scripts %}
-<!-- <script>
-document.addEventListener('DOMContentLoaded', function () {
-    const startInput = document.getElementById('id_start_date');
-    const endInput = document.getElementById('id_end_date');
-
-    function formatDate(date) {
-        return date.toISOString().split('T')[0];
-    }
-
-    function setTodayIfEmpty(input) {
-        if (!input.value) {
-            input.value = formatDate(new Date());
-        }
-    }
-
-    function setEndDateMinBasedOnStart() {
-        const startDate = new Date(startInput.value);
-        const nextDay = new Date(startDate);
-        nextDay.setDate(startDate.getDate() + 1);
-
-        const minEndDate = formatDate(nextDay);
-        endInput.min = minEndDate;
-
-        // Set end date only if it's empty or before min
-        if (!endInput.value || new Date(endInput.value) < nextDay) {
-            endInput.value = minEndDate;
-        }
-    }
-
-    // Step 1: Set today if blank
-    setTodayIfEmpty(startInput);
-
-    // Step 2: Set end date minimum and value
-    setEndDateMinBasedOnStart();
-
-    // Step 3: When user changes start date, auto-fix end date if needed
-    startInput.addEventListener('change', setEndDateMinBasedOnStart);
-});
-</script> -->
 
 <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 <script>
@@ -606,8 +568,6 @@ document.addEventListener("DOMContentLoaded", function () {
                 const startDate = startDateInput.value;
                 if (startDate) {
                     
-                    // endDateInput.value = "";
-                    // endDatePicker.clear();
                     endDatePicker.set("minDate", startDateInput.value);
 
                 }
@@ -826,8 +786,8 @@ document.addEventListener("DOMContentLoaded", function () {
     const fyEndDate = new Date(fyEndDateStr);
     const currentDate = new Date();
 
-    // currentDate.getMonth()
-    if (2 === fyEndDate.getMonth()) {
+
+    if (currentDate.getMonth() === fyEndDate.getMonth()) {
         // Show checkbox only in last month of FY
         nextYearOption.style.display = "block";
     }
