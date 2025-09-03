@@ -9,8 +9,8 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         # Define crontab: every day at 1 AM IST
         schedule, _ = CrontabSchedule.objects.get_or_create(
-            minute='54',
-            hour='10',
+            minute='30',
+            hour='19', # utc 19:30 - 1 am in india
             day_of_week='*',
             day_of_month='*',
             month_of_year='*',
