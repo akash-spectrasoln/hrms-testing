@@ -61,6 +61,18 @@ label {
         font-weight: 500;
 }
 
+.card-header {
+    position: relative;
+}
+
+
+.card-header .btn-close {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%) scale(1.5); /* center vertically + enlarge */
+}
+
 </style>
 {% endblock styles %}
 
@@ -69,7 +81,8 @@ label {
 <div class="container" >
     <div class="card">
         <div class="card-header text-center">
-            <div class="card-title"><h4>Edit Employee</h4></div>
+            <div class="card-title mt-1"><h4>Edit Employee</h4></div>
+            <a href="{% url 'employee_list' %}" class="btn-close btn-close-white custom-close" aria-label="Close"></a>
         </div>
         <div class="card-body">
             <form method="post" enctype="multipart/form-data" id="employeeForm">
