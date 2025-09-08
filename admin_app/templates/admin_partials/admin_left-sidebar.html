@@ -57,32 +57,45 @@
                                 <span><strong>Set Up table</strong></span>
                             </a>
                         </li>
-                        <li >
-                            <a href="javascript: void(0);" class="has-arrow">
-                                <i data-feather="bar-chart-2"></i>
-                                <span data-key="t-reports"><strong>Reports</strong></span>
-                            </a>
-                            <ul class="sub-menu" aria-expanded="false" style="width: 210px;">
-                                <li>
-                                    <a href="{% url 'employee_leaves' %}">
-                                        <i data-feather="file-text"></i>
-                                        <span><strong>Employee Leaves</strong></span>
-                                    </a>
-                                </li>
-                                <li>
-                                    <a href="{% url 'employee-bank' %}">
-                                        <i data-feather="dollar-sign"></i>
-                                        <span><strong>Employee Bank Details</strong></span>
-                                    </a>
-                                </li>
-                                <li>
-                                    <a href="{% url 'admin_leave_reports' %}">
-                                        <i data-feather="calendar"></i>
-                                        <span><strong>leaves</strong></span>
-                                    </a>
-                                </li>
-                            </ul>
-                        </li>
+<li>
+    <a href="javascript: void(0);" class="has-arrow">
+        <i data-feather="bar-chart-2"></i>
+        <span data-key="t-reports"><strong>Reports</strong></span>
+    </a>
+    <ul class="sub-menu" aria-expanded="false" style="width: 210px; max-height: 230px; overflow-y: auto;">
+        <li>
+            <a href="{% url 'employee_leaves' %}">
+                <i data-feather="file-text"></i>
+                <span><strong>Employee Leaves</strong></span>
+            </a>
+        </li>
+        <li>
+            <a href="{% url 'employee-bank' %}">
+                <i data-feather="dollar-sign"></i>
+                <span><strong>Employee Bank Details</strong></span>
+            </a>
+        </li>
+        <li>
+            <a href="{% url 'admin_leave_reports' %}">
+                <i data-feather="calendar"></i>
+                <span><strong>Leaves</strong></span>
+            </a>
+        </li>
+        <li>
+            <a href="{% url 'admin_work_utilization' %}">
+                <i data-feather="activity"></i>
+                <span><strong>Work Utilization</strong></span>
+            </a>
+        </li>
+        <li>
+            <a href="{% url 'admin_project_cc_utilization' %}">
+                <i data-feather="layers"></i>
+                <span><strong>Project CC Utilization</strong></span>
+            </a>
+        </li>
+    </ul>
+</li>
+
                 </div>
                 <!-- Sidebar -->
             </div>

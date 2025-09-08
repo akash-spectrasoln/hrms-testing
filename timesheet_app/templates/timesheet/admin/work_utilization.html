@@ -1,0 +1,201 @@
+{% extends 'admin_partials/admin_base.html' %}
+{% block body_class %}template-body-basic{% endblock %}
+{% load static %}
+
+{% block styles %}
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+<link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+
+<style>
+.main-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    margin-top: 20px; /* reduced top gap */
+}
+
+.card {
+    border: none;
+    border-radius: 12px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.table-responsive {
+    overflow-x: auto;
+}
+
+.table th, .table td {
+    vertical-align: middle;
+    white-space: nowrap;
+    font-size: 0.85rem;
+}
+
+.table th {
+    background-color: #4683fd;
+    font-weight: 600;
+    color: white;
+}
+
+.table a { color: white; }
+
+.no-data {
+    text-align: center;
+    padding: 20px;
+    color: #6b7280;
+}
+
+.card-body { padding-top: 0; }
+
+.form-control-sm {
+    height: 28px !important;
+    padding: 0.25rem 0.5rem !important;
+    font-size: 0.75rem !important;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="main-content">
+
+        <!-- Filters -->
+        <form method="GET" class="form-inline mb-3" id="utilizationFilterForm" style="margin-left: 20px;">
+            <div class="form-group mr-2">
+                <label for="start_date" class="mr-1">Start Date</label>
+                <input type="date" id="start_date" name="start_date" class="form-control form-control-sm"
+                       value="{{ start_date|date:'Y-m-d' }}" min="2025-08-01">
+            </div>
+            <div class="form-group mr-2">
+                <label for="end_date" class="mr-1">End Date</label>
+                <input type="date" id="end_date" name="end_date" class="form-control form-control-sm"
+                       value="{{ end_date|date:'Y-m-d' }}" min="2025-08-01" max="{{ today|date:'Y-m-d' }}">
+            </div>
+            <div class="form-group mr-2">
+                <input type="text" id="employeeSearch" class="form-control form-control-sm" placeholder="Search ID or Name...">
+            </div>
+            <div class="form-group mr-2">
+                <button type="submit" class="btn btn-primary btn-sm">Generate</button>
+            </div>
+            <div class="form-group mr-2">
+        <!-- Reset button reloads page without params -->
+        <a href="{% url request.resolver_match.url_name %}" class="btn btn-secondary btn-sm">Reset</a>
+    </div>
+        </form>
+
+        <!-- Download Excel -->
+        <div class="mb-2" style="margin-left: 20px;">
+            <button id="downloadExcel"
+                    class="btn btn-success btn-sm px-2 py-1"
+                    data-url="{% if report_data %}{% url 'export_admin_utilization' %}?start_date={{ start_date|date:'Y-m-d' }}&end_date={{ end_date|date:'Y-m-d' }}{% endif %}"
+                    {% if not report_data %}disabled{% endif %}>
+                <i class="fas fa-download"></i> Download Excel
+            </button>
+        </div>
+
+        <!-- Table -->
+        <div class="card">
+            <div class="card-body">
+                <div class="table-responsive" style="border-radius: 10px;">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Employee</th>
+                                <th class="text-end">Worked Days</th>
+                                <th class="text-end">Leave Days</th>
+                                <th class="text-end">Holidays</th>
+                                <th class="text-end">Total Work Days</th>
+                                <th class="text-end">Delayed Entries</th>
+                                <th class="text-end">Work Utilization %</th>
+                            </tr>
+                        </thead>
+                        <tbody id="reportTableBody">
+                            {% if report_data %}
+                                {% for entry in report_data %}
+                                <tr>
+                                    <td>{{ entry.employee_name }}</td>
+                                    <td class="text-end">{{ entry.worked_days }}</td>
+                                    <td class="text-end">{{ entry.leave_days }}</td>
+                                    <td class="text-end">{{ entry.holiday_days }}</td>
+                                    <td class="text-end">{{ entry.total_work_days }}</td>
+                                    <td class="text-end">{{ entry.delayed_entries }}</td>
+                                    <td class="text-end">{{ entry.utilization }}%</td>
+                                </tr>
+                                {% endfor %}
+                            {% else %}
+                                <tr>
+                                    <td colspan="7" class="no-data">
+                                        {% if request.GET.start_date or request.GET.end_date %}
+                                            No data found for selected range.
+                                        {% else %}
+                                            Choose a date range and click Generate.
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- JS -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+$(document).ready(function() {
+    // Date constraints
+    const startInput = $("#start_date")[0];
+    const endInput = $("#end_date")[0];
+    const today = new Date("{{ today|date:'Y-m-d' }}");
+
+    startInput.max = endInput.value;
+    endInput.min = startInput.value;
+    endInput.max = today.toISOString().split('T')[0];
+
+    startInput.addEventListener('change', () => {
+        endInput.min = startInput.value;
+        if (new Date(endInput.value) < new Date(startInput.value)) endInput.value = startInput.value;
+    });
+
+    endInput.addEventListener('change', () => {
+        startInput.max = endInput.value;
+        if (new Date(endInput.value) > today) endInput.value = today.toISOString().split('T')[0];
+        if (new Date(startInput.value) > new Date(endInput.value)) startInput.value = endInput.value;
+    });
+
+    // Employee Search
+    $("#employeeSearch").on("keyup", function() {
+        const search = $(this).val().toLowerCase();
+        $("#reportTableBody tr").each(function() {
+            const text = $(this).find("td:first").text().toLowerCase();
+            $(this).toggle(text.includes(search));
+        });
+    });
+
+    // Excel download
+    $("#downloadExcel").click(async function(e) {
+        e.preventDefault();
+        const url = $(this).data("url");
+        if (!url) return; // disabled if no report
+
+        try {
+            const response = await fetch(url);
+            if (!response.ok) throw new Error("Download failed");
+            const blob = await response.blob();
+            const link = document.createElement("a");
+            link.href = window.URL.createObjectURL(blob);
+            link.download = `Employee_Utilization_{{ start_date|date:'Ymd' }}_{{ end_date|date:'Ymd' }}.xlsx`;
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+        } catch(err) {
+            console.error(err);
+            alert("Failed to download Excel file");
+        }
+    });
+});
+</script>
+{% endblock %}

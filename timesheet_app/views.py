@@ -2014,3 +2014,573 @@ def timesheet_week_details(request):
         return JsonResponse({'success': False, 'message': 'Employee not found.'}, status=404)
     except Exception as e:
         return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+
+from datetime import datetime, timedelta
+from django.shortcuts import render
+from django.contrib.auth.decorators import login_required
+from django.core.exceptions import PermissionDenied
+from django.db.models import Q
+
+from datetime import timedelta
+
+def generate_utilization_report(logged_in_employee, start_date, end_date):
+    """
+    Generate a utilization report for the employees managed by the logged-in user.
+    Leave days exclude weekends and holidays.
+    """
+
+    # Step 1: Choose employees for report
+    if logged_in_employee.user.is_staff or logged_in_employee.user.is_superuser:
+        employees = Employees.objects.all().order_by('employee_id','first_name','last_name')
+    else:
+        if logged_in_employee.employees_managed.exists():
+            employees = logged_in_employee.employees_managed.all().order_by('employee_id','first_name','last_name')
+        else:
+            raise PermissionDenied("You are not authorized to view this report.")
+
+    report = []
+
+    for emp in employees:
+        work_hours_per_day = getattr(emp.country, "working_hours", 9)
+
+        # --- Holidays ---
+        holidays = set(Holiday.objects.filter(
+            country=emp.country,
+            date__range=(start_date, end_date)
+        ).values_list("date", flat=True))
+
+        state_holidays = set(StateHoliday.objects.filter(
+            country=emp.country,
+            state=emp.state,
+            date__range=(start_date, end_date)
+        ).values_list("date", flat=True))
+
+        all_holidays = holidays | state_holidays
+
+        # --- Timesheet items ---
+        items = TimesheetItem.objects.filter(
+            hdr__employee=emp,
+            wrk_date__range=(start_date, end_date)
+        )
+
+        worked_hours = holiday_hours = leave_hours = 0
+        total_work_days = 0
+        leave_days_count = 0
+
+        current = start_date
+        while current <= end_date:
+            weekday = current.weekday()
+            if weekday < 5:  # Mon-Fri only
+                total_work_days += 1
+
+                day_items = [i for i in items if i.wrk_date == current]
+                total_daily_hours = sum(i.wrk_hours for i in day_items)
+
+                is_holiday = current in all_holidays
+                is_leave = LeaveRequest.objects.filter(
+                    employee_master=emp,
+                    start_date__lte=current,
+                    end_date__gte=current,
+                    status="Approved"
+                ).exists()
+
+                if is_holiday:
+                    holiday_hours += work_hours_per_day
+                elif is_leave:
+                    leave_hours += work_hours_per_day
+                    leave_days_count += 1  # Only count leave if not holiday/weekend
+                else:
+                    worked_hours += total_daily_hours
+
+            current += timedelta(days=1)
+
+        # --- Convert to days ---
+        worked_days = int(worked_hours / work_hours_per_day)
+        leave_days = int(leave_days_count)
+        holiday_days = int(holiday_hours / work_hours_per_day)
+
+        # --- Delayed entries ---
+        delayed_entries = TimesheetHdr.objects.filter(
+            employee=emp,
+            week_end__gte=start_date,
+            week_start__lte=end_date,
+            is_delayed=True
+        ).count()
+
+        # --- Utilization percentage ---
+        utilization = (  (worked_days + leave_days + holiday_days) / total_work_days * 100) if (worked_days + leave_days) > 0 else 0.0
+
+        report.append({
+            "employee_obj": emp,
+            "employee_name": f"{emp.employee_id}-{emp.first_name} {emp.last_name}",
+            "worked_days": worked_days,          # int
+            "leave_days": leave_days,            # int
+            "holiday_days": holiday_days,        # int
+            "total_work_days": total_work_days,  # int
+            "delayed_entries": delayed_entries,  # int
+            "utilization": round(utilization, 2) # float
+        })
+
+    return report
+
+
+
+@admin_signin_required
+def admin_work_utilization_view(request):
+    if not (request.user.is_staff or request.user.is_superuser):
+        raise PermissionDenied("Admins only.")
+
+    today = datetime.today().date()
+    default_end = today
+    default_start = today - timedelta(days=6)
+
+    start_str = request.GET.get("start_date")
+    end_str = request.GET.get("end_date")
+
+    try:
+        start_date = datetime.strptime(start_str, "%Y-%m-%d").date() if start_str else default_start
+        end_date = datetime.strptime(end_str, "%Y-%m-%d").date() if end_str else default_end
+    except ValueError:
+        start_date, end_date = default_start, default_end
+
+    min_allowed = datetime(2025, 8, 1).date()
+    start_date = max(start_date, min_allowed)
+    end_date = min(end_date, today)
+
+    if start_date > end_date:
+        start_date = end_date - timedelta(days=6)
+        if start_date < min_allowed:
+            start_date = min_allowed
+
+    # For admins, employee_obj = fake holder just to pass role check
+    employee_obj = Employees.objects.filter(user=request.user).first()
+
+    report_data = generate_utilization_report(employee_obj, start_date, end_date) if request.GET else []
+
+    return render(request, "timesheet/admin/work_utilization.html", {
+        "report_data": report_data,
+        "start_date": start_date,
+        "end_date": end_date,
+        "today": today
+    })
+
+@employee_signin_required
+def employee_work_utilization_view(request):
+    today = datetime.today().date()
+    default_end = today
+    default_start = today - timedelta(days=6)
+
+    # --- Get dates from query ---
+    start_str = request.GET.get("start_date")
+    end_str = request.GET.get("end_date")
+
+    try:
+        start_date = datetime.strptime(start_str, "%Y-%m-%d").date() if start_str else default_start
+        end_date = datetime.strptime(end_str, "%Y-%m-%d").date() if end_str else default_end
+    except ValueError:
+        start_date, end_date = default_start, default_end
+
+    # --- Date bounds ---
+    min_allowed = datetime(2025, 8, 1).date()
+    start_date = max(start_date, min_allowed)
+    end_date = min(end_date, today)
+
+    if start_date > end_date:
+        start_date = end_date - timedelta(days=6)
+        if start_date < min_allowed:
+            start_date = min_allowed
+
+    # --- Get logged-in employee ---
+    try:
+        employee_obj = Employees.objects.get(user=request.user)
+    except Employees.DoesNotExist:
+        raise PermissionDenied("Employee profile not found.")
+
+    # --- Check if user manages others ---
+    is_manager = employee_obj.employees_managed.exists()
+
+    # --- Report generation (only on GET with params) ---
+    report_data = generate_utilization_report(employee_obj, start_date, end_date) if request.GET else []
+
+    return render(request, "timesheet/employee/work_utilization.html", {
+        "report_data": report_data,
+        "employee": employee_obj,
+        "start_date": start_date,
+        "end_date": end_date,
+        "today": today,
+        "is_manager": is_manager,   # 👈 Pass flag to template
+    })
+
+import openpyxl
+from django.http import HttpResponse, HttpResponseBadRequest
+from django.db.models import Q
+from datetime import datetime
+
+def _build_excel_response(report_data, filename):
+    workbook = openpyxl.Workbook()
+    sheet = workbook.active
+    sheet.title = "Employee Utilization"
+
+    # Header row
+    headers = [
+        "Employee",
+        "Worked Days",
+        "Leave Days",
+        "Holidays",
+        "Total Work Days",
+        "Delayed Entries",
+        "Work Utilization %"
+    ]
+    sheet.append(headers)
+
+    # Data rows
+    for entry in report_data:
+        sheet.append([
+            entry.get("employee_name", ""),
+            entry.get("worked_days", 0),
+            entry.get("leave_days", 0),
+            entry.get("holiday_days", 0),
+            entry.get("total_work_days", 0),
+            entry.get("delayed_entries", 0),
+            f"{entry.get('utilization', 0)}%",
+        ])
+
+    response = HttpResponse(
+        content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+    response["Content-Disposition"] = f'attachment; filename="{filename}"'
+    workbook.save(response)
+    return response
+
+@admin_signin_required
+def export_admin_utilization(request):
+    if not (request.user.is_staff or request.user.is_superuser):
+        raise PermissionDenied("Admins only.")
+
+    start_date = request.GET.get("start_date", "").strip()
+    end_date = request.GET.get("end_date", "").strip()
+
+    if not start_date or not end_date:
+        return HttpResponseBadRequest("Start and End date parameters are required.")
+
+    try:
+        start_date = datetime.strptime(start_date, "%Y-%m-%d").date()
+        end_date = datetime.strptime(end_date, "%Y-%m-%d").date()
+    except ValueError:
+        return HttpResponseBadRequest("Invalid date format. Use YYYY-MM-DD.")
+
+    # Pass dummy employee (just for role check)
+    employee_obj = Employees.objects.filter(user=request.user).first()
+
+    report_data = generate_utilization_report(employee_obj, start_date, end_date)
+
+    return _build_excel_response(report_data, "Admin_Employee_Utilization.xlsx")
+
+@employee_signin_required
+def export_employee_utilization(request):
+    start_date = request.GET.get("start_date", "").strip()
+    end_date = request.GET.get("end_date", "").strip()
+
+    if not start_date or not end_date:
+        return HttpResponseBadRequest("Start and End date parameters are required.")
+
+    try:
+        start_date = datetime.strptime(start_date, "%Y-%m-%d").date()
+        end_date = datetime.strptime(end_date, "%Y-%m-%d").date()
+    except ValueError:
+        return HttpResponseBadRequest("Invalid date format. Use YYYY-MM-DD.")
+
+    try:
+        employee_obj = Employees.objects.get(user=request.user)
+    except Employees.DoesNotExist:
+        raise PermissionDenied("Employee profile not found.")
+
+    report_data = generate_utilization_report(employee_obj, start_date, end_date)
+
+    return _build_excel_response(report_data, "Employee_Utilization.xlsx")
+
+from datetime import timedelta
+from django.core.exceptions import PermissionDenied
+
+def generate_project_cc_utilization_report(logged_in_employee, start_date, end_date):
+    """
+    Report: Project vs CostCenter utilization per employee.
+    - Working days = Mon-Fri only (weekends excluded).
+    - Days are integers in report, but calculated fractionally internally.
+    - Each day counts if not holiday/leave.
+    - Partial day hours count proportionally for project/CC days.
+    - Utilization % = total hours / (available_days * work_hours_per_day), max 100%.
+    """
+    from collections import defaultdict
+    from datetime import timedelta
+
+    # Employees scope
+    if logged_in_employee.user.is_staff or logged_in_employee.user.is_superuser:
+        employees = Employees.objects.all().order_by('employee_id', 'first_name', 'last_name')
+    else:
+        if logged_in_employee.employees_managed.exists():
+            employees = logged_in_employee.employees_managed.all()
+        else:
+            raise PermissionDenied("You are not authorized to view this report.")
+
+    report = []
+
+    for emp in employees:
+        work_hours_per_day = getattr(emp.country, "working_hours", 9)
+
+        # Holidays
+        holidays = set(Holiday.objects.filter(
+            country=emp.country,
+            date__range=(start_date, end_date)
+        ).values_list("date", flat=True))
+        state_holidays = set(StateHoliday.objects.filter(
+            country=emp.country,
+            state=emp.state,
+            date__range=(start_date, end_date)
+        ).values_list("date", flat=True))
+        all_holidays = holidays | state_holidays
+
+        # Timesheet items
+        items = TimesheetItem.objects.filter(
+            hdr__employee=emp,
+            wrk_date__range=(start_date, end_date)
+        )
+
+        # Organize hours per day
+        daily_project_hours = defaultdict(float)
+        daily_cc_hours = defaultdict(float)
+        for item in items:
+            if item.project:
+                daily_project_hours[item.wrk_date] += item.wrk_hours
+            if item.costcenter:
+                daily_cc_hours[item.wrk_date] += item.wrk_hours
+
+        # Counters
+        total_working_days = 0
+        holiday_days = 0
+        leave_days = 0
+        project_days_frac = 0.0
+        cc_days_frac = 0.0
+        total_hours_project = 0.0
+        total_hours_cc = 0.0
+
+        current = start_date
+        while current <= end_date:
+            if current.weekday() < 5:  # Mon-Fri
+                total_working_days += 1
+
+                if current in all_holidays:
+                    holiday_days += 1
+                else:
+                    is_leave = LeaveRequest.objects.filter(
+                        employee_master=emp,
+                        start_date__lte=current,
+                        end_date__gte=current,
+                        status="Approved"
+                    ).exists()
+                    if is_leave:
+                        leave_days += 1
+                    else:
+                        proj_hours = daily_project_hours.get(current, 0)
+                        cc_hours = daily_cc_hours.get(current, 0)
+                        total_hours = proj_hours + cc_hours
+
+                        # Fractional day contribution
+                        project_days_frac += proj_hours / work_hours_per_day
+                        cc_days_frac += cc_hours / work_hours_per_day
+
+                        # Sum total hours for utilization
+                        total_hours_project += proj_hours
+                        total_hours_cc += cc_hours
+
+            current += timedelta(days=1)
+
+        available_days = total_working_days - holiday_days - leave_days
+
+        # Round days for report
+        project_days_int = int(round(project_days_frac))
+        cc_days_int = int(round(cc_days_frac))
+
+        # Utilization based on total hours
+        project_util = (total_hours_project / (available_days * work_hours_per_day) * 100) if available_days > 0 else 0.0
+        cc_util = (total_hours_cc / (available_days * work_hours_per_day) * 100) if available_days > 0 else 0.0
+
+        # Ensure utilization <= 100%
+        project_util = min(project_util, 100.0)
+        cc_util = min(cc_util, 100.0)
+
+        report.append({
+            "employee_obj": emp,
+            "employee_name": f"{emp.employee_id}-{emp.first_name} {emp.last_name}",
+            "total_working_days": total_working_days,
+            "holiday_days": holiday_days,
+            "leave_days": leave_days,
+            "available_days": available_days,
+            "project_days": project_days_int,
+            "cc_days": cc_days_int,
+            "project_utilization": round(project_util, 2),
+            "cc_utilization": round(cc_util, 2),
+        })
+
+    return report
+
+from django.contrib.auth.decorators import login_required
+from django.core.exceptions import PermissionDenied
+from datetime import datetime, timedelta
+
+# ✅ Admin / Manager view
+@admin_signin_required
+def admin_project_cc_utilization_view(request):
+    today = datetime.today().date()
+    default_end = today
+    default_start = today - timedelta(days=6)
+
+    start_str = request.GET.get("start_date")
+    end_str = request.GET.get("end_date")
+
+    try:
+        start_date = datetime.strptime(start_str, "%Y-%m-%d").date() if start_str else default_start
+        end_date = datetime.strptime(end_str, "%Y-%m-%d").date() if end_str else default_end
+    except ValueError:
+        start_date, end_date = default_start, default_end
+
+    min_allowed = datetime(2025, 8, 1).date()
+    start_date = max(start_date, min_allowed)
+    end_date = min(end_date, today)
+
+    if start_date > end_date:
+        start_date = end_date - timedelta(days=6)
+        if start_date < min_allowed:
+            start_date = min_allowed
+
+    try:
+        employee_obj = Employees.objects.get(user=request.user)
+    except Employees.DoesNotExist:
+        raise PermissionDenied("Employee profile not found.")
+
+    # Admins/Managers see team/company
+    report_data = generate_project_cc_utilization_report(employee_obj, start_date, end_date) if request.GET else []
+
+    return render(request, "timesheet/admin/project_cc_utilization.html", {
+        "report_data": report_data,
+        "employee": employee_obj,
+        "start_date": start_date,
+        "end_date": end_date,
+        "today": today,
+    })
+
+
+# ✅ Employee self view
+@employee_signin_required
+def employee_project_cc_utilization_view(request):
+    today = datetime.today().date()
+    default_end = today
+    default_start = today - timedelta(days=6)
+
+    start_str = request.GET.get("start_date")
+    end_str = request.GET.get("end_date")
+
+    try:
+        start_date = datetime.strptime(start_str, "%Y-%m-%d").date() if start_str else default_start
+        end_date = datetime.strptime(end_str, "%Y-%m-%d").date() if end_str else default_end
+    except ValueError:
+        start_date, end_date = default_start, default_end
+
+    min_allowed = datetime(2025, 8, 1).date()
+    start_date = max(start_date, min_allowed)
+    end_date = min(end_date, today)
+
+    if start_date > end_date:
+        start_date = end_date - timedelta(days=6)
+        if start_date < min_allowed:
+            start_date = min_allowed
+
+    try:
+        employee_obj = Employees.objects.get(user=request.user)
+    except Employees.DoesNotExist:
+        raise PermissionDenied("Employee profile not found.")
+
+    # Check if user manages others
+    is_manager = employee_obj.employees_managed.exists()
+
+    report_data = []
+    if request.GET and is_manager:
+        # Only generate report for managers with subordinates
+        report_data = generate_project_cc_utilization_report(employee_obj, start_date, end_date)
+
+        # Filter to include only subordinates and optionally manager themselves
+        report_data = [
+            r for r in report_data if r["employee_obj"] in employee_obj.employees_managed.all()
+        ]
+
+    return render(request, "timesheet/employee/project_cc_utilization.html", {
+        "report_data": report_data,
+        "employee": employee_obj,
+        "start_date": start_date,
+        "end_date": end_date,
+        "today": today,
+        "is_manager": is_manager
+    })
+
+import openpyxl
+from django.http import HttpResponse
+
+@login_required
+def export_project_cc_utilization(request):
+    start_date = request.GET.get("start_date")
+    end_date = request.GET.get("end_date")
+
+    if not start_date or not end_date:
+        return HttpResponseBadRequest("Start and End date are required.")
+
+    try:
+        start_date = datetime.strptime(start_date, "%Y-%m-%d").date()
+        end_date = datetime.strptime(end_date, "%Y-%m-%d").date()
+    except ValueError:
+        return HttpResponseBadRequest("Invalid date format. Use YYYY-MM-DD.")
+
+    try:
+        employee_obj = Employees.objects.get(user=request.user)
+    except Employees.DoesNotExist:
+        raise PermissionDenied("Employee profile not found.")
+
+    report_data = generate_project_cc_utilization_report(employee_obj, start_date, end_date)
+
+
+
+    # Workbook
+    wb = openpyxl.Workbook()
+    sheet = wb.active
+    sheet.title = "Project vs CC Utilization"
+
+    headers = [
+        "Employee",
+        "Total Working Days",
+        "Holidays",
+        "Leave Days",
+        "Available Days",
+        "Project Days",
+        "CC Days",
+        "Project Utilization %",
+        "CC Utilization %",
+    ]
+    sheet.append(headers)
+
+    for entry in report_data:
+        sheet.append([
+            entry.get("employee_name"),
+            entry.get("total_working_days", 0),
+            entry.get("holiday_days", 0),
+            entry.get("leave_days", 0),
+            entry.get("available_days", 0),
+            entry.get("project_days", 0),
+            entry.get("cc_days", 0),
+            f"{entry.get('project_utilization', 0)}%",
+            f"{entry.get('cc_utilization', 0)}%",
+        ])
+
+    response = HttpResponse(content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+    response["Content-Disposition"] = 'attachment; filename="Project_CC_Utilization.xlsx"'
+    wb.save(response)
+    return response

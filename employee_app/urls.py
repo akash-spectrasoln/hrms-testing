@@ -58,6 +58,11 @@ path('timesheets/approve-selected/', ts_views.approve_selected_timesheets, name=
 path("timesheet-week-details/", ts_views.timesheet_week_details, name="timesheet_week_details"),
 path('nextyearcount/',get_next_year_leave_counts, name= 'get_next_year_leave_counts'),
 path('leave-reports/',leave_report,name="leave-report"),
+path("work-utilization/", ts_views.employee_work_utilization_view, name="work_utilization"),
+path("work-utilization/export/", ts_views.export_employee_utilization, name="export_employee_utilization"),
+path("project-cc-utilization/", ts_views.employee_project_cc_utilization_view, name="project_cc_utilization"),
+# Excel Export
+path("export/project-cc-utilization/", ts_views.export_project_cc_utilization, name="export_project_cc_utilization"),
 ]
 
 

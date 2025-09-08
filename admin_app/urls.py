@@ -95,7 +95,11 @@ path('assignments/<int:pk>/delete/', ts_views.AssignProjectDeleteView.as_view(),
 path('costcenters/', ts_views.CostCenterListView.as_view(), name='costcenter_list'),
 path('costcenters/create/', ts_views.CostCenterCreateView.as_view(), name='costcenter_create'),
 path('costcenters/<str:pk>/edit/', ts_views.CostCenterUpdateView.as_view(), name='costcenter_update'),
-path('admin-leavereport/',admin_leave_reports,name='admin_leave_reports')
+path('admin-leavereport/',admin_leave_reports,name='admin_leave_reports'),
+path("work-utilization/", ts_views.admin_work_utilization_view, name="admin_work_utilization"),
+path("work-utilization/export/", ts_views.export_employee_utilization, name="export_admin_utilization"),
+path("project-cc-utilization/", ts_views.admin_project_cc_utilization_view, name="admin_project_cc_utilization"),
+
 ]
 
 

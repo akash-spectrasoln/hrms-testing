@@ -40,6 +40,26 @@
                         <span data-key="t-dashboard"><strong>Approve Timesheet</strong></span>
                     </a>
                 </li>
+                 <li>
+                    <a href="javascript: void(0);" class="has-arrow">
+                        <i data-feather="bar-chart-2"></i>
+                        <span data-key="t-utilization"><strong>Utilization Reports</strong></span>
+                    </a>
+                    <ul class="sub-menu" aria-expanded="false" style="width: 210px;">
+                        <li>
+                            <a href="{% url 'work_utilization' %}">
+                                <i data-feather="activity"></i>
+                                <span><strong>Work Utilization</strong></span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="{% url 'project_cc_utilization' %}">
+                                <i data-feather="layers"></i>
+                                <span><strong>Project/CC Utilization</strong></span>
+                            </a>
+                        </li>
+                    </ul>
+                </li>
           
                 {% else %}
                 <li>
