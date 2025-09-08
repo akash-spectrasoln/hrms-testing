@@ -2031,10 +2031,14 @@ def generate_utilization_report(logged_in_employee, start_date, end_date):
     """
 
     # Step 1: Choose employees for report
-    if logged_in_employee.user.is_staff or logged_in_employee.user.is_superuser:
+        # Admin: get all employees
+    if logged_in_employee is None:
         employees = Employees.objects.all().order_by('employee_id','first_name','last_name')
     else:
-        if logged_in_employee.employees_managed.exists():
+        # Normal user
+        if logged_in_employee.user.is_staff or logged_in_employee.user.is_superuser:
+            employees = Employees.objects.all().order_by('employee_id','first_name','last_name')
+        elif logged_in_employee.employees_managed.exists():
             employees = logged_in_employee.employees_managed.all().order_by('employee_id','first_name','last_name')
         else:
             raise PermissionDenied("You are not authorized to view this report.")
@@ -2135,6 +2139,7 @@ def admin_work_utilization_view(request):
     default_end = today
     default_start = today - timedelta(days=6)
 
+    # --- Get dates from query params ---
     start_str = request.GET.get("start_date")
     end_str = request.GET.get("end_date")
 
@@ -2144,6 +2149,7 @@ def admin_work_utilization_view(request):
     except ValueError:
         start_date, end_date = default_start, default_end
 
+    # --- Enforce min/max allowed dates ---
     min_allowed = datetime(2025, 8, 1).date()
     start_date = max(start_date, min_allowed)
     end_date = min(end_date, today)
@@ -2153,10 +2159,9 @@ def admin_work_utilization_view(request):
         if start_date < min_allowed:
             start_date = min_allowed
 
-    # For admins, employee_obj = fake holder just to pass role check
-    employee_obj = Employees.objects.filter(user=request.user).first()
-
-    report_data = generate_utilization_report(employee_obj, start_date, end_date) if request.GET else []
+    # --- Admins do not need an Employees object ---
+    # Pass None to generate_utilization_report to indicate admin
+    report_data = generate_utilization_report(None, start_date, end_date) if request.GET else []
 
     return render(request, "timesheet/admin/work_utilization.html", {
         "report_data": report_data,
@@ -2164,6 +2169,7 @@ def admin_work_utilization_view(request):
         "end_date": end_date,
         "today": today
     })
+
 
 @employee_signin_required
 def employee_work_utilization_view(request):
@@ -2253,28 +2259,31 @@ def _build_excel_response(report_data, filename):
     workbook.save(response)
     return response
 
+
 @admin_signin_required
 def export_admin_utilization(request):
+    # --- Permission check ---
     if not (request.user.is_staff or request.user.is_superuser):
         raise PermissionDenied("Admins only.")
 
-    start_date = request.GET.get("start_date", "").strip()
-    end_date = request.GET.get("end_date", "").strip()
+    # --- Get query parameters ---
+    start_str = request.GET.get("start_date", "").strip()
+    end_str = request.GET.get("end_date", "").strip()
 
-    if not start_date or not end_date:
+    if not start_str or not end_str:
         return HttpResponseBadRequest("Start and End date parameters are required.")
 
     try:
-        start_date = datetime.strptime(start_date, "%Y-%m-%d").date()
-        end_date = datetime.strptime(end_date, "%Y-%m-%d").date()
+        start_date = datetime.strptime(start_str, "%Y-%m-%d").date()
+        end_date = datetime.strptime(end_str, "%Y-%m-%d").date()
     except ValueError:
         return HttpResponseBadRequest("Invalid date format. Use YYYY-MM-DD.")
 
-    # Pass dummy employee (just for role check)
-    employee_obj = Employees.objects.filter(user=request.user).first()
+    # --- Generate report ---
+    # For admins, pass None to indicate admin (no employee object needed)
+    report_data = generate_utilization_report(None, start_date, end_date)
 
-    report_data = generate_utilization_report(employee_obj, start_date, end_date)
-
+    # --- Return Excel response ---
     return _build_excel_response(report_data, "Admin_Employee_Utilization.xlsx")
 
 @employee_signin_required
@@ -2316,13 +2325,17 @@ def generate_project_cc_utilization_report(logged_in_employee, start_date, end_d
     from datetime import timedelta
 
     # Employees scope
-    if logged_in_employee.user.is_staff or logged_in_employee.user.is_superuser:
+    # Employees scope
+    if logged_in_employee is None:
+        # Admin: all employees
         employees = Employees.objects.all().order_by('employee_id', 'first_name', 'last_name')
+    elif logged_in_employee.user.is_staff or logged_in_employee.user.is_superuser:
+        employees = Employees.objects.all().order_by('employee_id','first_name','last_name')
+    elif logged_in_employee.employees_managed.exists():
+        employees = logged_in_employee.employees_managed.all().order_by('employee_id','first_name','last_name')
     else:
-        if logged_in_employee.employees_managed.exists():
-            employees = logged_in_employee.employees_managed.all().order_by('employee_id','first_name','last_name')
-        else:
-            raise PermissionDenied("You are not authorized to view this report.")
+        raise PermissionDenied("You are not authorized to view this report.")
+
 
     report = []
 
@@ -2454,13 +2467,9 @@ def admin_project_cc_utilization_view(request):
         if start_date < min_allowed:
             start_date = min_allowed
 
-    try:
-        employee_obj = Employees.objects.get(user=request.user)
-    except Employees.DoesNotExist:
-        raise PermissionDenied("Employee profile not found.")
-
-    # Admins/Managers see team/company
-    report_data = generate_project_cc_utilization_report(employee_obj, start_date, end_date) if request.GET else []
+    # ✅ Pass None for admin to indicate "all employees"
+    employee_obj = Employees.objects.filter(user=request.user).first()  # Optional, just for template
+    report_data = generate_project_cc_utilization_report(None, start_date, end_date) if request.GET else []
 
     return render(request, "timesheet/admin/project_cc_utilization.html", {
         "report_data": report_data,
@@ -2525,31 +2534,32 @@ def employee_project_cc_utilization_view(request):
 
 import openpyxl
 from django.http import HttpResponse
-
-@login_required
 def export_project_cc_utilization(request):
-    start_date = request.GET.get("start_date")
-    end_date = request.GET.get("end_date")
+    start_str = request.GET.get("start_date")
+    end_str = request.GET.get("end_date")
 
-    if not start_date or not end_date:
+    if not start_str or not end_str:
         return HttpResponseBadRequest("Start and End date are required.")
 
     try:
-        start_date = datetime.strptime(start_date, "%Y-%m-%d").date()
-        end_date = datetime.strptime(end_date, "%Y-%m-%d").date()
+        start_date = datetime.strptime(start_str, "%Y-%m-%d").date()
+        end_date = datetime.strptime(end_str, "%Y-%m-%d").date()
     except ValueError:
         return HttpResponseBadRequest("Invalid date format. Use YYYY-MM-DD.")
 
-    try:
-        employee_obj = Employees.objects.get(user=request.user)
-    except Employees.DoesNotExist:
-        raise PermissionDenied("Employee profile not found.")
+    # Determine if user is admin or regular employee
+    if request.user.is_staff or request.user.is_superuser:
+        employee_obj = None  # Admin: pass None to report
+    else:
+        try:
+            employee_obj = Employees.objects.get(user=request.user)
+        except Employees.DoesNotExist:
+            raise PermissionDenied("Employee profile not found.")
 
+    # Generate report
     report_data = generate_project_cc_utilization_report(employee_obj, start_date, end_date)
 
-
-
-    # Workbook
+    # Create Excel workbook
     wb = openpyxl.Workbook()
     sheet = wb.active
     sheet.title = "Project vs CC Utilization"
@@ -2580,7 +2590,9 @@ def export_project_cc_utilization(request):
             f"{entry.get('cc_utilization', 0)}%",
         ])
 
-    response = HttpResponse(content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+    response = HttpResponse(
+        content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
     response["Content-Disposition"] = 'attachment; filename="Project_CC_Utilization.xlsx"'
     wb.save(response)
     return response
