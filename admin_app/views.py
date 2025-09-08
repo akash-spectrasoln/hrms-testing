@@ -2342,7 +2342,7 @@ def admin_leave_reports(request):
         
         # Add data
         for row, leave in enumerate(leave_requests, 2):
-            employee_name = f"{leave.employee_master.first_name} {leave.employee_master.middle_name or ''} {leave.employee_master.last_name}".strip()
+            employee_name = f"{leave.employee_master.first_name} {leave.employee_master.last_name}".strip()
             ws.cell(row=row, column=1, value=leave.employee_master.employee_id)
             ws.cell(row=row, column=2, value=employee_name)
             ws.cell(row=row, column=3, value=leave.start_date)
