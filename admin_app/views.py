@@ -2287,3 +2287,79 @@ def setup_delete_view(request, pk):
     return redirect('setup_list')
 
 
+from calendar import monthrange
+
+@signin_required
+def admin_leave_reports(request):
+
+    #fetching current month first day and last day for default dates
+    today = date.today()
+    first_day_of_month = today.replace(day=1)
+    last_day_of_month = today.replace(day=monthrange(today.year,today.month)[1])
+
+    filter_start_date = request.GET.get('start_date')
+    filter_end_date = request.GET.get('end_date')
+
+    try:
+        start_date = datetime.strptime(filter_start_date,'%Y-%m-%d').date()
+        end_date = datetime.strptime(filter_end_date,'%Y-%m-%d').date()
+    except:
+        start_date = first_day_of_month
+        end_date = last_day_of_month
+
+    # Get the sort parameter from the URL, default to 'start_date'
+    sort_by = request.GET.get('sort_by', 'start_date')
+
+    if sort_by == 'name':
+        leave_requests = LeaveRequest.objects.filter(
+            start_date__lte=end_date,
+            end_date__gte=start_date,
+            status__in=['Approved','Pending']
+        ).select_related('employee_master').order_by('employee_master__first_name')
+    else:
+        leave_requests = LeaveRequest.objects.filter(
+            start_date__lte=end_date,
+            end_date__gte=start_date,
+            status__in=['Approved','Pending']
+        ).select_related('employee_master').order_by('start_date')
+
+    # Handle Excel download
+    if request.GET.get('download') == 'excel':
+        response = HttpResponse(
+            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+        response['Content-Disposition'] = f'attachment; filename="subordinates_leave_summary_{start_date}_{end_date}.xlsx"'
+        
+        # Create workbook and worksheet
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = "Subordinates Leave Summary"
+        
+        # Add headers
+        headers = ['ID', 'Names', 'Leave Start Date', 'Leave End Date', 'Status']
+        for col, header in enumerate(headers, 1):
+            ws.cell(row=1, column=col, value=header)
+        
+        # Add data
+        for row, leave in enumerate(leave_requests, 2):
+            employee_name = f"{leave.employee_master.first_name} {leave.employee_master.middle_name or ''} {leave.employee_master.last_name}".strip()
+            ws.cell(row=row, column=1, value=leave.employee_master.employee_id)
+            ws.cell(row=row, column=2, value=employee_name)
+            ws.cell(row=row, column=3, value=leave.start_date)
+            ws.cell(row=row, column=4, value=leave.end_date)
+            ws.cell(row=row, column=5, value=leave.status)
+        
+        # Save workbook
+        wb.save(response)
+        return response
+
+    
+    context={
+        'leave_requests':leave_requests,
+        'start_date':start_date,
+        'end_date':end_date,
+        'sort_by' : sort_by
+    }
+
+    return render(request,"leave_reports.html",context)
+

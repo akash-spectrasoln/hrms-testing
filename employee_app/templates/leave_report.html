@@ -1,0 +1,230 @@
+{% extends 'partials/base.html' %}
+{% load static %}
+
+{% block styles %}
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+<link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+<style>
+.main-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    margin-top: 100px;
+}
+
+.card {
+    border: none;
+    border-radius: 12px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.table-responsive {
+    overflow-x: auto;
+}
+
+.table th, .table td {
+    vertical-align: middle;
+    white-space: nowrap;
+    font-size: 0.85rem;
+}
+
+.table th {
+    background-color: #4683fd;
+    font-weight: 600;
+    vertical-align: middle !important;
+    color: white;
+}
+
+.table a{
+    color: white;
+}
+
+.table td {
+    font-size: 0.85rem;
+
+}
+
+.no-data {
+    text-align: center;
+    padding: 20px;
+    color: #6b7280;
+}
+
+.card-body {
+    padding-top: 0rem;
+}
+
+/* Status badges */
+.status {
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+.status.pending {
+    background-color: #f3e4b6;
+    color: #100f0b;
+}
+.status.accepted {
+    background-color: #2db44d;
+    color: #0c0f0d;
+}
+.status.rejected {
+    background-color: #f8d7da;
+    color: #721c24;
+}
+.form-control-sm {
+    height: 25px !important; /* Override Bootstrap's default height */
+    padding: 0.1rem 0.5rem !important; /* Override Bootstrap's default padding */
+    font-size: 0.73rem !important; /* Override Bootstrap's default font-size */
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="main-content">
+        <!-- Filter Form -->
+        <form method="GET" action="" class="form-inline mb-3" id="leaveFilterForm" style="margin-left: 20px;">
+            <div class="form-group mr-2">
+                <label for="start_date" class="mr-1">Start Date</label>
+                <input type="date" class="form-control form-control-sm" id="start_date" name="start_date"
+                       value="{{ start_date|date:'Y-m-d' }}">
+            </div>
+            <div class="form-group mr-2">
+                <label for="end_date" class="mr-1">End Date</label>
+                <input type="date" class="form-control form-control-sm" id="end_date" name="end_date"
+                       value="{{ end_date|date:'Y-m-d' }}">
+            </div>
+            <div class="form-group mr-2">
+                <button type="submit" class="btn btn-primary btn-sm" style="padding: 2px 6px 2px 6px;">Filter</button>
+            </div>
+            <div class="form-group mr-2">
+                <a href="{%url 'leave-report'%}" class="btn btn-secondary btn-sm" style="padding: 2px 6px 2px 6px;">Reset</a>
+            </div>
+        </form>
+
+        <!-- Download Button -->
+        <div class="" style="margin-left: 20px; margin-bottom: 10px;">
+            <button id="downloadExcel" class="btn btn-success btn-sm  px-1 py-1" 
+                    {% if not leave_requests %}disabled{% endif %}>
+                <i class="fas fa-download"></i> Download Excel
+            </button>
+        </div>
+
+        <!-- Leave Requests Table -->
+        <div class="card">
+            <div class="card-body">
+                <div class="table-responsive" style="border-radius: 10px;">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th><a href="?start_date={{ start_date|date:'Y-m-d' }}&end_date={{ end_date|date:'Y-m-d' }}&sort_by=name">
+                                        Name
+                                        {% if sort_by == 'name' %}
+                                            <i class="fas fa-sort-down" style="color: white; margin-left: 10px;"></i>
+                                        {% endif %}
+                                    </a></th>
+                                    
+                                <th><a href="?start_date={{ start_date|date:'Y-m-d' }}&end_date={{ end_date|date:'Y-m-d' }}&sort_by=start_date">
+                                        Leave Start Date
+                                        {% if sort_by == 'start_date' %}
+                                            <i class="fas fa-sort-down" style="color: white; margin-left: 10px;"></i>
+                                        {% endif %}
+                                    </a></th>
+                                <th>Leave End Date</th>
+                                <th>Leave Days</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for leave in leave_requests %}
+                            <tr>
+                                <td>{{ leave.employee_master.employee_id }}</td>
+                                <td style="text-align: left !important;">
+                                    {{ leave.employee_master.first_name }} {{ leave.employee_master.last_name }}
+                                </td>
+                                <td>{{ leave.start_date|date:"M d, Y" }}</td>
+                                <td>{{ leave.end_date|date:"M d, Y" }}</td>
+                                <td>{{ leave.leave_days }}</td>
+                                <td>
+                                    <span class="status {% if leave.status == 'Pending' %}pending{% elif leave.status == 'Approved' %}accepted{% elif leave.status == 'Rejected' %}rejected{% endif %}">
+                                        {{ leave.status }}
+                                    </span>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="6" class="no-data">
+                                     No leave requests found for the selected date range.
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- JS -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.bundle.min.js"></script>
+<script>
+$(document).ready(function() {
+    $("#downloadExcel").click(async function(e) {
+        e.preventDefault();
+
+        $("#downloadSpinner").show();
+        let startDate = $("#start_date").val();
+        let endDate = $("#end_date").val();
+
+        try {
+            let response = await fetch(`?download=excel&start_date=${startDate}&end_date=${endDate}`);
+            if (!response.ok) throw new Error("Network error");
+            let blob = await response.blob();
+
+            // Chromium browsers (Save As dialog)
+            if (window.showSaveFilePicker) {
+                const options = {
+                    suggestedName: `subordinates_leave_summary_${startDate}_${endDate}.xlsx`,
+                    types: [{
+                        description: 'Excel Files',
+                        accept: {'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx']},
+                    }],
+                };
+                const handle = await window.showSaveFilePicker(options);
+                const writable = await handle.createWritable();
+                await writable.write(blob);
+                await writable.close();
+            } else {
+                // Fallback: auto-download
+                let url = window.URL.createObjectURL(blob);
+                let a = document.createElement("a");
+                a.href = url;
+                a.download = `subordinates_leave_summary_${startDate}_${endDate}.xlsx`;
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+            }
+        } catch (err) {
+            if (err.name === 'AbortError') {
+                console.log("Download canceled by user.");
+            } else {
+                // Handle actual errors like network issues or permission errors.
+                alert("Error while downloading Excel: " + err.message);
+                console.error("Download error:", err);
+            }
+        } finally {
+            $("#downloadSpinner").hide();
+        }
+    });
+});
+</script>
+
+
+{% endblock %}

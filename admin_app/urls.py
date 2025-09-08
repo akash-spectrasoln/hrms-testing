@@ -95,7 +95,7 @@ path('assignments/<int:pk>/delete/', ts_views.AssignProjectDeleteView.as_view(),
 path('costcenters/', ts_views.CostCenterListView.as_view(), name='costcenter_list'),
 path('costcenters/create/', ts_views.CostCenterCreateView.as_view(), name='costcenter_create'),
 path('costcenters/<str:pk>/edit/', ts_views.CostCenterUpdateView.as_view(), name='costcenter_update'),
-
+path('admin-leavereport/',admin_leave_reports,name='admin_leave_reports')
 ]
 
 

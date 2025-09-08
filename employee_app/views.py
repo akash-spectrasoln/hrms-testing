@@ -2237,3 +2237,100 @@ def allocate_leave(request, employee_id):
     }
     return render(request, 'allocate_leave.html', context)
 
+from datetime import date
+from calendar import monthrange
+import openpyxl
+from django.http import HttpResponse
+
+@signin_required
+def leave_report(request):
+    
+    manager = Employees.objects.get(user=request.user)
+    # Check if the employee is a manager (has subordinates) (this is for displaying icons for manager on sidebar)
+    if manager.employees_managed.exists():  # If there are employees managed by this employee
+        is_manager = True
+    else:
+        is_manager = False
+
+    subordinates = Employees.objects.filter(manager=manager)
+
+    today = date.today()
+    first_day_of_month = today.replace(day=1)
+    last_day_of_month = today.replace(day=monthrange(today.year,today.month)[1])
+
+    # Get date range from request parameters
+    filter_start_date = request.GET.get('start_date')
+    filter_end_date = request.GET.get('end_date')
+
+    # Get the sort parameter from the URL, default to 'start_date'
+    sort_by = request.GET.get('sort_by', 'start_date')
+
+    try:
+        start_date = datetime.strptime(filter_start_date, '%Y-%m-%d').date()
+        end_date = datetime.strptime(filter_end_date, '%Y-%m-%d').date()
+    except:
+        start_date = first_day_of_month
+        end_date = last_day_of_month
+
+# Dynamic sorting based on the sort_by parameter
+    if sort_by == 'name':
+        # To sort by a related model's field, use a double underscore `__`
+        leave_requests = LeaveRequest.objects.filter(
+            employee_master__in=subordinates,
+            start_date__lte=end_date,
+            end_date__gte=start_date,
+            status__in = ['Approved','Pending']
+        ).select_related('employee_master').order_by('employee_master__first_name')
+    else:
+        leave_requests = LeaveRequest.objects.filter(
+            employee_master__in=subordinates,
+            start_date__lte=end_date,
+            end_date__gte=start_date,
+            status__in = ['Approved','Pending']
+        ).select_related('employee_master').order_by('start_date')
+
+
+    # Handle Excel download
+    if request.GET.get('download') == 'excel':
+        response = HttpResponse(
+            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+        response['Content-Disposition'] = f'attachment; filename="subordinates_leave_summary_{start_date}_{end_date}.xlsx"'
+        
+        # Create workbook and worksheet
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = "Subordinates Leave Summary"
+        
+        # Add headers
+        headers = ['ID', 'Name', 'Leave Start Date', 'Leave End Date', 'Status']
+        for col, header in enumerate(headers, 1):
+            ws.cell(row=1, column=col, value=header)
+        
+        # Add data
+        for row, leave in enumerate(leave_requests, 2):
+            employee_name = f"{leave.employee_master.first_name} {leave.employee_master.middle_name or ''} {leave.employee_master.last_name}".strip()
+            ws.cell(row=row, column=1, value=leave.employee_master.employee_id)
+            ws.cell(row=row, column=2, value=employee_name)
+            ws.cell(row=row, column=3, value=leave.start_date)
+            ws.cell(row=row, column=4, value=leave.end_date)
+            ws.cell(row=row, column=5, value=leave.status)
+        
+        # Save workbook
+        wb.save(response)
+        return response
+
+    context={
+        'leave_requests': leave_requests,
+        'start_date': start_date,
+        'end_date': end_date,
+        'employee': manager,
+        'is_manager': is_manager ,
+        'emp_id': manager.employee_id,
+        'emp_fname': manager.first_name,
+        'emp_lname': manager.last_name,
+        'sort_by': sort_by, 
+    }
+
+    return render(request,"leave_report.html",context)
+
