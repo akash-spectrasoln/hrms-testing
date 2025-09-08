@@ -2320,7 +2320,7 @@ def generate_project_cc_utilization_report(logged_in_employee, start_date, end_d
         employees = Employees.objects.all().order_by('employee_id', 'first_name', 'last_name')
     else:
         if logged_in_employee.employees_managed.exists():
-            employees = logged_in_employee.employees_managed.all()
+            employees = logged_in_employee.employees_managed.all().order_by('employee_id','first_name','last_name')
         else:
             raise PermissionDenied("You are not authorized to view this report.")
 
