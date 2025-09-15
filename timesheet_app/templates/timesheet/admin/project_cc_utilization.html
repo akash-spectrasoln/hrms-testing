@@ -89,7 +89,8 @@
                         <thead>
                             <tr>
                                 <th>Employee</th>
-                                <th class="text-end">Working Days</th>
+                                <th class="text-end">Weekday Worked</th>
+                                <th class="text-end">Weekend Worked</th>
                                 <th class="text-end">Holidays</th>
                                 <th class="text-end">Leaves</th>
                                 <th class="text-end">Total Days</th>
@@ -104,14 +105,15 @@
                                 {% for entry in report_data %}
                                 <tr>
                                     <td>{{ entry.employee_name }}</td>
-                                    <td class="text-end">{{ entry.available_days }}</td>
-                                    <td class="text-end">{{ entry.holiday_days }}</td>
-                                    <td class="text-end">{{ entry.leave_days }}</td>
-                                    <td class="text-end">{{ entry.total_working_days }}</td>
-                                    <td class="text-end">{{ entry.project_days }}</td>
-                                    <td class="text-end">{{ entry.cc_days }}</td>
-                                    <td class="text-end">{{ entry.project_utilization }}%</td>
-                                    <td class="text-end">{{ entry.cc_utilization }}%</td>
+                                    <td class="text-end">{{ entry.weekday_worked|default:0 }}</td>
+                                    <td class="text-end">{{ entry.weekend_worked|default:0 }}</td>
+                                    <td class="text-end">{{ entry.holiday_days|default:0 }}</td>
+                                    <td class="text-end">{{ entry.leave_days|default:0 }}</td>
+                                    <td class="text-end">{{ entry.total_working_days|default:0 }}</td>
+                                    <td class="text-end">{{ entry.project_days|default:0 }}</td>
+                                    <td class="text-end">{{ entry.cc_days|default:0 }}</td>
+                                    <td class="text-end">{{ entry.project_utilization|default:0 }}%</td>
+                                    <td class="text-end">{{ entry.cc_utilization|default:0 }}%</td>
                                 </tr>
                                 {% endfor %}
                             {% else %}

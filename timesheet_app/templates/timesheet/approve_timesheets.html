@@ -555,29 +555,31 @@ $(document).on('click', '.unapprove-btn', function (e) {
 
 // --- View Details ---
 
-        $(document).on('click', '.view-details-btn', function () {
+    // --- View Details ---
+$(document).on('click', '.view-details-btn', function () {
     const employeeId = $(this).data('employee-id');
-    const employeeCode = $(this).data('employee-code'); // Get the new attribute
-    const selectedWeek = $(this).data('week');
-    const selectedYear = $(this).data('year');
+    const employeeCode = $(this).data('employee-code');
+    const selectedWeek = parseInt($(this).data('week'));
+    const selectedYear = parseInt($(this).data('year'));
     const employeeName = $(this).data('employee-name');
 
-    // Create a new Date object for the start of the week
-    const weekStart = new Date(selectedYear, 0, 1 + (selectedWeek - 1) * 7);
-    const dayOfWeek = weekStart.getDay();
-    const diff = weekStart.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
-    weekStart.setDate(diff);
+    // ✅ Sunday–Saturday calculation (same as backend get_week_start_end using %U)
+    const jan1 = new Date(selectedYear, 0, 1);
+    const jan1Day = jan1.getDay(); // 0=Sunday
+    const firstSunday = new Date(jan1);
+    firstSunday.setDate(jan1.getDate() + ((7 - jan1Day) % 7));
 
-    // Get the end date of the week (6 days after the start)
+    const weekStart = new Date(firstSunday);
+    weekStart.setDate(firstSunday.getDate() + (selectedWeek - 1) * 7);
+
     const weekEnd = new Date(weekStart);
-    weekEnd.setDate(weekEnd.getDate() + 6);
+    weekEnd.setDate(weekStart.getDate() + 6);
 
     const weekStartStr = weekStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
     const weekEndStr = weekEnd.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 
-    // Update the modal title with the new format
+    // Update the modal title
     const newTitle = `Timesheet - ${employeeCode} - ${employeeName} (${weekStartStr} - ${weekEndStr}, ${selectedYear})`;
-    
     $('#weekDetailsModalLabel').text(newTitle);
     $('#weekDetailsModal .modal-body').html('<p class="text-center">Loading details...</p>');
     $('#weekDetailsModal').modal('show');
@@ -590,32 +592,26 @@ $(document).on('click', '.unapprove-btn', function (e) {
             if (resp.success) {
                 let detailsHtml = '';
                 if (resp.entries?.length) {
-                   resp.entries.forEach(function (day) {
-    // Skip weekends if no entries/holiday/leave
-    if (day.is_weekend && !day.is_holiday && !day.is_leave && (!day.timesheet_entries || !day.timesheet_entries.length)) {
-        return; // skip this day
-    }
-
-    // choose hours (backend may give 'total_hours' or 'hours')
+                    resp.entries.forEach(function (day) {
     const totalHrs = day.total_hours ?? day.hours ?? 0;
 
-    // header row
     detailsHtml += `
         <div class="modal-day-section">
             <div class="day-header">
                 <span>
-                    ${day.date_str}
+                    ${day.date_str} - ${day.day_name}
                     ${day.is_holiday 
                         ? ` - Holiday - ${day.holiday_name || 'Holiday'}` 
                         : day.is_leave 
                             ? ' - Leave' 
-                            : ''}
+                            : day.is_weekend 
+                                ? ' - Weekend' 
+                                : ''}
                 </span>
                 <span>${totalHrs} hrs</span>
             </div>
     `;
 
-    // entries if present
     if (day.timesheet_entries?.length) {
         day.timesheet_entries.forEach(function (entry) {
             detailsHtml += `
@@ -628,7 +624,7 @@ $(document).on('click', '.unapprove-btn', function (e) {
         });
     }
 
-    detailsHtml += '</div>'; // close modal-day-section
+    detailsHtml += '</div>';
 });
 
                 } else {
@@ -639,11 +635,11 @@ $(document).on('click', '.unapprove-btn', function (e) {
                 $('#weekDetailsModal .modal-body').html('<p class="text-center text-danger">' + (resp.message || 'Error loading details.') + '</p>');
             }
         },
-
         error: function () {
             $('#weekDetailsModal .modal-body').html('<p class="text-center text-danger">Error loading details. Please try again.</p>');
         }
     });
+
 });
 
     });

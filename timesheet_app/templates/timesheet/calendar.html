@@ -222,10 +222,19 @@
 
   /* ---------------- Calendar ---------------- */
   .calendar-container {
-    overflow-x: auto;
+    overflow-x: hidden;
     margin-top: 4px;
     -webkit-overflow-scrolling: touch;
   }
+  .calendar-wrapper {
+  margin-bottom: 0; /* remove bottom space */
+  padding-bottom: 0; /* shrink padding */
+}
+
+.timesheet-entry-table {
+  margin-top: 0;
+}
+
 
   .calendar-grid {
     display: grid;
@@ -310,6 +319,19 @@
     background-color: #f8adad;
     color: #d64352;
     font-weight: 600;
+  }
+  
+  .status-weekend-entered {
+    background-color: #9bacbc;
+    color: #050e18;
+    border-bottom: 3px solid #28a745;
+  }
+
+  .status-holiday-entered {
+    background-color: #f8adad;
+    color: #d64352;
+    font-weight: 600;
+    border-bottom: 3px solid #28a745;
   }
 
   .status-leave {
@@ -672,7 +694,7 @@ input[type="date"] {
         <div class="left-column">
           <!-- 📅 Calendar Section -->
           <div class="calendar-wrapper" data-joining-date="{{ employee.enc_valid_from|date:'Y-m-d' }}">
-            <div class="card shadow-sm mb-0">
+            <div class="card shadow-sm mb-1 border">
 
               <!-- Calendar Header with Proper Navigation -->
               <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center py-1 flex-wrap flex-sm-nowrap">
@@ -715,9 +737,9 @@ input[type="date"] {
 
               <div class="card-body p-0">
                 <!-- Calendar Grid -->
-                <div class="calendar-container mb-0">
+                <div class="calendar-container mb-1">
                   <!-- Week Headers -->
-                  <div class="calendar-grid calendar-header mb-0 small fw-bold">
+                  <div class="calendar-grid calendar-header mb-1 small fw-bold">
                     {% for day in weekdays %}
                     <div class="text-center border-bottom">{{ day }}</div>
                     {% endfor %}
@@ -1068,7 +1090,7 @@ input[type="date"] {
         // Initial setup for the calendar days on page load.
         // This is fine here because it runs only once.
         document.querySelectorAll('.calendar-day').forEach(d => {
-            if (d.classList.contains('status-weekend') || d.classList.contains('status-holiday') || d.classList.contains('status-leave') || d.classList.contains('leave-day')) {
+            if (d.classList.contains('status-leave') || d.classList.contains('leave-day')) {
                 d.classList.add('disabled');
                 clearDayHours(d);
                 d.classList.remove('status-entered');
@@ -1353,8 +1375,6 @@ if (addEntryBtn) {
         populateProjects(data.projects);
 
         if (selectedCell && (
-            selectedCell.classList.contains('status-weekend') ||
-            selectedCell.classList.contains('status-holiday') ||
             selectedCell.classList.contains('status-leave'))
         ) {
             selectedCell.classList.add('disabled');
@@ -1471,7 +1491,8 @@ const handleCalendarClick = async (e) => {
                 // 🔹 Re-attach navigation handlers
                 attachNavHandlers();
             }
-        })
+        
+          })
         .catch(err => console.error('Error loading calendar:', err))
         .finally(() => hideSpinnerAndEnableButtons());
 }
@@ -1500,56 +1521,85 @@ const handleCalendarClick = async (e) => {
         attachNavHandlers();
         bindCalendarDayListener(); // 🌟 CRITICAL FIX: Initial binding for the calendar days
         
+/** -------------------- Calendar refresh (SAFE) -------------------- **/
         /** -------------------- Calendar refresh (SAFE) -------------------- **/
-        async function refreshCalendarDates(dates, maxRetries = 4, baseDelay = 250) {
-            const tasks = [...new Set(dates)].map(async (d) => {
-                const cell = document.querySelector(`.calendar-day[data-date="${d}"]`);
-                for (let attempt = 0; attempt < maxRetries; attempt++) {
-                    try {
-                        const data = await fetchDayDataNoCache(d);
-                        const totalHrs = data.entries?.reduce((a, e) => a + parseFloat(e.hours_worked || 0), 0) || 0;
-                        if (!cell) return;
-                        cell.querySelector('.day-hours')?.remove();
-                        cell.classList.remove('updating');
-                        if (cell.classList.contains('status-weekend') || cell.classList.contains('status-holiday') || data.is_leave_day) {
-                            cell.classList.add('disabled');
-                            cell.classList.remove('status-entered', 'status-not-entered');
-                            return;
-                        }
-                        if (totalHrs > 0) {
-                            const hoursEl = document.createElement('span');
-                            hoursEl.className = 'day-hours';
-                            hoursEl.textContent = totalHrs + 'h';
-                            cell.appendChild(hoursEl);
-                            cell.classList.add('status-entered');
-                            cell.classList.remove('status-not-entered', 'disabled');
-                            return;
-                        } else {
-                            if (attempt < maxRetries - 1) {
-                                await sleep(baseDelay * (attempt + 1));
-                                continue;
-                            } else {
-                                cell.classList.remove('status-entered');
-                                cell.classList.add('status-not-entered');
-                                cell.classList.remove('disabled');
-                                return;
-                            }
-                        }
-                    } catch (err) {
-                        if (attempt < maxRetries - 1) {
-                            await sleep(baseDelay * (attempt + 1));
-                            continue;
-                        } else {
-                            console.error('refreshCalendarDates error for', d, err);
-                            cell?.classList.remove('updating');
-                            return;
-                        }
+async function refreshCalendarDates(dates, maxRetries = 4, baseDelay = 250) {
+    const tasks = [...new Set(dates)].map(async (d) => {
+        const cell = document.querySelector(`.calendar-day[data-date="${d}"]`);
+        if (!cell) return;
+
+        // Add a temporary class to indicate the cell is updating
+        cell.classList.add('updating');
+
+        for (let attempt = 0; attempt < maxRetries; attempt++) {
+            try {
+                const data = await fetchDayDataNoCache(d);
+                const totalHrs = data.entries?.reduce((a, e) => a + parseFloat(e.hours_worked || 0), 0) || 0;
+
+                // 1. Remove all existing status classes to prevent conflicts
+                cell.classList.remove(
+                    'status-leave',
+                    'status-entered',
+                    'status-not-entered',
+                    'status-weekend-entered',
+                    'status-holiday-entered',
+                    'status-weekend',
+                    'status-holiday',
+                    'disabled'
+                );
+                cell.classList.remove('updating');
+                clearDayHours(cell);
+
+                // 2. Re-apply the correct state based on the fetched data
+                
+                // First, check for highest-priority disabled states (leave, future, etc.)
+                if (data.is_leave_day || data.is_future || data.is_before_joining_date) {
+                    cell.classList.add('disabled', 'status-leave');
+                    // Exit early for disabled days
+                    return; 
+                }
+
+                // Next, check for hours entered
+                if (totalHrs > 0) {
+                    const hoursEl = document.createElement('span');
+                    hoursEl.className = 'day-hours';
+                    hoursEl.textContent = totalHrs + 'h';
+                    cell.appendChild(hoursEl);
+
+                    if (data.is_weekend) {
+                        cell.classList.add('status-weekend-entered');
+                    } else if (data.is_holiday) {
+                        cell.classList.add('status-holiday-entered');
+                    } else {
+                        cell.classList.add('status-entered');
+                    }
+                } else {
+                    // No hours entered
+                    if (data.is_weekend) {
+                        cell.classList.add('status-weekend');
+                    } else if (data.is_holiday) {
+                        cell.classList.add('status-holiday');
+                    } else {
+                        cell.classList.add('status-not-entered');
                     }
                 }
-            });
-            await Promise.all(tasks);
+                
+                // Success, break the retry loop
+                return; 
+            } catch (err) {
+                if (attempt < maxRetries - 1) {
+                    await sleep(baseDelay * (attempt + 1));
+                    continue; // Continue to the next attempt
+                } else {
+                    console.error('refreshCalendarDates error for', d, err);
+                    cell.classList.remove('updating');
+                    return; // Fail gracefully after max retries
+                }
+            }
         }
-
+    });
+    await Promise.all(tasks);
+}
         /** -------------------- Checkbox & Paste Logic -------------------- **/
         const initCheckboxLogic = () => {
             const checkboxes = document.querySelectorAll('.entry-checkbox');
@@ -1590,7 +1640,7 @@ const handleCalendarClick = async (e) => {
             if (calendar) {
                 calendar.querySelectorAll('.calendar-day').forEach(d => {
                     d.classList.remove('selected-source-date', 'selected-target-date', 'clicked-date');
-                    if (d.classList.contains('status-weekend') || d.classList.contains('status-holiday') || d.classList.contains('status-leave') || d.classList.contains('leave-day')) {
+                    if (d.classList.contains('status-leave') || d.classList.contains('leave-day')) {
                         d.classList.add('disabled');
                     } else {
                         d.classList.remove('disabled');

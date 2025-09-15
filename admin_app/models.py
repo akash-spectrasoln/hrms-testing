@@ -1259,23 +1259,23 @@ class TimesheetHdr(models.Model):
 
             if is_holiday:
                 if total_daily_work_hours > 0:
-                    if total_daily_work_hours < work_hours_per_day:
-                        self.tot_hol_hrs += work_hours_per_day
-                    else:
-                        self.tot_hol_hrs += total_daily_work_hours
+                    # Employee worked on holiday → count only as work hours
+                    self.tot_hrs_wrk += total_daily_work_hours
                 else:
+                    # Employee didn’t work → count as holiday hours
                     self.tot_hol_hrs += work_hours_per_day
-            # Add the `is_weekend` check here
             elif is_leave and not is_weekend:
                 # Leave day logic, but only if it's not a weekend
                 self.tot_lev_hrs += work_hours_per_day
             else:
                 # Regular weekday or weekend logic
                 self.tot_hrs_wrk += total_daily_work_hours
+
             
             current_date += timedelta(days=1)
         
         self.save(update_fields=["tot_hrs_wrk", "tot_hol_hrs", "tot_lev_hrs"])
+    
     def __str__(self):
         return f"Timesheet {self.tsheet_id} - {self.employee.first_name}{self.employee.middle_name}{self.employee.last_name}"
 

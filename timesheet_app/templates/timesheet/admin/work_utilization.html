@@ -101,7 +101,8 @@
                         <thead>
                             <tr>
                                 <th>Employee</th>
-                                <th class="text-end">Worked Days</th>
+                                <th class="text-end">Weekdays Worked</th>
+                                <th class="text-end">Weekends Worked</th>
                                 <th class="text-end">Leave Days</th>
                                 <th class="text-end">Holidays</th>
                                 <th class="text-end">Total Work Days</th>
@@ -115,6 +116,7 @@
                                 <tr>
                                     <td>{{ entry.employee_name }}</td>
                                     <td class="text-end">{{ entry.worked_days }}</td>
+                                    <td class="text-end">{{ entry.extra_weekend_days }}</td>
                                     <td class="text-end">{{ entry.leave_days }}</td>
                                     <td class="text-end">{{ entry.holiday_days }}</td>
                                     <td class="text-end">{{ entry.total_work_days }}</td>

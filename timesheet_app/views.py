@@ -714,6 +714,10 @@ def adjust_month_year(month, year, delta):
 
 # ---------------- 1️⃣ Config ----------------
 
+
+import calendar
+from datetime import date, timedelta
+from django.db.models import Sum, Case, When, IntegerField
 @employee_signin_required
 def timesheet_calendar(request):
     """
@@ -724,15 +728,10 @@ def timesheet_calendar(request):
     today = timezone.localdate()
 
     # 1️⃣ Determine the earliest valid date for the employee
-    # Correctly use the enc_valid_from property to get the decrypted joining date
     joining_date = employee.enc_valid_from
-    
-    # Set the fixed new start date
     new_start_date_of_calendar = date(2025, 9, 1)
-
-    # The effective start date for this employee is the later of their joining date or the fixed start date
     effective_start_date = max(joining_date, new_start_date_of_calendar)
-    
+
     # 2️⃣ Month & Year selection
     try:
         month = int(request.GET.get('month', today.month))
@@ -740,24 +739,27 @@ def timesheet_calendar(request):
     except (TypeError, ValueError):
         month, year = today.month, today.year
 
-    # Validate month/year
     month = max(1, min(12, month))
     year = max(2000, min(2100, year))
 
     # 3️⃣ Apply Navigation Limits
-    # Limit backward navigation to the effective start date.
     current_date_obj = date(year, month, 1)
-    
     if current_date_obj < date(effective_start_date.year, effective_start_date.month, 1):
         month, year = effective_start_date.month, effective_start_date.year
-    
-    # The forward navigation limit will be applied later in the context.
+        current_date_obj = date(year, month, 1)
 
-    # 4️⃣ Timesheet items
+    # 6️⃣ Build the calendar grid (we do this early so we know the full date range)
+    cal = calendar.Calendar(firstweekday=6)  # Sunday first
+    month_days = cal.monthdatescalendar(year, month)  # list of weeks -> list of dates
+    # grid_start is first cell (usually from prev month), grid_end is last
+    grid_start = month_days[0][0]
+    grid_end = month_days[-1][-1]
+
+    # 4️⃣ Timesheet items — fetch for the full grid range (so adjacent-month days have data)
     timesheet_qs = TimesheetItem.objects.filter(
         hdr__employee=employee,
-        wrk_date__year=year,
-        wrk_date__month=month
+        wrk_date__gte=grid_start,
+        wrk_date__lte=grid_end
     ).values('wrk_date').annotate(
         total_hours=Sum('wrk_hours'),
         approved_count=Sum(
@@ -765,87 +767,83 @@ def timesheet_calendar(request):
         )
     )
 
+    # Map date -> totals
     timesheet_hours = {entry['wrk_date']: entry['total_hours'] for entry in timesheet_qs}
     timesheet_dates = set(timesheet_hours.keys())
     approved_dates = {entry['wrk_date'] for entry in timesheet_qs if entry['approved_count'] > 0}
 
-    # 5️⃣ Holidays & Leave
+    # 5️⃣ Holidays & leave — also across the grid range
     holidays_qs = Holiday.objects.filter(
         country=employee.country,
-        date__year=year,
-        date__month=month
+        date__gte=grid_start,
+        date__lte=grid_end
     ).only('date', 'name')
     state_holidays_qs = StateHoliday.objects.filter(
         country=employee.country,
         state=employee.state,
-        date__year=year,
-        date__month=month
+        date__gte=grid_start,
+        date__lte=grid_end
     ).only('date', 'name')
 
     all_holidays = {h.date: h.name for h in holidays_qs}
     all_holidays.update({sh.date: sh.name for sh in state_holidays_qs})
 
-    # Leave dates
-    month_start = date(year, month, 1)
-    month_end = date(year, month, calendar.monthrange(year, month)[1])
-
+    # Leave dates — include leaves that overlap the grid range
     leave_dates = set()
-    for start, end in LeaveRequest.objects.filter(
+    leave_qs = LeaveRequest.objects.filter(
         employee_master=employee,
         status='Approved',
-        start_date__lte=month_end,
-        end_date__gte=month_start
-    ).values_list('start_date', 'end_date'):
-        for i in range((end - start).days + 1):
-            day = start + timedelta(days=i)
-            if day.month == month:
-                leave_dates.add(day)
+        start_date__lte=grid_end,
+        end_date__gte=grid_start
+    ).values_list('start_date', 'end_date')
 
-    # 6️⃣ Build calendar grid
-    cal = calendar.Calendar(firstweekday=0)
-    month_days = cal.monthdatescalendar(year, month)
+    for start, end in leave_qs:
+        # clamp to grid range to avoid iterating unnecessarily
+        s = max(start, grid_start)
+        e = min(end, grid_end)
+        for i in range((e - s).days + 1):
+            leave_dates.add(s + timedelta(days=i))
+
+    # 6️⃣ Build calendar_data — include outside-month days, add is_current_month flag
     calendar_data = []
-
     for week in month_days:
         week_data = []
         for day in week:
-            if day.month != month:
-                week_data.append(None)
-                continue
-
-            is_weekend = day.weekday() >= 5
+            # flags
+            is_current_month = (day.month == month)
+            is_weekend = day.weekday() >= 5  # Sat=5, Sun=6 (but with firstweekday=6 Sun is 6)
             is_holiday = day in all_holidays
             holiday_name = all_holidays.get(day, '')
             on_leave = day in leave_dates
             is_entered = day in timesheet_dates
             is_future = day > today
             is_approved = day in approved_dates
-            
-            # --- New Logic: Disable days before effective start date ---
             is_before_joining_date = day < effective_start_date
-            
-            status, hours, is_disabled = "", None, False
 
-            # Disabling logic: A day is disabled if it's a special day, in the future,
-            # OR before the employee's effective start date.
-            if is_weekend or is_holiday or on_leave or is_future or is_before_joining_date:
-                is_disabled = True
-            else:
-                is_disabled = False
+            # Disabled logic (same as your previous rule)
+            is_disabled = any([ on_leave, is_future, is_before_joining_date])
+            # NOTE: we DO NOT automatically disable outside-month days here. Let frontend decide.
+            # if you want to disable outside-month cells too, uncomment:
+            # if not is_current_month:
+            #     is_disabled = True
 
-            # Status logic: Prioritize special days for the class name
-            if is_weekend:
-                status = "status-weekend"
+            # Status priority
+            if on_leave:
+                status = "status-leave"
+            elif is_holiday and is_entered:
+                status = "status-holiday-entered"
+            elif is_weekend and is_entered:
+                status = "status-weekend-entered"
             elif is_holiday:
                 status = "status-holiday"
-            elif on_leave:
-                status = "status-leave"
+            elif is_weekend:
+                status = "status-weekend"
             elif is_entered:
                 status = "status-entered"
             else:
                 status = "status-not-entered"
 
-            # Set hours only if entries exist, regardless of status class
+
             hours = timesheet_hours.get(day, 0) if is_entered else None
 
             week_data.append({
@@ -861,38 +859,41 @@ def timesheet_calendar(request):
                 'on_leave': on_leave,
                 'is_weekend': is_weekend,
                 'is_holiday': is_holiday,
+                'is_current_month': is_current_month,
+                'is_outside_month': not is_current_month,  # convenience flag
             })
         calendar_data.append(week_data)
 
-    # 7️⃣ Navigation
+    # 7️⃣ Navigation (same as you had)
     prev_month, prev_year = adjust_month_year(month, year, -1)
     next_month, next_year = adjust_month_year(month, year, 1)
 
-    # Disable previous navigation if before the effective start date.
     prev_date_obj = date(prev_year, prev_month, 1) if prev_month else None
     if prev_date_obj and prev_date_obj < date(effective_start_date.year, effective_start_date.month, 1):
         prev_month, prev_year = None, None
 
-    # Enable next navigation to any month in the current year, but not future years.
-    next_date_obj = date(next_year, next_month, 1) if next_month else None
-    if next_date_obj and next_date_obj > date(today.year, 12, 1):
-        next_month, next_year = None, None
-
-    # 8️⃣ Context
+    # 8️⃣ Context — include grid range and also a timesheet list for grid (useful for popup)
     context = {
         'year': year,
         'month': month,
         'current_month_name': calendar.month_name[month],
-        'weekdays': ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+        'weekdays': ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
         'calendar_data': calendar_data,
         'today': today,
         'activities': Activity.objects.only('act_id', 'act_name'),
         'work_locations': WrkLocation.objects.only('loc_id', 'loc_name'),
         'employee': employee,
+        # monthly list preserved (for other places that depend on it)
         'timesheet_entries': TimesheetItem.objects.filter(
             hdr__employee=employee,
             wrk_date__year=year,
             wrk_date__month=month
+        ).order_by('-wrk_date'),
+        # full-grid timesheet items (for legend popup / quick lookup)
+        'timesheet_entries_grid': TimesheetItem.objects.filter(
+            hdr__employee=employee,
+            wrk_date__gte=grid_start,
+            wrk_date__lte=grid_end
         ).order_by('-wrk_date'),
         'prev_month': prev_month,
         'prev_year': prev_year,
@@ -904,13 +905,15 @@ def timesheet_calendar(request):
         'next_year_only': next_year,
         'current_year': today.year,
         'is_manager': is_manager,
-        'joining_date': joining_date
+        'joining_date': joining_date,
+        'grid_start': grid_start,
+        'grid_end': grid_end,
     }
 
     # 9️⃣ AJAX support
     if request.headers.get('x-requested-with') == 'XMLHttpRequest':
         return render(request, 'timesheet/calendar_grid.html', context)
-        
+
     return render(request, 'timesheet/calendar.html', context)
 
 @employee_signin_required
@@ -933,8 +936,8 @@ def submit_timesheet(request):
     except (ValueError, TypeError):
         return _error_response(request, "Invalid date format.", 400)
 
-    # Week start (Monday) & end (Sunday) for header
-    week_start = date_obj - timedelta(days=date_obj.weekday())
+    # Week start (Sunday) & end (Saturday) for header
+    week_start = date_obj - timedelta(days=(date_obj.weekday() + 1) % 7)
     week_end = week_start + timedelta(days=6)
 
     # 2️⃣ Determine project OR cost center
@@ -1151,40 +1154,48 @@ def get_timesheet_day_data(request):
     Fetch and return all necessary data for a given day's timesheet entry screen:
       - Employee's timesheet entries for that day
       - Available projects and cost center options
-      - Leave status for the day
+      - Leave/holiday status for the day
       - Project end date and remaining working days
     """
-    # 1. CORRECTED: Fetch employee profile and related employee type in one query
+    # 1. Fetch employee profile
     try:
         employee = request.user.employee_profile
-        # We need to refresh the object to ensure the related field is loaded
-        # The best practice is to load it upfront with the initial query
-        # Let's assume you've already configured select_related in the view that calls this function.
-        # If not, you might need to do something like this:
-        # employee = EmployeeProfile.objects.select_related('employee_type').get(user=request.user)
-
-    except employee.DoesNotExist:
+    except Employees.DoesNotExist:
         return JsonResponse({"error": "Employee profile not found."}, status=404)
 
-    #  2. CORRECTED: Get the 'code' field from the related employee_type object
+    # 2. Employee type code
     employee_type_code = employee.employee_type.code if employee.employee_type else None
 
+    # 3. Parse date
     date_str = request.GET.get("date")
     date_obj = parse_date(date_str)
-
-    #  Invalid date check
     if not date_obj:
         return JsonResponse({"error": "Invalid date"}, status=400)
 
-    #  1. Check if the employee is on approved leave that day
+    # 4. Check leave
     on_leave = LeaveRequest.objects.filter(
         employee_master=employee,
         status="Approved",
         start_date__lte=date_obj,
         end_date__gte=date_obj
-    ).only("id").exists()
+    ).exists()
 
-    #  2. Get all timesheet entries for that date (with related fields to avoid N+1 queries)
+    # 5. Check holiday
+    is_holiday = Holiday.objects.filter(
+        country=employee.country,
+        date=date_obj
+    ).exists() or StateHoliday.objects.filter(
+        country=employee.country,
+        state=employee.state,
+        date=date_obj
+    ).exists()
+
+    # 5.5. Check if it's a weekend (Saturday or Sunday)
+    is_weekend = date_obj.weekday() >= 5 # 5 is Saturday, 6 is Sunday
+
+    
+
+    # 6. Timesheet entries
     items_qs = (
         TimesheetItem.objects
         .filter(hdr__employee=employee, wrk_date=date_obj)
@@ -1199,38 +1210,32 @@ def get_timesheet_day_data(request):
         )
     )
 
-
-    #  3. Build entries list for frontend
     entry_list = []
     for item in items_qs:
-        # 🌟 FIX: Consistently format the project/cost center name
         project_name = None
         project_id = None
         project_assignment_id = None
         is_costcenter = False
 
         if item.project_assignment:
-            # This is a project. Format it as "Client Alias - Project Name"
             proj_obj = item.project_assignment.project
             client_alias = proj_obj.client.client_alias if proj_obj.client else "No Client"
             project_name = f"{client_alias} - {proj_obj.project_name}"
             project_id = proj_obj.project_id
             project_assignment_id = item.project_assignment.pk
         elif item.costcenter:
-            # This is a cost center. Format it as "CostCenter ID - CostCenter Name"
             costcenter = item.costcenter
             project_name = f"{costcenter.costcenter_id} - {costcenter.costcenter_name}"
             project_id = costcenter.costcenter_id
             project_assignment_id = f"COSTCENTER-{project_id}"
             is_costcenter = True
-        
-        # 🌟 The rest of the dictionary now uses the new, consistently formatted fields
+
         entry_list.append({
             "tsheet_item_id": item.pk,
             "date": item.wrk_date,
             "projectAssignmentId": project_assignment_id,
             "project_id": project_id,
-            "project_name": project_name, # This is now the correctly formatted string
+            "project_name": project_name,
             "activity_id": item.activity.act_id if item.activity else None,
             "activity_name": item.activity.act_name if item.activity else "",
             "work_location_id": item.work_location.loc_id if item.work_location else None,
@@ -1241,8 +1246,7 @@ def get_timesheet_day_data(request):
             "is_costcenter": is_costcenter,
         })
 
-
-    # 4. Fetch active project assignments for that day
+    # 7. Fetch active project assignments
     project_assignments = AssignProject.objects.filter(
         employee=employee,
         start_date__lte=date_obj,
@@ -1274,9 +1278,11 @@ def get_timesheet_day_data(request):
             "remaining_days": remaining_days
         })
 
-    #  5. Add cost center as first option, but only for employees
-    #🌟 3. CORRECTED: Check against the `employee_type_code`
-    if employee.cost_center and employee_type_code == 'E':
+    # 8. Add cost center only if:
+    #    - Employee has a cost center
+    #    - Employee type is 'E'
+    #    - It is not a holiday/leave day
+    if employee.cost_center and employee_type_code == 'E' and not (on_leave or is_holiday or is_weekend):
         projects_list.insert(0, {
             "projectAssignmentId": f"COSTCENTER-{employee.cost_center.costcenter_id}",
             "project_id": employee.cost_center.costcenter_id,
@@ -1289,7 +1295,7 @@ def get_timesheet_day_data(request):
             "remaining_days": None
         })
 
-    #  6. Get first project entry’s end date & remaining working days
+    # 9. Get first project entry’s end date & remaining working days
     first_project_entry = next(
         (e for e in items_qs if e.project_assignment and e.project_assignment.project),
         None
@@ -1301,14 +1307,16 @@ def get_timesheet_day_data(request):
             employee, now().date(), project_end_date
         )
 
-    # ✅ 7. Return data as JSON
+    # ✅ 10. Return data
     return JsonResponse({
         "entries": entry_list,
         "is_leave_day": on_leave,
+        "is_holiday": is_holiday,
+        "is_weekend": is_weekend, # <-- Add this line
         "projects": projects_list,
         "remaining_working_days": remaining_working_days,
         "project_end_date": project_end_date,
-        "employee_type_code": employee_type_code, # 🌟 CORRECTED: Pass the code to the frontend
+        "employee_type_code": employee_type_code,
     }, encoder=DjangoJSONEncoder)
 
 from django.views.decorators.csrf import csrf_protect
@@ -1329,9 +1337,11 @@ def delete_timesheet_entry(request, entry_id):
 @require_POST
 def copy_timesheet_entries(request):
     """
-    Copy selected TimesheetItem entries to multiple target dates,
-    allowing copying to weekends and holidays with overlapping approved leave.
-    Leaves on weekends or holidays are ignored.
+    Copy selected TimesheetItem entries to multiple target dates.
+    Rules:
+      - Can copy to weekends and holidays (projects allowed).
+      - Approved leave on working days blocks copying.
+      - Do NOT allow cost center entries on holidays.
     """
     employee = request.user.employee_profile
 
@@ -1372,7 +1382,7 @@ def copy_timesheet_entries(request):
     if not items:
         return JsonResponse({"error": "No valid entries found"}, status=404)
 
-    # --- Fetch holidays for each month involved ---
+    # --- Fetch holidays ---
     emp_holidays = {}
     for date_obj in parsed_dates.values():
         year = date_obj.year
@@ -1391,8 +1401,6 @@ def copy_timesheet_entries(request):
         month_holidays = {h.date: h.name for h in holidays_qs}
         month_holidays.update({sh.date: sh.name for sh in state_holidays_qs})
         emp_holidays.update(month_holidays)
-
-
 
     # --- Fetch approved leave ---
     leave_ranges = LeaveRequest.objects.filter(
@@ -1413,7 +1421,8 @@ def copy_timesheet_entries(request):
             if day in emp_holidays:
                 continue
             leave_days.add(day)
-    # --- Fetch existing entries for target dates ---
+
+    # --- Existing entries map ---
     existing_entries = TimesheetItem.objects.filter(
         hdr__employee=employee,
         wrk_date__in=parsed_dates.values()
@@ -1431,9 +1440,7 @@ def copy_timesheet_entries(request):
         is_weekend = date_obj.weekday() >= 5
         is_holiday = date_obj in emp_holidays
 
-
-
-        # Skip leave days only on working days
+        # Skip approved leave days (only working days)
         if date_obj in leave_days:
             skipped_details.setdefault(td, []).append("Approved leave on a working day")
             continue
@@ -1442,7 +1449,7 @@ def copy_timesheet_entries(request):
         entries_copied = 0
 
         with transaction.atomic():
-            week_start = date_obj - timedelta(days=date_obj.weekday())
+            week_start = date_obj - timedelta(days=date_obj.weekday() + 1 if date_obj.weekday() != 6 else 0)
             week_end = week_start + timedelta(days=6)
 
             hdr, _ = TimesheetHdr.objects.get_or_create(
@@ -1460,6 +1467,19 @@ def copy_timesheet_entries(request):
                     skipped_details.setdefault(td, []).append(reason)
                     continue
 
+                # 🌟 NEW CHECK: block cost center on holidays
+                if item.costcenter and is_holiday:
+                    skipped_details.setdefault(td, []).append(
+                        f"Cannot copy cost center '{item.costcenter.costcenter_name}' to holiday"
+                    )
+                    continue
+                if item.costcenter and is_weekend:
+                    skipped_details.setdefault(td, []).append(
+                        f"Cannot copy cost center '{item.costcenter.costcenter_name}' to Weekend"
+                    )
+                    continue
+
+                # Project validity check
                 if item.project_assignment:
                     valid_project = AssignProject.objects.filter(
                         pk=item.project_assignment.pk,
@@ -1473,11 +1493,12 @@ def copy_timesheet_entries(request):
                         )
                         continue
 
+                # Hours check
                 if day_hours + item.wrk_hours > 12:
                     skipped_details.setdefault(td, []).append("Copying would exceed 12h limit")
                     continue
 
-                # --- Create timesheet entry ---
+                # --- Create entry ---
                 TimesheetItem.objects.create(
                     hdr=hdr,
                     wrk_date=date_obj,
@@ -1494,7 +1515,7 @@ def copy_timesheet_entries(request):
                 existing_map.setdefault(date_obj, {})[key] = item.wrk_hours
 
         if entries_copied > 0:
-            hdr.save()  # update updated_at
+            hdr.save()
             copied_dates.append(td)
         else:
             skipped_details.setdefault(td, []).append("No entries copied for this date")
@@ -1506,13 +1527,29 @@ def copy_timesheet_entries(request):
         "message": f"Copied to {len(copied_dates)} date(s). Skipped {len(skipped_details)} date(s)."
     })
 
+# def get_week_start_end(year: int, week: int):
+#     """Return Monday and Sunday dates for a given ISO week/year."""
+#     try:
+#         first_day = datetime.strptime(f'{year} {week} 1', '%G %V %u').date()
+#         return first_day, first_day + timedelta(days=6)
+#     except ValueError:
+#         return None, None
+
+from datetime import datetime, timedelta
+
 def get_week_start_end(year: int, week: int):
-    """Return Monday and Sunday dates for a given ISO week/year."""
+    """
+    Return Sunday–Saturday dates for a given Sunday-based week/year.
+    Uses %U (week numbers where weeks start on Sunday).
+    """
     try:
-        first_day = datetime.strptime(f'{year} {week} 1', '%G %V %u').date()
-        return first_day, first_day + timedelta(days=6)
+        # %U = week number (Sunday as first day, 00–53)
+        wk_start = datetime.strptime(f"{year} {week} 0", "%Y %U %w").date()
+        wk_end = wk_start + timedelta(days=6)
+        return wk_start, wk_end
     except ValueError:
         return None, None
+
 
 
 def build_leave_days(employee_ids, week_start, week_end):
@@ -1575,6 +1612,10 @@ def calculate_timesheet_stats(emp, ts_hdr, week_start, leave_days, holidays_cach
     """
     Calculates and returns a dictionary of all timesheet stats for an employee,
     including a detailed breakdown of entries for each day.
+    Week: Sunday–Saturday
+    Approval:
+
+        - If a day has entries → total >= min_daily_hours
     """
     # --- 1. Base setup ---
     has_timesheets = ts_hdr is not None
@@ -1583,6 +1624,7 @@ def calculate_timesheet_stats(emp, ts_hdr, week_start, leave_days, holidays_cach
 
     # Working hours baseline
     min_daily_hours = getattr(emp.country, 'working_hours', 9) or 9
+    weekly_threshold = min_daily_hours * 5
 
     # Leave / holiday caches for this employee
     leave_dates = leave_days.get(emp.id, set())
@@ -1591,23 +1633,33 @@ def calculate_timesheet_stats(emp, ts_hdr, week_start, leave_days, holidays_cach
     num_leaves = len(leave_dates)
     num_holidays = len(emp_holidays)
 
-    # --- 2. Aggregate hours (Retrieve from database) ---
-    if has_timesheets:
-        weekday_hours = ts_hdr.tot_hrs_wrk
-        total_holiday_hours = ts_hdr.tot_hol_hrs
-        total_leave_hours = ts_hdr.tot_lev_hrs
-    else:
-        weekday_hours = 0
-        total_holiday_hours = 0
-        total_leave_hours = 0
-    
-    # Weekend hours are not stored, so we sum them manually from the items
-    weekend_hours = sum(i.wrk_hours for i in timesheet_items if i.wrk_date.weekday() >= 5)
+    # --- 2. Aggregate hours (from header if exists) ---
+    # if has_timesheets:
+    #     weekday_hours = ts_hdr.tot_hrs_wrk
+    #     total_holiday_hours = ts_hdr.tot_hol_hrs
+    #     total_leave_hours = ts_hdr.tot_lev_hrs
+    # else:
+    #     weekday_hours = 0
+    #     total_holiday_hours = 0
+    #     total_leave_hours = 0
+    # --- 2. Aggregate hours (from items directly, not header) ---
+    weekday_hours = 0
+    weekend_hours = 0
+    for i in timesheet_items:
+        if i.wrk_date.weekday() >= 5:  # Sat=5, Sun=6
+            weekend_hours += i.wrk_hours
+        else:
+            weekday_hours += i.wrk_hours
+
+    # Leave/holiday hours can still come from header
+    total_leave_hours = ts_hdr.tot_lev_hrs if has_timesheets else 0
+    total_holiday_hours = ts_hdr.tot_hol_hrs if has_timesheets else 0
+
 
     detailed_entries = []
 
     # --- 3. Build day-by-day breakdown for display ---
-    for i in range(7):
+    for i in range(7):  # Sunday–Saturday
         current_date = week_start + timedelta(days=i)
         is_holiday = current_date in emp_holidays
         is_leave = current_date in leave_dates
@@ -1621,20 +1673,15 @@ def calculate_timesheet_stats(emp, ts_hdr, week_start, leave_days, holidays_cach
         holiday_name = emp_holidays.get(current_date)
 
         if is_holiday:
-            # Display logic for holidays: show credited hours
-            if entered_hours == 0:
-                day_total_hours = min_daily_hours
-            elif entered_hours < min_daily_hours:
+            if entered_hours == 0 or entered_hours < min_daily_hours:
                 day_total_hours = min_daily_hours
             else:
                 day_total_hours = entered_hours
             status_message = f"{holiday_name or 'Holiday'}"
         elif is_leave:
-            # Display logic for leave days
             day_total_hours = min_daily_hours
             status_message = "Leave Day"
         else:
-            # Normal workday display
             if entered_hours > 0:
                 status_message = "Entries made."
             day_total_hours = entered_hours
@@ -1651,11 +1698,10 @@ def calculate_timesheet_stats(emp, ts_hdr, week_start, leave_days, holidays_cach
             'timesheet_entries': [
                 {
                     'project_name': (
-                                    f"{e.project.client.client_alias}-{e.project.project_name}"
-                                    if e.project and e.project.client else
-                                    (e.project.project_name if e.project else None)
-                                    ),
-                    # Costcenter formatting with id
+                        f"{e.project.client.client_alias}-{e.project.project_name}"
+                        if e.project and e.project.client else
+                        (e.project.project_name if e.project else None)
+                    ),
                     'costcenter_name': (
                         f"{e.costcenter.costcenter_id}-{e.costcenter.costcenter_name}"
                         if e.costcenter else None
@@ -1674,30 +1720,21 @@ def calculate_timesheet_stats(emp, ts_hdr, week_start, leave_days, holidays_cach
     # --- 5. Approval logic ---
     can_approve = has_timesheets
 
-    for i in range(5):  # Monday–Friday
-        current_date = week_start + timedelta(days=i)
-        entered_hours_for_day = sum(
-            item.wrk_hours for item in timesheet_items if item.wrk_date == current_date
-        )
-        
-        if emp.employee_type and emp.employee_type.code == 'C':
-            # Contractor: only check that they have entered some hours on each working day
-            day_is_complete = (
-                entered_hours_for_day > 0 or
-                current_date in leave_dates or
-                current_date in emp_holidays
-            )
-        else:
-            # Regular Employee or Intern: check for min_daily_hours
-            day_is_complete = (
-                entered_hours_for_day >= min_daily_hours or
-                current_date in leave_dates or
-                current_date in emp_holidays
-            )
-        
-        if not day_is_complete:
+    if can_approve:
+        # Rule 1: weekly total must be >= threshold
+        if total_hours < weekly_threshold:
             can_approve = False
-            break
+
+        # Rule 2: if a day has entries → must have >= min_daily_hours
+        for i in range(7):
+            current_date = week_start + timedelta(days=i)
+            entered_hours_for_day = sum(
+                item.wrk_hours for item in timesheet_items if item.wrk_date == current_date
+            )
+
+            if entered_hours_for_day > 0 and entered_hours_for_day < min_daily_hours:
+                can_approve = False
+                break
 
     # --- 6. Return result ---
     return {
@@ -1716,19 +1753,32 @@ def calculate_timesheet_stats(emp, ts_hdr, week_start, leave_days, holidays_cach
         'detailed_entries': detailed_entries
     }
 
+from datetime import datetime, timedelta
+
 def build_weeks_list(num_weeks=8):
-    """Return a list of `num_weeks` week data for filters, starting from the previous week."""
+    """
+    Return a list of Sunday–Saturday weeks for filters,
+    starting from the previous week.
+    """
     today = datetime.now().date()
-    # Find the Monday of the current week, then subtract one week to get the previous week's Monday
-    previous_monday = today - timedelta(days=today.weekday()) - timedelta(weeks=1)
+
+    # Find the Sunday of the current week, then subtract one week
+    previous_sunday = today - timedelta(days=(today.weekday() + 1) % 7) - timedelta(weeks=1)
+
     weeks_list = []
     for i in range(num_weeks):
-        wk_start = previous_monday - timedelta(weeks=i)
+        wk_start = previous_sunday - timedelta(weeks=i)
         wk_end = wk_start + timedelta(days=6)
-        week_num = wk_start.isocalendar()[1]
-        year_num = wk_start.isocalendar()[0]
+
+        week_num = int(wk_start.strftime("%U"))
+        if week_num == 0:  # handle first week of year
+            week_num = 1
+
+        year_num = wk_start.year
         label = f"Week {week_num} ({wk_start.strftime('%d %b')} - {wk_end.strftime('%d %b')})"
+
         weeks_list.append({'week': week_num, 'label': label, 'year': year_num})
+
     return weeks_list
 
 
@@ -1771,6 +1821,7 @@ from django.contrib import messages
 def timesheet_approval_list(request):
     """
     Manages the timesheet approval list for a manager.
+    Supports Sunday–Saturday weeks and filtering by search/status.
     """
     try:
         manager = Employees.objects.get(user=request.user)
@@ -1779,15 +1830,18 @@ def timesheet_approval_list(request):
         return render(request, 'employee_app/error.html', {'message': 'Employee profile not found.'})
 
     # --- 1. Get and Validate User Inputs ---
-    selected_year = int(request.GET.get('year', datetime.now().year))
     today = datetime.now().date()
-    previous_week_start = today - timedelta(weeks=1)
-    previous_week_num = previous_week_start.isocalendar()[1]
-    selected_week = int(request.GET.get('week', previous_week_num))
+    selected_year = int(request.GET.get('year', today.year))
+
+    # Compute Sunday-based current week number (%U)
+    current_week_num = int(today.strftime("%U"))-1
+    selected_week = int(request.GET.get('week', current_week_num))
+
 
     search_query = request.GET.get('search', '').strip()
     status_filter = request.GET.get('status', 'All')
 
+    # --- 2. Get week start/end (Sunday–Saturday) ---
     week_start, week_end = get_week_start_end(selected_year, selected_week)
     if not week_start:
         messages.error(request, "Invalid week/year selection.")
@@ -1804,10 +1858,10 @@ def timesheet_approval_list(request):
         }
         return render(request, 'timesheet/approve_timesheets.html', context)
 
-    # --- 2. Get Subordinates ---
+    # --- 3. Get Subordinates ---
     subordinates = Employees.objects.filter(manager=manager).select_related(
         'country', 'state'
-    ).order_by('employee_id','first_name','last_name')
+    ).order_by('employee_id', 'first_name', 'last_name')
 
     if search_query:
         subordinates = subordinates.filter(
@@ -1816,7 +1870,7 @@ def timesheet_approval_list(request):
             Q(last_name__icontains=search_query)
         )
 
-    # --- 3. Prefetch Timesheet Headers ---
+    # --- 4. Prefetch Timesheet Headers ---
     timesheet_prefetch_queryset = TimesheetHdr.objects.filter(
         week_start=week_start, week_end=week_end
     ).prefetch_related('timesheet_items')
@@ -1829,36 +1883,39 @@ def timesheet_approval_list(request):
         )
     )
 
-    # --- 4. Build Leave & Holiday Caches ---
+    # --- 5. Build Leave & Holiday Caches ---
     employee_ids = [emp.id for emp in subordinates]
     leave_days = build_leave_days(employee_ids, week_start, week_end)
-
     holidays_cache = build_holidays_cache(subordinates, week_start, week_end)
 
-    # --- 5. Build Timesheet Data for Each Employee ---
+    # --- 6. Build Timesheet Data ---
     timesheet_data = []
     for emp in subordinates:
         ts_hdr = emp.timesheet_header_list[0] if emp.timesheet_header_list else None
         stats = calculate_timesheet_stats(emp, ts_hdr, week_start, leave_days, holidays_cache)
         timesheet_data.append(stats)
 
-    # --- 6. Apply Status Filter ---
+    # --- 7. Apply Status Filter ---
     if status_filter == 'Approved':
         timesheet_data = [d for d in timesheet_data if d.get('is_fully_approved')]
     elif status_filter == 'Pending':
-        # Pending means they have a timesheet, are not fully approved, but can be
-        timesheet_data = [d for d in timesheet_data if d.get('has_timesheets') and not d.get('is_fully_approved') and d.get('can_approve')]
+        timesheet_data = [
+            d for d in timesheet_data
+            if d.get('has_timesheets') and not d.get('is_fully_approved') and d.get('can_approve')
+        ]
     elif status_filter == 'Incomplete':
-        # Incomplete means they have a timesheet, are not approved, and cannot be approved (because of missing data)
-        timesheet_data = [d for d in timesheet_data if d.get('has_timesheets') and not d.get('is_fully_approved') and not d.get('can_approve')]
+        timesheet_data = [
+            d for d in timesheet_data
+            if d.get('has_timesheets') and not d.get('is_fully_approved') and not d.get('can_approve')
+        ]
     elif status_filter == 'No Data':
         timesheet_data = [d for d in timesheet_data if not d.get('has_timesheets')]
 
-    # --- 7. Context & Render ---
+    # --- 8. Context & Render ---
     weeks_list = build_weeks_list()
     unique_years = sorted({w['year'] for w in weeks_list}, reverse=True)
     is_manager = subordinates.exists()
-    
+
     context = {
         'timesheet_data': timesheet_data,
         'weeks_list': weeks_list,
@@ -1870,26 +1927,28 @@ def timesheet_approval_list(request):
         'employee': manager,
         'is_manager': is_manager
     }
+
     return render(request, 'timesheet/approve_timesheets.html', context)
+
 from django.http import JsonResponse
 from django.views.decorators.http import require_POST
 from django.contrib.auth.decorators import login_required
 from django.utils import timezone
 from datetime import date
 
-@employee_signin_required
+employee_signin_required
 @require_POST
 def approve_timesheet(request):
-    """Approve a single employee's weekly timesheet."""
+    """Approve a single employee's weekly timesheet (Sunday–Saturday)."""
     emp_id = request.POST.get('employee_id')
-    year = request.POST.get('year')
-    week = request.POST.get('week')
+    year = int(request.POST.get('year'))
+    week = int(request.POST.get('week'))
+
+    week_start, week_end = get_week_start_end(year, week)
+    if not week_start or not week_end:
+        return JsonResponse({'success': False, 'message': 'Invalid week/year.'})
 
     try:
-        week_start = date.fromisocalendar(int(year), int(week), 1)  # Monday
-        week_end = date.fromisocalendar(int(year), int(week), 7)    # Sunday
-
-
         hdr = TimesheetHdr.objects.get(
             employee_id=emp_id,
             week_start=week_start,
@@ -1900,12 +1959,11 @@ def approve_timesheet(request):
             return JsonResponse({'success': False, 'message': 'Already approved.'})
 
         hdr.is_approved = True
-        hdr.approved_by = request.user.employee_profile  # FIXED
+        hdr.approved_by = request.user.employee_profile
         hdr.approved_date = timezone.now()
         hdr.save()
 
         return JsonResponse({"success": True, "message": "Timesheet approved."})
-
 
     except TimesheetHdr.DoesNotExist:
         return JsonResponse({'success': False, 'message': 'Timesheet not found.'})
@@ -1916,7 +1974,7 @@ def approve_timesheet(request):
 @employee_signin_required
 @require_POST
 def approve_selected_timesheets(request):
-    """Approve multiple employees' weekly timesheets at once."""
+    """Approve multiple employees' weekly timesheets at once (Sunday–Saturday)."""
     ids = request.POST.getlist('ids[]')  # ["empID-year-week", ...]
     approved = []
     errors = []
@@ -1924,8 +1982,10 @@ def approve_selected_timesheets(request):
     for composite_id in ids:
         try:
             emp_id, year, week = composite_id.split('-')
-            week_start = date.fromisocalendar(int(year), int(week), 1)
-            week_end = date.fromisocalendar(int(year), int(week), 7)
+            week_start, week_end = get_week_start_end(int(year), int(week))
+            if not week_start or not week_end:
+                errors.append({'id': composite_id, 'error': 'Invalid week/year'})
+                continue
 
             hdr = TimesheetHdr.objects.get(
                 employee_id=emp_id,
@@ -1935,7 +1995,7 @@ def approve_selected_timesheets(request):
 
             if not hdr.is_approved:
                 hdr.is_approved = True
-                hdr.approved_by = request.user.employee_profile  # FIXED
+                hdr.approved_by = request.user.employee_profile
                 hdr.approved_date = timezone.now()
                 hdr.save()
                 approved.append(composite_id)
@@ -1946,12 +2006,11 @@ def approve_selected_timesheets(request):
             errors.append({'id': composite_id, 'error': str(e)})
 
     return JsonResponse({
-    "success": True,
-    "message": f"{len(approved)} timesheet(s) approved.",
-    "approved_ids": approved,
-    "errors": errors
-})
-
+        "success": True,
+        "message": f"{len(approved)} timesheet(s) approved.",
+        "approved_ids": approved,
+        "errors": errors
+    })
 
 
 
@@ -1975,8 +2034,10 @@ def timesheet_week_details(request):
         year = int(request.GET.get('year'))
         week = int(request.GET.get('week'))
 
-        week_start = datetime.fromisocalendar(year, week, 1).date()
-        week_end = week_start + timedelta(days=6)
+        # ✅ Use Sunday–Saturday logic (%U), not ISO
+        week_start, week_end = get_week_start_end(year, week)
+        if not week_start:
+            return JsonResponse({'success': False, 'message': 'Invalid week/year'}, status=400)
 
         employee = Employees.objects.select_related('country', 'state').get(pk=emp_id)
 
@@ -1992,20 +2053,12 @@ def timesheet_week_details(request):
         ).first()
 
         stats = calculate_timesheet_stats(employee, ts_hdr, week_start, leave_days_map, holidays_cache)
-    
-
-
         entries = stats['detailed_entries']
 
-        # 🔹 Remove weekends (Sat=5, Sun=6) if they have no items
+        # 🔹 Remove weekends (Saturday=5, Sunday=6) if they have no entries
         filtered_entries = []
         for e in entries:
-            date = datetime.strptime(e['date'], "%Y-%m-%d").date()
-            is_weekend = date.weekday() in [5, 6]  # Sat=5, Sun=6
 
-            if is_weekend and not e.get('items'):  
-                # Skip weekends with no timesheet items
-                continue
             filtered_entries.append(e)
 
         return JsonResponse({'success': True, 'entries': filtered_entries})
@@ -2027,19 +2080,20 @@ from datetime import timedelta
 def generate_utilization_report(logged_in_employee, start_date, end_date):
     """
     Generate a utilization report for the employees managed by the logged-in user.
-    Leave days exclude weekends and holidays.
+    Rules:
+      - Mon–Fri are official working days.
+      - Leave: counts as 1 day (minimum hours per day).
+      - Holiday: if no entry → holiday day; if entry → work day.
+      - Weekend: ignored unless employee enters → then counts in worked hours, not days.
     """
-
     # Step 1: Choose employees for report
-        # Admin: get all employees
-    if logged_in_employee is None:
-        employees = Employees.objects.all().order_by('employee_id','first_name','last_name')
+    if logged_in_employee is None:  # Admin
+        employees = Employees.objects.all().order_by("employee_id", "first_name", "last_name")
     else:
-        # Normal user
         if logged_in_employee.user.is_staff or logged_in_employee.user.is_superuser:
-            employees = Employees.objects.all().order_by('employee_id','first_name','last_name')
+            employees = Employees.objects.all().order_by("employee_id", "first_name", "last_name")
         elif logged_in_employee.employees_managed.exists():
-            employees = logged_in_employee.employees_managed.all().order_by('employee_id','first_name','last_name')
+            employees = logged_in_employee.employees_managed.all().order_by("employee_id", "first_name", "last_name")
         else:
             raise PermissionDenied("You are not authorized to view this report.")
 
@@ -2048,7 +2102,7 @@ def generate_utilization_report(logged_in_employee, start_date, end_date):
     for emp in employees:
         work_hours_per_day = getattr(emp.country, "working_hours", 9)
 
-        # --- Holidays ---
+        # --- Holidays (national + state) ---
         holidays = set(Holiday.objects.filter(
             country=emp.country,
             date__range=(start_date, end_date)
@@ -2068,41 +2122,49 @@ def generate_utilization_report(logged_in_employee, start_date, end_date):
             wrk_date__range=(start_date, end_date)
         )
 
-        worked_hours = holiday_hours = leave_hours = 0
+        worked_hours = leave_hours = holiday_hours = 0
         total_work_days = 0
-        leave_days_count = 0
+        worked_days = leave_days = holiday_days = 0
+        extra_weekend_days = 0
 
         current = start_date
         while current <= end_date:
-            weekday = current.weekday()
-            if weekday < 5:  # Mon-Fri only
+            weekday = current.weekday()  # 0=Mon, 6=Sun
+            day_items = [i for i in items if i.wrk_date == current]
+            total_daily_hours = sum(i.wrk_hours for i in day_items)
+
+            is_holiday = current in all_holidays
+            is_leave = LeaveRequest.objects.filter(
+                employee_master=emp,
+                start_date__lte=current,
+                end_date__gte=current,
+                status="Approved"
+            ).exists()
+
+            if weekday < 5:  # Mon–Fri
                 total_work_days += 1
 
-                day_items = [i for i in items if i.wrk_date == current]
-                total_daily_hours = sum(i.wrk_hours for i in day_items)
-
-                is_holiday = current in all_holidays
-                is_leave = LeaveRequest.objects.filter(
-                    employee_master=emp,
-                    start_date__lte=current,
-                    end_date__gte=current,
-                    status="Approved"
-                ).exists()
-
                 if is_holiday:
-                    holiday_hours += work_hours_per_day
+                    if total_daily_hours > 0:  # worked on holiday
+                        worked_hours += total_daily_hours
+                        worked_days += 1
+                    else:  # holiday not worked
+                        holiday_hours += work_hours_per_day
+                        holiday_days += 1
                 elif is_leave:
                     leave_hours += work_hours_per_day
-                    leave_days_count += 1  # Only count leave if not holiday/weekend
+                    leave_days += 1
                 else:
                     worked_hours += total_daily_hours
+                    if total_daily_hours >= work_hours_per_day:
+                        worked_days += 1
+
+            else:  # Weekend
+                if total_daily_hours > 0:
+                    worked_hours += total_daily_hours
+                    extra_weekend_days += 1  # tracked separately, does not count in total_work_days
 
             current += timedelta(days=1)
-
-        # --- Convert to days ---
-        worked_days = int(worked_hours / work_hours_per_day)
-        leave_days = int(leave_days_count)
-        holiday_days = int(holiday_hours / work_hours_per_day)
 
         # --- Delayed entries ---
         delayed_entries = TimesheetHdr.objects.filter(
@@ -2112,23 +2174,24 @@ def generate_utilization_report(logged_in_employee, start_date, end_date):
             is_delayed=True
         ).count()
 
-        # --- Utilization percentage ---
-        utilization = (  (worked_days + leave_days + holiday_days) / total_work_days * 100) if (worked_days + leave_days) > 0 else 0.0
+        # --- Utilization: hours-based ---
+        required_hours = total_work_days * work_hours_per_day
+        actual_hours = worked_hours + leave_hours + holiday_hours
+        utilization = min((actual_hours / required_hours) * 100, 100) if required_hours > 0 else 0.0
 
         report.append({
             "employee_obj": emp,
             "employee_name": f"{emp.employee_id}-{emp.first_name} {emp.last_name}",
-            "worked_days": worked_days,          # int
-            "leave_days": leave_days,            # int
-            "holiday_days": holiday_days,        # int
-            "total_work_days": total_work_days,  # int
+            "worked_days": worked_days,          # int, weekdays worked
+            "leave_days": leave_days,            # int, weekdays on leave
+            "holiday_days": holiday_days,        # int, weekdays holiday not worked
+            "total_work_days": total_work_days,  # int, Mon–Fri only
+            "extra_weekend_days": extra_weekend_days,  # int, weekends worked
             "delayed_entries": delayed_entries,  # int
-            "utilization": round(utilization, 2) # float
+            "utilization": round(utilization, 2) # float, hours-based
         })
 
     return report
-
-
 
 @admin_signin_required
 def admin_work_utilization_view(request):
@@ -2172,6 +2235,7 @@ def admin_work_utilization_view(request):
 
 
 @employee_signin_required
+@employee_signin_required
 def employee_work_utilization_view(request):
     today = datetime.today().date()
     default_end = today
@@ -2206,8 +2270,15 @@ def employee_work_utilization_view(request):
     # --- Check if user manages others ---
     is_manager = employee_obj.employees_managed.exists()
 
-    # --- Report generation (only on GET with params) ---
-    report_data = generate_utilization_report(employee_obj, start_date, end_date) if request.GET else []
+    report_data = []
+    if request.GET and is_manager:
+        # Only generate report if manager with subordinates
+        report_data = generate_utilization_report(employee_obj, start_date, end_date)
+
+        # Filter to include only subordinates
+        report_data = [
+            r for r in report_data if r["employee_obj"] in employee_obj.employees_managed.all()
+        ]
 
     return render(request, "timesheet/employee/work_utilization.html", {
         "report_data": report_data,
@@ -2215,7 +2286,7 @@ def employee_work_utilization_view(request):
         "start_date": start_date,
         "end_date": end_date,
         "today": today,
-        "is_manager": is_manager,   # 👈 Pass flag to template
+        "is_manager": is_manager,
     })
 
 import openpyxl
@@ -2231,7 +2302,8 @@ def _build_excel_response(report_data, filename):
     # Header row
     headers = [
         "Employee",
-        "Worked Days",
+        "Weekdays Worked",
+        "Weekends Worked",
         "Leave Days",
         "Holidays",
         "Total Work Days",
@@ -2245,6 +2317,7 @@ def _build_excel_response(report_data, filename):
         sheet.append([
             entry.get("employee_name", ""),
             entry.get("worked_days", 0),
+            entry.get("extra_weekend_days",0),
             entry.get("leave_days", 0),
             entry.get("holiday_days", 0),
             entry.get("total_work_days", 0),
@@ -2313,21 +2386,11 @@ from datetime import timedelta
 from django.core.exceptions import PermissionDenied
 
 def generate_project_cc_utilization_report(logged_in_employee, start_date, end_date):
-    """
-    Report: Project vs CostCenter utilization per employee.
-    - Working days = Mon-Fri only (weekends excluded).
-    - Days are integers in report, but calculated fractionally internally.
-    - Each day counts if not holiday/leave.
-    - Partial day hours count proportionally for project/CC days.
-    - Utilization % = total hours / (available_days * work_hours_per_day), max 100%.
-    """
     from collections import defaultdict
     from datetime import timedelta
 
-    # Employees scope
-    # Employees scope
+    # --- Employee scope ---
     if logged_in_employee is None:
-        # Admin: all employees
         employees = Employees.objects.all().order_by('employee_id', 'first_name', 'last_name')
     elif logged_in_employee.user.is_staff or logged_in_employee.user.is_superuser:
         employees = Employees.objects.all().order_by('employee_id','first_name','last_name')
@@ -2336,13 +2399,12 @@ def generate_project_cc_utilization_report(logged_in_employee, start_date, end_d
     else:
         raise PermissionDenied("You are not authorized to view this report.")
 
-
     report = []
 
     for emp in employees:
-        work_hours_per_day = getattr(emp.country, "working_hours", 9)
+        min_working_hours = getattr(emp.country, "working_hours", 9)
 
-        # Holidays
+        # --- Holidays ---
         holidays = set(Holiday.objects.filter(
             country=emp.country,
             date__range=(start_date, end_date)
@@ -2354,13 +2416,12 @@ def generate_project_cc_utilization_report(logged_in_employee, start_date, end_d
         ).values_list("date", flat=True))
         all_holidays = holidays | state_holidays
 
-        # Timesheet items
+        # --- Timesheet items ---
         items = TimesheetItem.objects.filter(
             hdr__employee=emp,
             wrk_date__range=(start_date, end_date)
         )
 
-        # Organize hours per day
         daily_project_hours = defaultdict(float)
         daily_cc_hours = defaultdict(float)
         for item in items:
@@ -2369,69 +2430,82 @@ def generate_project_cc_utilization_report(logged_in_employee, start_date, end_d
             if item.costcenter:
                 daily_cc_hours[item.wrk_date] += item.wrk_hours
 
-        # Counters
-        total_working_days = 0
-        holiday_days = 0
+        # --- Counters ---
+        weekday_worked = 0
+        weekend_worked = 0
         leave_days = 0
-        project_days_frac = 0.0
-        cc_days_frac = 0.0
+        holiday_days = 0
+        project_days_count = 0
+        cc_days_count = 0
         total_hours_project = 0.0
         total_hours_cc = 0.0
+        total_working_days = 0  # Mon–Fri
 
         current = start_date
         while current <= end_date:
-            if current.weekday() < 5:  # Mon-Fri
+            weekday = current.weekday()  # 0=Mon, 6=Sun
+            proj_hours = daily_project_hours.get(current, 0)
+            cc_hours = daily_cc_hours.get(current, 0)
+            total_daily_hours = proj_hours + cc_hours
+
+            is_holiday = current in all_holidays
+            is_leave = LeaveRequest.objects.filter(
+                employee_master=emp,
+                start_date__lte=current,
+                end_date__gte=current,
+                status="Approved"
+            ).exists()
+
+            if weekday < 5:  # Mon–Fri
                 total_working_days += 1
 
-                if current in all_holidays:
+                if is_leave:
+                    leave_days += 1
+                elif is_holiday and total_daily_hours == 0:
                     holiday_days += 1
                 else:
-                    is_leave = LeaveRequest.objects.filter(
-                        employee_master=emp,
-                        start_date__lte=current,
-                        end_date__gte=current,
-                        status="Approved"
-                    ).exists()
-                    if is_leave:
-                        leave_days += 1
-                    else:
-                        proj_hours = daily_project_hours.get(current, 0)
-                        cc_hours = daily_cc_hours.get(current, 0)
-                        total_hours = proj_hours + cc_hours
-
-                        # Fractional day contribution
-                        project_days_frac += proj_hours / work_hours_per_day
-                        cc_days_frac += cc_hours / work_hours_per_day
-
-                        # Sum total hours for utilization
+                    if total_daily_hours > 0:
+                        weekday_worked += 1
                         total_hours_project += proj_hours
                         total_hours_cc += cc_hours
+                        if proj_hours >= min_working_hours:
+                            project_days_count += 1
+                        if cc_hours >= min_working_hours:
+                            cc_days_count += 1
+
+            else:  # Weekend
+                if total_daily_hours > 0:
+                    weekend_worked += 1
+                    total_hours_project += proj_hours
+                    total_hours_cc += cc_hours
+
+                    # ✅ Also count weekend entries for project/cc days
+                    if proj_hours >= min_working_hours:
+                        project_days_count += 1
+                    if cc_hours >= min_working_hours:
+                        cc_days_count += 1
 
             current += timedelta(days=1)
 
-        available_days = total_working_days - holiday_days - leave_days
 
-        # Round days for report
-        project_days_int = int(round(project_days_frac))
-        cc_days_int = int(round(cc_days_frac))
+        available_days = total_working_days - leave_days - holiday_days
 
-        # Utilization based on total hours
-        project_util = (total_hours_project / (available_days * work_hours_per_day) * 100) if available_days > 0 else 0.0
-        cc_util = (total_hours_cc / (available_days * work_hours_per_day) * 100) if available_days > 0 else 0.0
-
-        # Ensure utilization <= 100%
+        # --- Utilization ---
+        project_util = (total_hours_project / (available_days * min_working_hours) * 100) if available_days > 0 else 0.0
+        cc_util = (total_hours_cc / (available_days * min_working_hours) * 100) if available_days > 0 else 0.0
         project_util = min(project_util, 100.0)
         cc_util = min(cc_util, 100.0)
 
         report.append({
             "employee_obj": emp,
             "employee_name": f"{emp.employee_id}-{emp.first_name} {emp.last_name}",
-            "total_working_days": total_working_days,
-            "holiday_days": holiday_days,
+            "total_working_days": total_working_days,   # Mon–Fri count
+            "weekday_worked": weekday_worked,           # weekdays with work hours
+            "weekend_worked": weekend_worked,           # weekends worked
             "leave_days": leave_days,
-            "available_days": available_days,
-            "project_days": project_days_int,
-            "cc_days": cc_days_int,
+            "holiday_days": holiday_days,
+            "project_days": project_days_count,
+            "cc_days": cc_days_count,
             "project_utilization": round(project_util, 2),
             "cc_utilization": round(cc_util, 2),
         })
@@ -2534,7 +2608,10 @@ def employee_project_cc_utilization_view(request):
 
 import openpyxl
 from django.http import HttpResponse
+
+
 def export_project_cc_utilization(request):
+    # --- Get and validate dates ---
     start_str = request.GET.get("start_date")
     end_str = request.GET.get("end_date")
 
@@ -2547,19 +2624,19 @@ def export_project_cc_utilization(request):
     except ValueError:
         return HttpResponseBadRequest("Invalid date format. Use YYYY-MM-DD.")
 
-    # Determine if user is admin or regular employee
+    # --- Determine employee scope ---
     if request.user.is_staff or request.user.is_superuser:
-        employee_obj = None  # Admin: pass None to report
+        employee_obj = None  # Admin sees all
     else:
         try:
             employee_obj = Employees.objects.get(user=request.user)
         except Employees.DoesNotExist:
             raise PermissionDenied("Employee profile not found.")
 
-    # Generate report
+    # --- Generate report data ---
     report_data = generate_project_cc_utilization_report(employee_obj, start_date, end_date)
 
-    # Create Excel workbook
+    # --- Create Excel workbook ---
     wb = openpyxl.Workbook()
     sheet = wb.active
     sheet.title = "Project vs CC Utilization"
@@ -2567,6 +2644,8 @@ def export_project_cc_utilization(request):
     headers = [
         "Employee",
         "Total Working Days",
+        "Weekday Worked",
+        "Weekend Worked",
         "Holidays",
         "Leave Days",
         "Available Days",
@@ -2581,6 +2660,8 @@ def export_project_cc_utilization(request):
         sheet.append([
             entry.get("employee_name"),
             entry.get("total_working_days", 0),
+            entry.get("weekday_worked", 0),
+            entry.get("weekend_worked", 0),
             entry.get("holiday_days", 0),
             entry.get("leave_days", 0),
             entry.get("available_days", 0),
@@ -2590,6 +2671,7 @@ def export_project_cc_utilization(request):
             f"{entry.get('cc_utilization', 0)}%",
         ])
 
+    # --- Prepare response ---
     response = HttpResponse(
         content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
