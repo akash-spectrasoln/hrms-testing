@@ -128,8 +128,15 @@
                             });
 
                             // Debug: Log messages to console
-                            var messages = JSON.parse(document.getElementById('toastsContainer').dataset.messages);
-                            console.log('Received messages:', messages);
+                            var toastsContainer = document.getElementById('toastsContainer');
+                            if (toastsContainer && toastsContainer.dataset && toastsContainer.dataset.messages) {
+                                try {
+                                    var messages = JSON.parse(toastsContainer.dataset.messages);
+                                    console.log('Received messages:', messages);
+                                } catch (e) {
+                                    console.log('Error parsing messages:', e);
+                                }
+                            }
                         });
                     </script>
                      <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>

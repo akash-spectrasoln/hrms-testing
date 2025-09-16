@@ -408,7 +408,6 @@
         return cookieValue;
     }
     const csrftoken = getCookie("csrftoken");
-    console.log(csrftoken)
 
     $.ajaxSetup({
         headers: { "X-CSRFToken": csrftoken }
@@ -601,9 +600,9 @@ $(document).on('click', '.view-details-btn', function () {
                 <span>
                     ${day.date_str} - ${day.day_name}
                     ${day.is_holiday 
-                        ? ` - Holiday - ${day.holiday_name || 'Holiday'}` 
+                        ? ` - <span style="color: #d64352;">Holiday - ${day.holiday_name || 'Holiday'}</span>` 
                         : day.is_leave 
-                            ? ' - Leave' 
+                            ? ' - <span style="color: #a46fe5;">Leave</span>' 
                             : day.is_weekend 
                                 ? ' - Weekend' 
                                 : ''}

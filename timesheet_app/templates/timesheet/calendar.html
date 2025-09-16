@@ -950,7 +950,8 @@ input[type="date"] {
         const confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
 
         // Confirm button handler (bound once)
-        confirmDeleteBtn.addEventListener('click', async () => {
+        if (confirmDeleteBtn) {
+            confirmDeleteBtn.addEventListener('click', async () => {
             if (!entryIdToDelete) return;
 
             const day = dateField.value;
@@ -994,6 +995,7 @@ input[type="date"] {
                 entryIdToDelete = null;
             }
         });
+        }
 
         /** -------------------- State -------------------- **/
         let selectedEntryIds = [];
@@ -1126,16 +1128,18 @@ input[type="date"] {
                 clearTimeout(hideTimer);
                 hideTimer = setTimeout(() => { tooltipEl.remove(); }, 2000);
             };
-            document.addEventListener('touchstart', (e) => {
-                const dayEl = e.target.closest('.calendar-day[data-holiday]');
-                if (!dayEl) return;
-                showTooltip(dayEl);
-            }, { passive: true });
-            document.addEventListener('click', (e) => {
-                const dayEl = e.target.closest('.calendar-day[data-holiday]');
-                if (!dayEl) return;
-                showTooltip(dayEl);
-            });
+             document.addEventListener('touchstart', (e) => {
+                 if (!e || !e.target) return;
+                 const dayEl = e.target.closest('.calendar-day[data-holiday]');
+                 if (!dayEl) return;
+                 showTooltip(dayEl);
+             }, { passive: true });
+             document.addEventListener('click', (e) => {
+                 if (!e || !e.target) return;
+                 const dayEl = e.target.closest('.calendar-day[data-holiday]');
+                 if (!dayEl) return;
+                 showTooltip(dayEl);
+             });
         })();
 
 
@@ -1174,16 +1178,18 @@ input[type="date"] {
             projectSelect.dispatchEvent(new Event('change'));
         };
 
-        projectSelect.addEventListener('change', () => {
-            const opt = projectSelect.selectedOptions[0];
-            if (opt?.dataset.startDate && opt?.dataset.endDate) {
-                const start = formatDate(opt.dataset.startDate);
-                const end = formatDate(opt.dataset.endDate);
-                remainingDaysInfo.textContent = `Project Validity: ${start} → ${end}`;
-            } else {
-                remainingDaysInfo.textContent = '';
-            }
-        });
+        if (projectSelect) {
+            projectSelect.addEventListener('change', () => {
+                const opt = projectSelect.selectedOptions[0];
+                if (opt?.dataset.startDate && opt?.dataset.endDate) {
+                    const start = formatDate(opt.dataset.startDate);
+                    const end = formatDate(opt.dataset.endDate);
+                    remainingDaysInfo.textContent = `Project Validity: ${start} → ${end}`;
+                } else {
+                    remainingDaysInfo.textContent = '';
+                }
+            });
+        }
 
         const populateForm = (entry, readOnly = false) => {
             entryIdField.value = entry.tsheet_item_id;
@@ -1227,33 +1233,28 @@ input[type="date"] {
                 block: 'start'
             });
         };
-    // This handles the dynamically loaded 'Add Entry' button.
-    document.addEventListener('click', e => {
-        if (e.target.id === 'add-entry-btn') {
-            e.preventDefault(); // Good practice to prevent any default form actions
-            addEntryButtonHandler();
-        }
-    });
+     // This handles the dynamically loaded 'Add Entry' button.
+     document.addEventListener('click', e => {
+         if (!e || !e.target) return;
+         if (e.target.id === 'add-entry-btn') {
+             e.preventDefault(); // Good practice to prevent any default form actions
+             addEntryButtonHandler();
+         }
+     });
         /** -------------------- Load Day Data -------------------- **/
       const loadDayData = async (date, suppressErrors = false) => {
-
-
     clearForm(true);
     clearDetails();
 
-    //  Always reset visibility before processing
     entryDetails.classList.add('d-none');
     formContainer.style.display = 'none';
-
 
     showSpinnerAndDisableButtons();
     try {
         const resp = await fetch(
-            `/hrms/employee/ajax/get-timesheet-day-data/?date=${encodeURIComponent(date)}&_=${Date.now()}`, {
-                cache: 'no-store'
-            }
+            `/hrms/employee/ajax/get-timesheet-day-data/?date=${encodeURIComponent(date)}&_=${Date.now()}`,
+            { cache: 'no-store' }
         );
-
 
         if (!resp.ok) {
             if (!suppressErrors) showToastMessage(`HTTP error: ${resp.status}`, "error");
@@ -1288,6 +1289,11 @@ input[type="date"] {
                 entryDetails.classList.remove('d-none');
                 formContainer.style.display = 'none'; // just in case
 
+                // 🔹 build lookup map (id -> entry object)
+                const entryMap = Object.fromEntries(
+                    data.entries.map(entry => [entry.tsheet_item_id, entry])
+                );
+
                 const tbodyHTML = data.entries.map(entry => {
                     if (entry.is_approved) {
                         return `
@@ -1299,7 +1305,8 @@ input[type="date"] {
                                 <td class="text-end">${entry.hours_worked}</td>
                                 <td>${entry.work_location_name || ''}</td>
                                 <td class="text-center">
-                                    <button type="button" class="view-entry btn btn-link p-0 approved-tick" data-entry='${JSON.stringify(entry)}'>✔</button>
+                                    <button type="button" class="view-entry btn btn-link p-0 approved-tick" 
+                                        data-entry-id="${entry.tsheet_item_id}">✔</button>
                                 </td>
                             </tr>`;
                     } else {
@@ -1312,8 +1319,10 @@ input[type="date"] {
                                 <td class="text-end">${entry.hours_worked}</td>
                                 <td>${entry.work_location_name || ''}</td>
                                 <td class="text-center">
-                                    <button type="button" class="edit-entry btn btn-link p-0" data-entry='${JSON.stringify(entry)}'>✏️</button>
-                                    <button type="button" class="delete-entry btn btn-link text-danger p-0 ms-1" data-entry-id="${entry.tsheet_item_id}" title="Delete">🗑️</button>
+                                    <button type="button" class="edit-entry btn btn-link p-0" 
+                                        data-entry-id="${entry.tsheet_item_id}">✏️</button>
+                                    <button type="button" class="delete-entry btn btn-link text-danger p-0 ms-1" 
+                                        data-entry-id="${entry.tsheet_item_id}" title="Delete">🗑️</button>
                                 </td>
                             </tr>`;
                     }
@@ -1338,35 +1347,40 @@ input[type="date"] {
                     </div>`;
 
                 initCheckboxLogic();
-                // 🔹 Hide Add Entry button if the day is leave OR if any entry is approved
-const addEntryBtn = document.getElementById('add-entry-btn');
-if (addEntryBtn) {
-    const hasApproved = data.entries?.some(entry => entry.is_approved) || false;
 
-    if (isLeaveDay || hasApproved) {
-        addEntryBtn.style.display = 'none';   // completely hide
-        // OR addEntryBtn.disabled = true;    // if you prefer to show but block
-    } else {
-        addEntryBtn.style.display = 'inline-block'; // show again
-    }
-}
+                // 🔹 Hide Add Entry button if leave or has approved entry
+                const addEntryBtn = document.getElementById('add-entry-btn');
+                if (addEntryBtn) {
+                    const hasApproved = data.entries?.some(entry => entry.is_approved) || false;
+                    addEntryBtn.style.display = (isLeaveDay || hasApproved) ? 'none' : 'inline-block';
+                }
 
-                detailsBody.querySelectorAll('.edit-entry').forEach(btn =>
-                    btn.addEventListener('click', e => populateForm(JSON.parse(e.currentTarget.dataset.entry), false))
-                );
-                detailsBody.querySelectorAll('.view-entry').forEach(btn =>
-                    btn.addEventListener('click', e => populateForm(JSON.parse(e.currentTarget.dataset.entry), true))
-                );
-                detailsBody.querySelectorAll('.delete-entry').forEach(btn =>
+                // 🔹 Event listeners now use entryMap
+                detailsBody.querySelectorAll('.edit-entry').forEach(btn => {
+                    btn.addEventListener('click', e => {
+                        const id = e.currentTarget.dataset.entryId;
+                        const entry = entryMap[id];
+                        if (entry) populateForm(entry, false);
+                    });
+                });
+
+                detailsBody.querySelectorAll('.view-entry').forEach(btn => {
+                    btn.addEventListener('click', e => {
+                        const id = e.currentTarget.dataset.entryId;
+                        const entry = entryMap[id];
+                        if (entry) populateForm(entry, true);
+                    });
+                });
+
+                detailsBody.querySelectorAll('.delete-entry').forEach(btn => {
                     btn.addEventListener('click', e => {
                         entryIdToDelete = e.currentTarget.dataset.entryId;
                         deleteModal.show();
-                    })
-                );
+                    });
+                });
 
             } else {
                 formContainer.style.display = 'block';
-                // Add form-visible class to trigger side-by-side layout
                 document.querySelector('.calendar-timesheet-container').classList.add('form-visible');
                 lockForm(false);
             }
@@ -1374,14 +1388,13 @@ if (addEntryBtn) {
 
         populateProjects(data.projects);
 
-        if (selectedCell && (
-            selectedCell.classList.contains('status-leave'))
-        ) {
+        if (selectedCell && selectedCell.classList.contains('status-leave')) {
             selectedCell.classList.add('disabled');
             clearDayHours(selectedCell);
             selectedCell.classList.remove('status-entered');
         }
         return data;
+
     } catch (err) {
         console.error("loadDayData error:", err);
         if (!suppressErrors) showToastMessage("Failed to load day data. Please check your connection.", "error");
@@ -1399,17 +1412,20 @@ if (addEntryBtn) {
             };
         };
 
-        /** -------------------- Calendar Click Logic (UPDATED) -------------------- **/
-        // 🌟 CRITICAL FIX: The function now works on any calendar-day element
-const handleCalendarClick = async (e) => {
-    const btn = e.target.closest('.calendar-day');
-    if (!btn || !btn.dataset.date) return;
+         /** -------------------- Calendar Click Logic (UPDATED) -------------------- **/
+         // 🌟 CRITICAL FIX: The function now works on any calendar-day element
+ const handleCalendarClick = async (e) => {
+     if (!e || !e.target) return;
+     const btn = e.target.closest('.calendar-day');
+     if (!btn || !btn.dataset || !btn.dataset.date) return;
 
-    const date = btn.dataset.date; // always YYYY-MM-DD from dataset
+    const date = btn.dataset ? btn.dataset.date : null; // always YYYY-MM-DD from dataset
+    if (!date) return;
     const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
 
     // Joining date might include time (e.g. "2025-08-25 21:25:20")
-    let joiningDate = document.querySelector('.calendar-wrapper')?.dataset.joiningDate;
+    const calendarWrapper = document.querySelector('.calendar-wrapper');
+    let joiningDate = calendarWrapper && calendarWrapper.dataset ? calendarWrapper.dataset.joiningDate : null;
 
     // 🚫 Block future dates
     if (date > today) {
@@ -1498,15 +1514,21 @@ const handleCalendarClick = async (e) => {
 }
         // Attach click handlers to navigation buttons
         function attachNavHandlers() {
-            document.querySelectorAll('.calendar-nav').forEach(btn => {
-                btn.addEventListener('click', event => {
-                    event.preventDefault();
-                    const month = btn.dataset.month;
-                    const year = btn.dataset.year;
-                    if (!month || !year || btn.disabled) return;
-                    loadCalendar(month, year);
+            const navButtons = document.querySelectorAll('.calendar-nav');
+            if (navButtons.length > 0) {
+                navButtons.forEach(btn => {
+                     if (btn) {
+                         btn.addEventListener('click', event => {
+                             if (!event) return;
+                             event.preventDefault();
+                             const month = btn.dataset?.month;
+                             const year = btn.dataset?.year;
+                             if (!month || !year || btn.disabled) return;
+                             loadCalendar(month, year);
+                         });
+                     }
                 });
-            });
+            }
         }
         
         // 🌟 NEW FUNCTION: Binds the click listener for the calendar grid
@@ -1653,7 +1675,8 @@ async function refreshCalendarDates(dates, maxRetries = 4, baseDelay = 250) {
         };
 
         /** -------------------- Paste Entries (fixed) -------------------- **/
-        pasteBtn.addEventListener('click', async () => {
+        if (pasteBtn) {
+            pasteBtn.addEventListener('click', async () => {
             if (!selectedEntryIds.length || !targetDates.size) {
                 return showToastMessage("Select at least one entry and one target date.", "error");
             }
@@ -1709,9 +1732,11 @@ async function refreshCalendarDates(dates, maxRetries = 4, baseDelay = 250) {
                 hideSpinnerAndEnableButtons();
             }
         });
+        }
 
         /** -------------------- Form Submission (safe refresh) -------------------- **/
-        form.addEventListener('submit', async e => {
+        if (form) {
+            form.addEventListener('submit', async e => {
     e.preventDefault();
     showSpinnerAndDisableButtons();
 
@@ -1777,6 +1802,7 @@ async function refreshCalendarDates(dates, maxRetries = 4, baseDelay = 250) {
         hideSpinnerAndEnableButtons();
     }
 });
+        }
 
    });
 </script>
@@ -1785,18 +1811,22 @@ async function refreshCalendarDates(dates, maxRetries = 4, baseDelay = 250) {
   const legendBtn = document.getElementById('legend-btn');
   const legendPopup = document.getElementById('legend-popup');
 
-  legendBtn.addEventListener('click', (e) => {
-    e.stopPropagation();
-    legendPopup.style.display = (legendPopup.style.display === 'block') ? 'none' : 'block';
-  });
+   if (legendBtn && legendPopup) {
+     legendBtn.addEventListener('click', (e) => {
+       if (!e) return;
+       e.stopPropagation();
+       legendPopup.style.display = (legendPopup.style.display === 'block') ? 'none' : 'block';
+     });
 
-  document.addEventListener('click', () => {
-    legendPopup.style.display = 'none';
-  });
+     document.addEventListener('click', () => {
+       legendPopup.style.display = 'none';
+     });
 
-  legendPopup.addEventListener('click', (e) => {
-    e.stopPropagation(); // prevent close when clicking inside popup
-  });
+     legendPopup.addEventListener('click', (e) => {
+       if (!e) return;
+       e.stopPropagation(); // prevent close when clicking inside popup
+     });
+   }
 </script>
 
 {% endblock %}

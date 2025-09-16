@@ -192,6 +192,7 @@ class Employees(models.Model):
         blank=True, 
         verbose_name="IFSC Code"
     )
+    excl_folup = models.BooleanField(default=False)
 
     def delete(self, *args, **kwargs):
         self.is_deleted = True

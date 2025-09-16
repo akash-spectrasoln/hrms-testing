@@ -3,10 +3,12 @@
 
 function toggleLoadingOverlay(showOverlay) {
     const loadingOverlay = document.getElementById('loadingOverlay');
-    if (showOverlay) {
-        loadingOverlay.style.display = 'block';
-    } else {
-        loadingOverlay.style.display = 'none';
+    if (loadingOverlay) {
+        if (showOverlay) {
+            loadingOverlay.style.display = 'block';
+        } else {
+            loadingOverlay.style.display = 'none';
+        }
     }
 }
 
@@ -88,22 +90,31 @@ function toggleConnection(connection_id, status) {
 
 
 // search js code
+document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.getElementById('searchInput');
+    const tableList = document.getElementById('tablelist');
+    
+    if (searchInput && tableList) {
+        searchInput.addEventListener('input', function() {
+            var searchQuery = this.value.toLowerCase();
+            var tableRows = tableList.querySelectorAll('tbody tr');
 
-document.getElementById('searchInput').addEventListener('input', function() {
-    var searchQuery = this.value.toLowerCase();
-    var tableRows = document.getElementById('tablelist').querySelectorAll('tbody tr');
+            // Loop through each table row
+            tableRows.forEach(function(row) {
+                var firstCell = row.querySelector('td');
+                if (firstCell) {
+                    var tableName = firstCell.textContent.toLowerCase();
 
-    // Loop through each table row
-    tableRows.forEach(function(row) {
-        var tableName = row.querySelector('td').textContent.toLowerCase();
-
-        // Check if the table name contains the search query
-        if (tableName.includes(searchQuery)) {
-            row.style.display = 'table-row'; // Show the table row
-        } else {
-            row.style.display = 'none'; // Hide the table row
-        }
-    });
+                    // Check if the table name contains the search query
+                    if (tableName.includes(searchQuery)) {
+                        row.style.display = 'table-row'; // Show the table row
+                    } else {
+                        row.style.display = 'none'; // Hide the table row
+                    }
+                }
+            });
+        });
+    }
 });
 
  
