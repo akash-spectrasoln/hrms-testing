@@ -217,7 +217,6 @@ def send_timesheet_reminder(day_type="friday", country_id=None):
     Runs on Friday 4 PM (for current week) and Monday 9 AM (for previous week).
     Logs detailed processing steps for each employee.
     """
-
     today = timezone.localdate()
     logger.info("Task started for day_type=%s, country_id=%s", day_type, country_id)
 
@@ -236,30 +235,42 @@ def send_timesheet_reminder(day_type="friday", country_id=None):
 
     logger.info("Week calculated: %s → %s", week_start, week_end)
 
-    # Filter active employees (exclude contractors)
-    employees = Employees.objects.filter(is_deleted=False, user__is_active=True).exclude(employee_type__code="C")
+    # Filter active employees (exclude contractors + excl_folup upfront)
+    employees = (
+        Employees.objects.filter(is_deleted=False, user__is_active=True)
+        .exclude(employee_type__code="C")
+        .exclude(excl_folup=True)
+    )
     if country_id:
         employees = employees.filter(country_id=country_id)
 
     logger.info("Total employees to process: %s", employees.count())
 
-    # Collect holidays
-    holidays = set(Holiday.objects.filter(date__range=(week_start, week_end)).values_list("date", flat=True))
-    holidays |= set(StateHoliday.objects.filter(date__range=(week_start, week_end)).values_list("date", flat=True))
-    logger.info("Holidays in this week: %s", sorted(holidays))
-
     for emp in employees:
         try:
             logger.info("Processing employee: %s (%s)", emp.first_name, emp.id)
 
-            # Skip if excl_folup
-            if getattr(emp, "excl_folup", False):
-                logger.info("Skipping %s (excl_folup=True)", emp.first_name)
-                continue
-
             min_daily_hours = getattr(emp.country, "working_hours", 9) or 9
             weekly_threshold = min_daily_hours * 5
-            logger.debug("Employee %s: min_daily_hours=%s, weekly_threshold=%s", emp.first_name, min_daily_hours, weekly_threshold)
+            logger.debug(
+                "Employee %s: min_daily_hours=%s, weekly_threshold=%s",
+                emp.first_name, min_daily_hours, weekly_threshold
+            )
+
+            # Collect holidays for employee’s country
+            emp_holidays = set(
+                Holiday.objects.filter(
+                    date__range=(week_start, week_end),
+                    country=emp.country
+                ).values_list("date", flat=True)
+            )
+            emp_holidays |= set(
+                StateHoliday.objects.filter(
+                    date__range=(week_start, week_end),
+                    state__country=emp.country
+                ).values_list("date", flat=True)
+            )
+            logger.debug("Employee %s holidays: %s", emp.first_name, sorted(emp_holidays))
 
             # Collect leave days
             leave_days = set()
@@ -278,7 +289,9 @@ def send_timesheet_reminder(day_type="friday", country_id=None):
 
             # Get timesheet entries
             ts_hdr = TimesheetHdr.objects.filter(employee=emp, week_start=week_start).first()
-            timesheet_items = list(ts_hdr.timesheet_items.filter(wrk_date__range=(week_start, week_end))) if ts_hdr else []
+            timesheet_items = list(
+                ts_hdr.timesheet_items.filter(wrk_date__range=(week_start, week_end))
+            ) if ts_hdr else []
             logger.debug("Employee %s has %s timesheet entries", emp.first_name, len(timesheet_items))
 
             # Map entered hours per date
@@ -294,30 +307,48 @@ def send_timesheet_reminder(day_type="friday", country_id=None):
                 entered_hours = entered_by_date.get(current_date, 0)
 
                 if entered_hours > 0:
-                    logger.debug("Employee %s entered %s hours on %s", emp.first_name, entered_hours, current_date)
+                    logger.debug(
+                        "Employee %s entered %s hours on %s",
+                        emp.first_name, entered_hours, current_date
+                    )
                     if entered_hours < min_daily_hours:
-                        logger.info("Employee %s failed daily minimum hours on %s (%s < %s)", emp.first_name, current_date, entered_hours, min_daily_hours)
+                        logger.info(
+                            "Employee %s failed daily minimum hours on %s (%s < %s)",
+                            emp.first_name, current_date, entered_hours, min_daily_hours
+                        )
                         can_approve = False
                     total_hours += entered_hours
                 else:
-                    if current_date in leave_days or current_date in holidays:
+                    if current_date in leave_days or current_date in emp_holidays:
                         total_hours += min_daily_hours
-                        logger.debug("Employee %s auto-filled %s hours for leave/holiday on %s", emp.first_name, min_daily_hours, current_date)
+                        logger.debug(
+                            "Employee %s auto-filled %s hours for leave/holiday on %s",
+                            emp.first_name, min_daily_hours, current_date
+                        )
                     else:
-                        logger.debug("Employee %s missing entry on %s (0 hours)", emp.first_name, current_date)
+                        logger.debug(
+                            "Employee %s missing entry on %s (0 hours)",
+                            emp.first_name, current_date
+                        )
 
             # Skip if full leave/holiday week
             working_weekdays = [d for d in all_days if d.weekday() < 5]
-            if all(d in leave_days or d in holidays for d in working_weekdays):
+            if all(d in leave_days or d in emp_holidays for d in working_weekdays):
                 logger.info("Skipping %s (full leave/holiday week)", emp.first_name)
                 continue
 
             # Weekly threshold check
             if total_hours < weekly_threshold:
-                logger.info("Employee %s failed weekly threshold: %s < %s", emp.first_name, total_hours, weekly_threshold)
+                logger.info(
+                    "Employee %s failed weekly threshold: %s < %s",
+                    emp.first_name, total_hours, weekly_threshold
+                )
                 can_approve = False
             else:
-                logger.info("Employee %s passes weekly threshold: %s >= %s", emp.first_name, total_hours, weekly_threshold)
+                logger.info(
+                    "Employee %s passes weekly threshold: %s >= %s",
+                    emp.first_name, total_hours, weekly_threshold
+                )
 
             # Send email if required
             if not can_approve:
@@ -353,4 +384,7 @@ def send_timesheet_reminder(day_type="friday", country_id=None):
             logger.exception("Error processing employee %s: %s", emp.first_name, e)
             continue
 
-    logger.info("Timesheet reminder task completed for day_type=%s, country_id=%s", day_type, country_id)
+    logger.info(
+        "Timesheet reminder task completed for day_type=%s, country_id=%s",
+        day_type, country_id
+    )
