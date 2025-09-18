@@ -360,7 +360,7 @@ def send_timesheet_reminder(day_type="friday", country_id=None):
                 <div style="max-width:600px; margin:0; padding:20px; border:1px solid #ddd; border-radius:8px; background:#fafafa;">
                     <p>Dear {emp.first_name},</p>
                     <p>{message_text}</p>
-                    <p style="margin:15px 0; padding:10px; background:#f0f8ff; border-left:4px solid #0073e6;">
+                    <p style="margin:15px 0; padding:10px 0 10px 2px ; background:#f0f8ff; border-left:4px solid #0073e6;">
                         Week: {week_start} to {week_end}
                     </p>
                     <p>Best regards,<br>Spectra HR Team</p>
@@ -368,6 +368,7 @@ def send_timesheet_reminder(day_type="friday", country_id=None):
                 </body>
                 </html>
                 """
+                logger.info("Sending email to %s (%s) with subject='%s'", emp.first_name, emp.company_email, subject)
                 send_mail(
                     subject,
                     plain_message,
@@ -376,7 +377,7 @@ def send_timesheet_reminder(day_type="friday", country_id=None):
                     html_message=html_message,
                     fail_silently=False,
                 )
-                logger.info("Reminder email sent to %s", emp.first_name)
+                logger.info("Email successfully sent to %s (%s)", emp.first_name, emp.company_email)
             else:
                 logger.info("No email required for %s (all conditions met)", emp.first_name)
 

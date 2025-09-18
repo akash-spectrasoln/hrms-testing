@@ -796,13 +796,17 @@ def timesheet_calendar(request):
         start_date__lte=grid_end,
         end_date__gte=grid_start
     ).values_list('start_date', 'end_date')
+    
 
     for start, end in leave_qs:
-        # clamp to grid range to avoid iterating unnecessarily
         s = max(start, grid_start)
         e = min(end, grid_end)
         for i in range((e - s).days + 1):
-            leave_dates.add(s + timedelta(days=i))
+            day = s + timedelta(days=i)
+            if day.weekday() < 5 and day not in all_holidays:
+                leave_dates.add(day)
+
+
 
     # 6️⃣ Build calendar_data — include outside-month days, add is_current_month flag
     calendar_data = []
@@ -1173,12 +1177,15 @@ def get_timesheet_day_data(request):
         return JsonResponse({"error": "Invalid date"}, status=400)
 
     # 4. Check leave
-    on_leave = LeaveRequest.objects.filter(
-        employee_master=employee,
-        status="Approved",
-        start_date__lte=date_obj,
-        end_date__gte=date_obj
-    ).exists()
+    on_leave = (
+            date_obj.weekday() < 5 and
+            LeaveRequest.objects.filter(
+                employee_master=employee,
+                status="Approved",
+                start_date__lte=date_obj,
+                end_date__gte=date_obj
+            ).exists()
+        )
 
     # 5. Check holiday
     is_holiday = Holiday.objects.filter(
@@ -1613,9 +1620,6 @@ def calculate_timesheet_stats(emp, ts_hdr, week_start, leave_days, holidays_cach
     Calculates and returns a dictionary of all timesheet stats for an employee,
     including a detailed breakdown of entries for each day.
     Week: Sunday–Saturday
-    Approval:
-
-        - If a day has entries → total >= min_daily_hours
     """
     # --- 1. Base setup ---
     has_timesheets = ts_hdr is not None
@@ -1627,22 +1631,25 @@ def calculate_timesheet_stats(emp, ts_hdr, week_start, leave_days, holidays_cach
     weekly_threshold = min_daily_hours * 5
 
     # Leave / holiday caches for this employee
-    leave_dates = leave_days.get(emp.id, set())
+    week_end = week_start + timedelta(days=6)
+    raw_leave_dates = leave_days.get(emp.id, set())
     emp_holidays = get_all_holidays(emp, holidays_cache)
+
+    leave_dates = {
+        d for d in raw_leave_dates
+        if week_start <= d <= week_end and d.weekday() < 5 and d not in emp_holidays
+    }
+
+ 
+
+    print("Leave days for", emp.id, ":", sorted([d.strftime("%Y-%m-%d") for d in leave_dates]))
+
+
 
     num_leaves = len(leave_dates)
     num_holidays = len(emp_holidays)
 
-    # --- 2. Aggregate hours (from header if exists) ---
-    # if has_timesheets:
-    #     weekday_hours = ts_hdr.tot_hrs_wrk
-    #     total_holiday_hours = ts_hdr.tot_hol_hrs
-    #     total_leave_hours = ts_hdr.tot_lev_hrs
-    # else:
-    #     weekday_hours = 0
-    #     total_holiday_hours = 0
-    #     total_leave_hours = 0
-    # --- 2. Aggregate hours (from items directly, not header) ---
+    # --- 2. Aggregate hours ---
     weekday_hours = 0
     weekend_hours = 0
     for i in timesheet_items:
@@ -1651,23 +1658,22 @@ def calculate_timesheet_stats(emp, ts_hdr, week_start, leave_days, holidays_cach
         else:
             weekday_hours += i.wrk_hours
 
-    # Leave/holiday hours can still come from header
     total_leave_hours = ts_hdr.tot_lev_hrs if has_timesheets else 0
     total_holiday_hours = ts_hdr.tot_hol_hrs if has_timesheets else 0
 
-
     detailed_entries = []
 
-    # --- 3. Build day-by-day breakdown for display ---
+    # --- 3. Build day-by-day breakdown ---
     for i in range(7):  # Sunday–Saturday
         current_date = week_start + timedelta(days=i)
+        is_weekend = current_date.weekday() >= 5
         is_holiday = current_date in emp_holidays
-        is_leave = current_date in leave_dates
+        is_leave = current_date in leave_dates and not is_weekend  # 🚫 no weekend leave
 
         entries_for_day = [item for item in timesheet_items if item.wrk_date == current_date]
         entered_hours = sum(e.wrk_hours for e in entries_for_day)
 
-        # Logic for what hours to display for each day
+        # Default values
         day_total_hours = entered_hours
         status_message = "No entries made."
         holiday_name = emp_holidays.get(current_date)
@@ -1681,6 +1687,11 @@ def calculate_timesheet_stats(emp, ts_hdr, week_start, leave_days, holidays_cach
         elif is_leave:
             day_total_hours = min_daily_hours
             status_message = "Leave Day"
+        elif is_weekend:
+            if entered_hours > 0:
+                day_total_hours = entered_hours
+            else:
+                day_total_hours = 0
         else:
             if entered_hours > 0:
                 status_message = "Entries made."
@@ -1693,6 +1704,7 @@ def calculate_timesheet_stats(emp, ts_hdr, week_start, leave_days, holidays_cach
             'hours': day_total_hours,
             'is_holiday': is_holiday,
             'is_leave': is_leave,
+            'is_weekend': is_weekend,
             'status_message': status_message,
             'holiday_name': holiday_name if is_holiday else None,
             'timesheet_entries': [
@@ -1714,24 +1726,24 @@ def calculate_timesheet_stats(emp, ts_hdr, week_start, leave_days, holidays_cach
             ]
         })
 
-    # --- 4. Final total for display ---
+    # --- 4. Final total ---
     total_hours = weekday_hours + weekend_hours + total_leave_hours + total_holiday_hours
 
     # --- 5. Approval logic ---
     can_approve = has_timesheets
 
     if can_approve:
-        # Rule 1: weekly total must be >= threshold
         if total_hours < weekly_threshold:
             can_approve = False
 
-        # Rule 2: if a day has entries → must have >= min_daily_hours
+        # Daily check
         for i in range(7):
             current_date = week_start + timedelta(days=i)
+            if current_date.weekday() >= 5:  # skip weekend
+                continue
             entered_hours_for_day = sum(
                 item.wrk_hours for item in timesheet_items if item.wrk_date == current_date
             )
-
             if entered_hours_for_day > 0 and entered_hours_for_day < min_daily_hours:
                 can_approve = False
                 break
