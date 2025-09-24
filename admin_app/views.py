@@ -3,7 +3,8 @@ from django.shortcuts import render,redirect
 from django.http import HttpResponse
 from.models import *
 from django.shortcuts import render
-
+from django.views.generic import ListView, CreateView, UpdateView
+from django.db import models
 # Create your views here.
 
 
@@ -2363,3 +2364,313 @@ def admin_leave_reports(request):
 
     return render(request,"leave_reports.html",context)
 
+
+
+from django.db.models import Q
+from django.views.generic import ListView
+from .models import Devices, DeviceType, DeviceBrand
+@method_decorator(signin_required, name='dispatch')
+class DeviceListView(ListView):
+    model = Devices
+    template_name = "device_list.html"
+    context_object_name = "devices"
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+
+        search = self.request.GET.get("search")
+        type_id = self.request.GET.get("type")
+        brand_id = self.request.GET.get("brand")
+        status = self.request.GET.get("status")
+
+        # Apply search filter
+        if search:
+            qs = qs.filter(
+                Q(device_model__icontains=search) |
+                Q(device_type__device_type__icontains=search) |
+                Q(device_brand__device_brand__icontains=search)
+            )
+
+        # Apply type filter
+        if type_id:
+            qs = qs.filter(device_type_id=type_id)
+
+        # Apply brand filter
+        if brand_id:
+            qs = qs.filter(device_brand_id=brand_id)
+
+        # Apply status filter
+        if status:
+            if status == "active":
+                qs = qs.filter(active=True, retire_date__isnull=True)
+            elif status == "inactive":
+                qs = qs.filter(active=False)
+            elif status == "all":
+                qs = qs  # no extra filter, show all devices
+        else:
+            # Default: initial page load -> show only active devices
+            qs = qs.filter(active=True, retire_date__isnull=True)
+
+        return qs
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        ctx["types"] = DeviceType.objects.all()
+        ctx["brands"] = DeviceBrand.objects.all()
+        ctx["search_query"] = self.request.GET.get("search", "")
+        ctx["type_filter"] = self.request.GET.get("type", "")
+        ctx["brand_filter"] = self.request.GET.get("brand", "")
+        ctx["status_filter"] = self.request.GET.get("status", "")
+        return ctx
+@method_decorator(signin_required, name='dispatch')
+class DeviceCreateView(CreateView):
+    model = Devices
+    form_class = DeviceForm
+    template_name = "device_form.html"
+
+    def get_success_url(self):
+        # Preserve previous filters from GET parameters
+        next_url = self.request.GET.get("next")
+        return next_url or reverse_lazy("device-list")
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        ctx["next"] = self.request.GET.get("next", "")
+        return ctx
+
+@method_decorator(signin_required, name='dispatch')
+class DeviceUpdateView(UpdateView):
+    model = Devices
+    form_class = DeviceForm
+    template_name = "device_form.html"
+
+    def get_success_url(self):
+        # Preserve previous filters from GET parameters
+        next_url = self.request.GET.get("next")
+        return next_url or reverse_lazy("device-list")
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        ctx["next"] = self.request.GET.get("next", "")
+        return ctx
+
+
+# -----------------------------
+# Employee search (for Select2)
+# -----------------------------
+def employee_search(request):
+    term = request.GET.get("term", "")
+
+    employees = Employees.objects.filter(
+        Q(first_name__icontains=term) |
+        Q(last_name__icontains=term) |
+        Q(employee_id__icontains=term)
+    ).order_by("employee_id", "first_name", "last_name")
+
+    results = [
+        {"id": emp.pk, "text": f"{emp.employee_id} - {emp.first_name} {emp.last_name}"}
+        for emp in employees
+    ]
+
+    return JsonResponse({"results": results})
+
+# -----------------------------
+# Device search (for Select2)
+# -----------------------------
+def _get_device_icon(device_type):
+    """Get appropriate icon for device type."""
+    icon_map = {
+        'laptop': '💻',
+        'mouse': '🖱️',
+        'keyboard': '⌨️',
+        'monitor': '🖥️',
+        'desktop': '🖥️',
+        'tablet': '📱',
+        'phone': '📱',
+        'printer': '🖨️',
+        'scanner': '📄',
+        'headphone': '🎧',
+        'speaker': '🔊',
+        'camera': '📷',
+        'projector': '📽️',
+        'computer': '💻',
+        'pc': '🖥️',
+    }
+    
+    # Get the icon for the device type (case insensitive)
+    device_type_lower = device_type.lower() if device_type else ''
+    for key, icon in icon_map.items():
+        if key in device_type_lower:
+            return icon
+    
+    # Default icon for unknown types
+    return '🔧'
+
+def device_search(request):
+    term = request.GET.get("term", "")
+    current_assignment_id = request.GET.get("current_assignment_id")
+
+    devices_qs = Devices.objects.filter(
+        Q(device_model__icontains=term) |
+        Q(serial_no__icontains=term) |
+        Q(device_brand__device_brand__icontains=term),
+        active=True,
+        retire_date__isnull=True
+    ).order_by(
+        "device_brand__device_brand",
+        "device_type__device_type",
+        "device_model",
+        "serial_no"
+    )
+
+    # Exclude currently assigned devices (unless editing this assignment)
+    assigned_ids = DeviceTracker.objects.filter(end_date__isnull=True).values_list("device_id", flat=True)
+    if current_assignment_id:
+        try:
+            current = DeviceTracker.objects.get(pk=current_assignment_id)
+            assigned_ids = [id for id in assigned_ids if id != current.device_id]
+        except DeviceTracker.DoesNotExist:
+            pass
+
+    available_devices = devices_qs.exclude(pk__in=assigned_ids)
+
+    results = [
+        {"id": d.pk, "text": f"{_get_device_icon(d.device_type.device_type)} {d.device_brand.device_brand} {d.device_model} - {d.serial_no}"}
+        for d in available_devices
+    ]
+
+    return JsonResponse({"results": results})
+
+# views.py
+from django.urls import reverse
+from django.views.generic import ListView, CreateView, UpdateView
+from django.db.models import Q
+
+from .models import DeviceTracker
+from .forms import DeviceTrackerForm
+@method_decorator(signin_required, name='dispatch')
+class DeviceTrackerListView(ListView):
+    """List all device assignments with optional search and status filtering.
+
+    Preserves search/filter values for the template.
+    """
+    model = DeviceTracker
+    template_name = "device_tracker_list.html"
+    context_object_name = "assignments"
+
+    def get_queryset(self):
+        """Return filtered queryset based on search query and status filter."""
+        queryset = super().get_queryset().select_related(
+            "employee", "device", "device__device_brand", "device__device_type"
+        )
+
+        # Get search parameters from querystring
+        search_query = self.request.GET.get("search", "").strip()
+        status_filter = self.request.GET.get("status", "").lower()
+
+        # Filter by status
+        if status_filter == "active":
+            queryset = queryset.filter(end_date__isnull=True)
+        elif status_filter == "ended":
+            queryset = queryset.filter(end_date__isnull=False)
+
+        # Filter by search query
+        if search_query:
+            queryset = queryset.filter(
+                Q(employee__employee_id__icontains=search_query) |
+                Q(employee__first_name__icontains=search_query) |
+                Q(employee__last_name__icontains=search_query) |
+                Q(device__device_model__icontains=search_query) |
+                Q(device__device_brand__device_brand__icontains=search_query) |
+                Q(device__serial_no__icontains=search_query)
+            )
+
+        # Order by employee ID
+        return queryset.order_by("employee__employee_id")
+
+    def get_context_data(self, **kwargs):
+        """Add search/filter parameters to context for template persistence."""
+        context = super().get_context_data(**kwargs)
+        context["search_query"] = self.request.GET.get("search", "").strip()
+        context["status_filter"] = self.request.GET.get("status", "").lower()
+        return context
+
+@method_decorator(signin_required, name='dispatch')
+class DeviceTrackerCreateView(CreateView):
+    """Create a new device assignment with AJAX-enabled employee/device Select2 fields.
+
+    Preserves the filtered list URL via 'next' query parameter.
+    """
+    model = DeviceTracker
+    form_class = DeviceTrackerForm
+    template_name = "device_tracker_form.html"
+
+    def get_success_url(self):
+        """Redirect back to the filtered list or default list if no 'next' is provided."""
+        return self.request.GET.get("next", reverse("device-tracker-list"))
+
+    def get_context_data(self, **kwargs):
+        """Pass template data for Select2 fields and preserve 'next' parameter."""
+        context = super().get_context_data(**kwargs)
+        next_url = self.request.GET.get("next", reverse("device-tracker-list"))
+        context["next"] = next_url
+        context["template_data"] = {
+            "employeeSearchUrl": reverse("employee_search"),
+            "deviceSearchUrl": reverse("device_search"),
+            "employeeData": None,
+            "deviceData": None,
+        }
+        return context
+
+@method_decorator(signin_required, name='dispatch')
+class DeviceTrackerUpdateView(UpdateView):
+    """Edit an existing device assignment.
+
+    Preserves filtered list URL via 'next' and preselects employee/device in Select2.
+    """
+    model = DeviceTracker
+    form_class = DeviceTrackerForm
+    template_name = "device_tracker_form.html"
+
+    def get_queryset(self):
+        """Select related fields to reduce database queries."""
+        return DeviceTracker.objects.select_related(
+            "employee", "device", "device__device_brand", "device__device_type"
+        )
+
+    def get_success_url(self):
+        """Redirect back to filtered list or default list after saving."""
+        return self.request.GET.get("next", reverse("device-tracker-list"))
+
+    def get_context_data(self, **kwargs):
+        """Add Select2 template data and preserve 'next' query parameter."""
+        context = super().get_context_data(**kwargs)
+        form = context["form"]
+        next_url = self.request.GET.get("next", reverse("device-tracker-list"))
+        context["next"] = next_url
+
+        # Preselect employee and device for edit
+        employee_data = None
+        device_data = None
+        if form.instance.pk and form.instance.employee:
+            employee_data = {
+                "id": form.instance.employee.pk,
+                "text": f"{form.instance.employee.employee_id} - "
+                        f"{form.instance.employee.first_name} {form.instance.employee.last_name}"
+            }
+        if form.instance.pk and form.instance.device:
+            device_data = {
+                "id": form.instance.device.pk,
+                "text": f"{_get_device_icon(form.instance.device.device_type.device_type)}"
+                        f"{form.instance.device.device_brand.device_brand} "
+                        f"{form.instance.device.device_model} " 
+                        f"-{form.instance.device.serial_no}"
+            }
+
+        context["template_data"] = {
+            "employeeSearchUrl": reverse("employee_search"),
+            "deviceSearchUrl": reverse("device_search"),
+            "employeeData": employee_data,
+            "deviceData": device_data,
+        }
+        return context

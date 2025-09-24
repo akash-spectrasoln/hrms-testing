@@ -76,6 +76,18 @@ path('setup/', setup_list_create_view, name='setup_list'),
 path('setup/edit/<int:pk>/', setup_edit_view, name='setup_edit'),
 path('setup/delete/<int:pk>/', setup_delete_view, name='setup_delete'),
 
+# Devices
+path("devices/", DeviceListView.as_view(), name="device-list"),
+path("devices/add/", DeviceCreateView.as_view(), name="device-add"),
+path("devices/<int:pk>/edit/", DeviceUpdateView.as_view(), name="device-edit"),
+
+# Device Tracker
+path('employee-search/',employee_search, name='employee_search'),
+path('device-search/', device_search, name='device_search'),
+path("device-tracker/", DeviceTrackerListView.as_view(), name="device-tracker-list"),
+path("device-tracker/add/", DeviceTrackerCreateView.as_view(), name="device-tracker-add"),
+path("device-tracker/<int:pk>/edit/", DeviceTrackerUpdateView.as_view(), name="device-tracker-edit"),
+
 path('clients/', ts_views.client_list, name='client_list'),
 path('clients/add/', ts_views.client_create, name='client_create'),
 path('clients/<int:pk>/edit/', ts_views.client_update, name='client_update'),

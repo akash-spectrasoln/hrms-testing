@@ -1,0 +1,126 @@
+{% extends 'admin_partials/admin_base.html' %}
+{% load static %}
+{% load form_tags %}
+
+{% block content %}
+<style>
+.centered-form-container { max-width: 500px; margin: 0 auto; }
+.form-label { margin-bottom: 2px; font-weight: 500; }
+.form-control-sm { padding: 0.3rem 0.5rem; font-size: 0.875rem; }
+.card-header h5 { text-align: center; }
+.select2-container--default .select2-selection--single { border: 1px solid #ced4da !important; border-radius: 0.25rem !important; height: calc(1.5em + 0.75rem + 2px) !important; }
+.select2-container--default .select2-selection--single .select2-selection__rendered { line-height: calc(1.5em + 0.75rem) !important; padding-left: 0.5rem !important; padding-right: 20px !important; }
+.select2-container--default .select2-selection--single .select2-selection__arrow { height: calc(1.5em + 0.75rem) !important; right: 1px !important; }
+.select2-container--default.select2-container--focus .select2-selection--single { border-color: #0d6efd !important; box-shadow: 0 0 0 0.2rem rgba(13,110,253,0.25) !important; }
+.form-control.is-invalid, .select2-container--default .select2-selection--single.is-invalid { border-color: #dc3545 !important; box-shadow: 0 0 0 0.2rem rgba(220,53,69,0.25) !important; }
+.errorlist { color: #dc3545; font-size: 0.875rem; margin-top: 0.25rem; padding: 0; list-style: none; }
+.errorlist li { margin-bottom: 0.25rem; }
+</style>
+
+<div class="container my-4">
+    <div class="card centered-form-container shadow">
+        <div class="card-header bg-primary text-white py-2 px-3">
+            <h5>{{ form.instance.pk|yesno:"Edit Device Assignment,Assign Device" }}</h5>
+        </div>
+        <div class="card-body py-3 px-3">
+            <form method="post" novalidate>
+                {% csrf_token %}
+                {{ form.non_field_errors }}
+
+                <div class="mb-2">
+                    <label class="form-label">Employee</label>
+                    {{ form.employee|add_class:"form-control form-control-sm employee-select2" }}
+                    {{ form.employee.errors }}
+                </div>
+
+                <div class="mb-2">
+                    <label class="form-label">Device</label>
+                    {{ form.device|add_class:"form-control form-control-sm device-select2" }}
+                    {{ form.device.errors }}
+                </div>
+
+                <div class="mb-2">
+                    <label class="form-label">Start Date</label>
+                    {{ form.start_date|add_class:"form-control form-control-sm" }}
+                    {{ form.start_date.errors }}
+                </div>
+
+                <div class="mb-2">
+                    <label class="form-label">End Date</label>
+                    {{ form.end_date|add_class:"form-control form-control-sm" }}
+                    {{ form.end_date.errors }}
+                </div>
+
+                <div class="d-flex gap-2 mt-3">
+                    <a href="{{ next|default:'' }}" class="btn btn-secondary btn-sm">Back</a>
+                    <button type="submit" class="btn btn-success btn-sm">Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{{ template_data|json_script:"template-data" }}
+
+<script>
+$(function() {
+    const templateData = JSON.parse(document.getElementById("template-data").textContent);
+
+    function initSelect2($el, url, preselected, extraParams={}) {
+        // Destroy if already initialized
+        if ($el.hasClass('select2-hidden-accessible')) $el.select2('destroy');
+
+        $el.select2({
+            placeholder: 'Search...',
+            allowClear: true,
+            width: '100%',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                delay: 250,
+                data: function(params) {
+                    return Object.assign({ term: params.term, page: params.page || 1 }, extraParams);
+                },
+                processResults: function(data) {
+                    return { results: data.results || [] };
+                },
+                cache: true
+            },
+            templateResult: data => data.text || data.id,
+            templateSelection: data => data.text || data.id,
+            escapeMarkup: markup => markup
+        });
+
+        // Preselected for edit mode
+        if (preselected) {
+            const option = new Option(preselected.text, preselected.id, true, true);
+            $el.append(option).trigger('change');
+        }
+
+        // Ensure selected option exists on any selection (fixes None on submit)
+        $el.on('select2:select', function(e) {
+            const data = e.params.data;
+            if (!$el.find("option[value='" + data.id + "']").length) {
+                const option = new Option(data.text, data.id, true, true);
+                $el.append(option).trigger('change');
+            }
+        });
+
+        // Error highlight for invalid fields
+        function updateError() {
+            const hasError = $el.siblings('.errorlist').length > 0;
+            $el.next('.select2-container').find('.select2-selection--single')
+                .toggleClass('is-invalid', hasError);
+        }
+
+        updateError();
+        $el.on('change', updateError);
+        $('form').on('submit', () => setTimeout(updateError, 50));
+    }
+
+    // Initialize Select2 fields
+    initSelect2($('.employee-select2'), templateData.employeeSearchUrl, templateData.employeeData);
+    initSelect2($('.device-select2'), templateData.deviceSearchUrl, templateData.deviceData);
+});
+</script>
+{% endblock %}

@@ -1,0 +1,93 @@
+{% extends 'admin_partials/admin_base.html' %}
+{% load static %}
+{% load form_tags %}
+
+{% block content %}
+<style>
+    .centered-form-container { max-width: 500px; margin: 0 auto; }
+    .form-label { margin-bottom: 2px; font-weight: 500; }
+    .form-control-sm { padding: 0.3rem 0.5rem; font-size: 0.875rem; }
+    .card-header h5 { width: 100%; text-align: center; margin: 0; }
+</style>
+
+<div class="container my-4">
+    <div class="card centered-form-container shadow">
+        <div class="card-header bg-primary text-white py-2 px-3">
+            <h5 class="mb-0">{{ form.instance.pk|yesno:"Edit Device,Add Device" }}</h5>
+        </div>
+
+        <div class="card-body py-3 px-3">
+            <form method="post" novalidate>
+                {% csrf_token %}
+                {{ form.non_field_errors }}
+
+                <!-- Model -->
+                <div class="mb-2">
+                    <label for="id_device_model" class="form-label">Model</label>
+                    {{ form.device_model|add_class:"form-control form-control-sm" }}
+                    {{ form.device_model.errors }}
+                </div>
+
+                <!-- Type -->
+                <div class="mb-2">
+                    <label for="id_device_type" class="form-label">Type</label>
+                    {{ form.device_type|add_class:"form-control form-control-sm" }}
+                    {{ form.device_type.errors }}
+                </div>
+
+                <!-- Brand -->
+                <div class="mb-2">
+                    <label for="id_device_brand" class="form-label">Brand</label>
+                    {{ form.device_brand|add_class:"form-control form-control-sm" }}
+                    {{ form.device_brand.errors }}
+                </div>
+
+                <!-- Serial No -->
+                <div class="mb-2">
+                    <label for="id_serial_no" class="form-label">Serial No</label>
+                    {{ form.serial_no|add_class:"form-control form-control-sm" }}
+                    {{ form.serial_no.errors }}
+                </div>
+
+                <!-- Procurement Date -->
+                <div class="mb-2">
+                    <label for="id_proc_date" class="form-label">Procurement Date</label>
+                    {{ form.proc_date|add_class:"form-control form-control-sm" }}
+                    {{ form.proc_date.errors }}
+                </div>
+
+                <!-- Retire Date -->
+                <div class="mb-2">
+                    <label for="id_retire_date" class="form-label">Retire Date</label>
+                    {{ form.retire_date|add_class:"form-control form-control-sm" }}
+                    {{ form.retire_date.errors }}
+                </div>
+
+                <!-- Price -->
+                <div class="mb-2">
+                    <label for="id_price" class="form-label">Price</label>
+                    {{ form.price|add_class:"form-control form-control-sm" }}
+                    {{ form.price.errors }}
+                </div>
+
+                <!-- Active -->
+                <div class="form-check mb-3">
+                    {{ form.active|add_class:"form-check-input" }}
+                    <label class="form-check-label" for="{{ form.active.id_for_label }}">Active</label>
+                    {{ form.active.errors }}
+                </div>
+
+                <!-- Buttons -->
+                <div class="d-flex justify-content-start gap-4 mt-3">
+                    <a href="{{ next|default:'' }}" class="btn btn-secondary btn-sm">
+                        <i class="fas fa-arrow-left me-1"></i> Back
+                    </a>
+                    <button type="submit" class="btn btn-success btn-sm">
+                        <i class="fas fa-save me-1"></i> Save
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1323,6 +1323,115 @@ class TimesheetItem(models.Model):
 
     def __str__(self):
         return f"Item {self.id} - {self.project.project_name} ({self.date})"
+    
+
+class DeviceBrand(models.Model):
+    id = models.AutoField(primary_key=True)
+    device_brand = models.CharField(max_length=100, unique=True)   # Lenovo, HP, Acer, Dell
+
+    class Meta:
+        db_table = "device_brand"
+
+    def __str__(self):
+        return self.device_brand
 
 
+class DeviceType(models.Model):
+    id = models.AutoField(primary_key=True)
+    device_type = models.CharField(max_length=50, unique=True)   # Laptop, Mouse
 
+    class Meta:
+        db_table = "device_type"
+
+    def __str__(self):
+        return self.device_type
+
+
+class Devices(models.Model):
+    id = models.AutoField(primary_key=True)
+    device_model = models.CharField(max_length=100)   # Device model
+    device_type = models.ForeignKey(DeviceType, on_delete=models.CASCADE, db_column="type")
+    device_brand = models.ForeignKey(DeviceBrand, on_delete=models.CASCADE, db_column="brand")
+    serial_no = models.CharField(max_length=100, unique=True)
+    proc_date = models.DateField()   # Procurement Date
+    retire_date = models.DateField(null=True, blank=True)
+    price = models.DecimalField(max_digits=12, decimal_places=2)
+    active = models.BooleanField(default=True)
+
+    class Meta:
+        db_table = "devices"
+
+    def __str__(self):
+        return f"{self.device_brand.device_brand} {self.device_model} ({self.serial_no})"
+    def save(self, *args, **kwargs):
+        # Automatically set active based on retire_date
+        if self.retire_date:
+            self.active = False
+        else:
+            self.active = True
+        super().save(*args, **kwargs)
+    @property
+    def is_available(self):
+        """Check if device is active and not retired & not currently assigned."""
+        return (
+            self.active
+            and self.retire_date is None
+            and not self.device_trackers.filter(end_date__isnull=True).exists()
+        )
+
+class DeviceTracker(models.Model):
+    id = models.AutoField(primary_key=True)
+    employee = models.ForeignKey(
+        "Employees",
+        on_delete=models.CASCADE,
+        related_name="device_trackers"
+    )
+    device = models.ForeignKey(
+        "Devices",
+        on_delete=models.CASCADE,
+        related_name="device_trackers"
+    )
+    start_date = models.DateField()
+    end_date = models.DateField(null=True, blank=True)
+
+    class Meta:
+        db_table = "device_tracker"
+        constraints = [
+            # Prevent one device from being assigned to multiple employees at once
+            models.UniqueConstraint(
+                fields=["device"],
+                condition=Q(end_date__isnull=True),
+                name="unique_active_device_assignment",
+            )
+        ]
+
+    def clean(self):
+        """Validate assignment rules before saving."""
+        from django.core.exceptions import ValidationError
+
+        # Validate date logic
+        if self.end_date and self.start_date > self.end_date:
+            raise ValidationError("End date cannot be earlier than start date.")
+
+        # 🚨 Prevent duplicate active device assignment
+        if self.device_id and not self.end_date:  # means still active
+            existing = DeviceTracker.objects.filter(
+                device=self.device,
+                end_date__isnull=True
+            ).exclude(pk=self.pk)  # exclude self if updating
+            if existing.exists():
+                raise ValidationError(
+                    f"Device {self.device} is already assigned to {existing.first().employee.first_name} {existing.first().employee.last_name}."
+                )
+
+        # 🚨 Prevent same employee having 2 active devices of same type
+        if self.device_id and not self.end_date:
+            same_type_active = DeviceTracker.objects.filter(
+                employee=self.employee,
+                device__device_type=self.device.device_type,
+                end_date__isnull=True,
+            ).exclude(pk=self.pk)
+            if same_type_active.exists():
+                raise ValidationError(
+                    f"{self.employee.first_name} already has an active {self.device.device_type} assigned."
+                )
