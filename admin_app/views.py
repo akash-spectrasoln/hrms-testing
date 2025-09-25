@@ -2428,8 +2428,15 @@ class DeviceCreateView(CreateView):
     form_class = DeviceForm
     template_name = "device_form.html"
 
+    def form_valid(self, form):
+        self.object = form.save(commit=False)
+        employee = self.request.user.employee_profile  # logged-in employee
+        self.object.created_by = employee
+        self.object.updated_by = employee
+        self.object.save()
+        return super().form_valid(form)
+
     def get_success_url(self):
-        # Preserve previous filters from GET parameters
         next_url = self.request.GET.get("next")
         return next_url or reverse_lazy("device-list")
 
@@ -2438,14 +2445,21 @@ class DeviceCreateView(CreateView):
         ctx["next"] = self.request.GET.get("next", "")
         return ctx
 
+
 @method_decorator(signin_required, name='dispatch')
 class DeviceUpdateView(UpdateView):
     model = Devices
     form_class = DeviceForm
     template_name = "device_form.html"
 
+    def form_valid(self, form):
+        self.object = form.save(commit=False)
+        employee = self.request.user.employee_profile  # logged-in employee
+        self.object.updated_by = employee
+        self.object.save()
+        return super().form_valid(form)
+
     def get_success_url(self):
-        # Preserve previous filters from GET parameters
         next_url = self.request.GET.get("next")
         return next_url or reverse_lazy("device-list")
 
@@ -2535,7 +2549,7 @@ def device_search(request):
     available_devices = devices_qs.exclude(pk__in=assigned_ids)
 
     results = [
-        {"id": d.pk, "text": f"{_get_device_icon(d.device_type.device_type)} {d.device_brand.device_brand} {d.device_model} - {d.serial_no}"}
+        {"id": d.pk, "text": f"{_get_device_icon(d.device_type.device_type)} {d.device_brand.device_brand} {d.device_model} | SN: {d.serial_no}"}
         for d in available_devices
     ]
 
@@ -2594,23 +2608,26 @@ class DeviceTrackerListView(ListView):
         context["search_query"] = self.request.GET.get("search", "").strip()
         context["status_filter"] = self.request.GET.get("status", "").lower()
         return context
-
 @method_decorator(signin_required, name='dispatch')
 class DeviceTrackerCreateView(CreateView):
-    """Create a new device assignment with AJAX-enabled employee/device Select2 fields.
-
-    Preserves the filtered list URL via 'next' query parameter.
-    """
+    """Create a new device assignment with AJAX-enabled employee/device Select2 fields."""
     model = DeviceTracker
     form_class = DeviceTrackerForm
     template_name = "device_tracker_form.html"
+
+    def form_valid(self, form):
+        self.object = form.save(commit=False)
+        employee = self.request.user.employee_profile  # logged-in employee
+        self.object.created_by = employee
+        self.object.updated_by = employee
+        self.object.save()
+        return super().form_valid(form)
 
     def get_success_url(self):
         """Redirect back to the filtered list or default list if no 'next' is provided."""
         return self.request.GET.get("next", reverse("device-tracker-list"))
 
     def get_context_data(self, **kwargs):
-        """Pass template data for Select2 fields and preserve 'next' parameter."""
         context = super().get_context_data(**kwargs)
         next_url = self.request.GET.get("next", reverse("device-tracker-list"))
         context["next"] = next_url
@@ -2622,15 +2639,20 @@ class DeviceTrackerCreateView(CreateView):
         }
         return context
 
+
 @method_decorator(signin_required, name='dispatch')
 class DeviceTrackerUpdateView(UpdateView):
-    """Edit an existing device assignment.
-
-    Preserves filtered list URL via 'next' and preselects employee/device in Select2.
-    """
+    """Edit an existing device assignment."""
     model = DeviceTracker
     form_class = DeviceTrackerForm
     template_name = "device_tracker_form.html"
+
+    def form_valid(self, form):
+        self.object = form.save(commit=False)
+        employee = self.request.user.employee_profile  # logged-in employee
+        self.object.updated_by = employee
+        self.object.save()
+        return super().form_valid(form)
 
     def get_queryset(self):
         """Select related fields to reduce database queries."""
@@ -2643,7 +2665,6 @@ class DeviceTrackerUpdateView(UpdateView):
         return self.request.GET.get("next", reverse("device-tracker-list"))
 
     def get_context_data(self, **kwargs):
-        """Add Select2 template data and preserve 'next' query parameter."""
         context = super().get_context_data(**kwargs)
         form = context["form"]
         next_url = self.request.GET.get("next", reverse("device-tracker-list"))
@@ -2663,7 +2684,7 @@ class DeviceTrackerUpdateView(UpdateView):
                 "id": form.instance.device.pk,
                 "text": f"{_get_device_icon(form.instance.device.device_type.device_type)}"
                         f"{form.instance.device.device_brand.device_brand} "
-                        f"{form.instance.device.device_model} " 
+                        f"{form.instance.device.device_model} "
                         f"-{form.instance.device.serial_no}"
             }
 

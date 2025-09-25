@@ -79,7 +79,7 @@
                   <option value="">All</option>
                   {% for b in brands %}
                     <option value="{{ b.pk }}" {% if request.GET.brand == b.pk|stringformat:"s" %}selected{% endif %}>
-                      {{ b.device_model }}
+                      {{ b.device_brand }}
                     </option>
                   {% endfor %}
                 </select>
@@ -111,8 +111,9 @@
                     <th>Type</th>
                     <th>Serial No</th>
                     <th>Proc Date</th>
-                    <th>Retire Date</th>
                     <th>Price</th>
+                    <th>Retire Date</th>
+                    <th>Comment</th>
                     <th>Status</th>
                     <th>Actions</th>
                   </tr>
@@ -125,8 +126,9 @@
                       <td>{{ device.device_type.device_type }}</td>
                       <td>{{ device.serial_no }}</td>
                       <td>{{ device.proc_date }}</td>
-                      <td>{{ device.retire_date|default:"-" }}</td>
                       <td>{{ device.price }}</td>
+                      <td>{{ device.retire_date|default:"-" }}</td>
+                      <td>{{ device.comment|default:"-"|truncatechars:50 }}</td>                     
                       <td>
                         {% if device.active %}<span class="badge bg-success">Active</span>
                         {% else %}<span class="badge bg-secondary">Inactive</span>{% endif %}
@@ -142,7 +144,7 @@
                     </tr>
                   {% empty %}
                     <tr>
-                      <td colspan="9" class="text-center text-muted">No devices found.</td>
+                      <td colspan="10" class="text-center text-muted">No devices found.</td>
                     </tr>
                   {% endfor %}
                 </tbody>

@@ -56,19 +56,21 @@
                     {{ form.proc_date.errors }}
                 </div>
 
-                <!-- Retire Date -->
-                <div class="mb-2">
-                    <label for="id_retire_date" class="form-label">Retire Date</label>
-                    {{ form.retire_date|add_class:"form-control form-control-sm" }}
-                    {{ form.retire_date.errors }}
-                </div>
-
                 <!-- Price -->
                 <div class="mb-2">
                     <label for="id_price" class="form-label">Price</label>
                     {{ form.price|add_class:"form-control form-control-sm" }}
                     {{ form.price.errors }}
                 </div>
+
+                {% if form.instance.pk %}
+                <!-- Retire Date (only in edit mode) -->
+                <div class="mb-2">
+                    <label for="id_retire_date" class="form-label">Retire Date</label>
+                    {{ form.retire_date|add_class:"form-control form-control-sm" }}
+                    {{ form.retire_date.errors }}
+                </div>
+                {% endif %}
 
                 <!-- Active -->
                 <div class="form-check mb-3">
@@ -77,12 +79,20 @@
                     {{ form.active.errors }}
                 </div>
 
+                <!-- Comment -->
+                <div class="mb-2">
+                    <label for="id_comment" class="form-label">Comment</label>
+                    {{ form.comment|add_class:"form-control form-control-sm" }}
+                    {{ form.comment.errors }}
+                    <small id="comment-counter" class="form-text text-muted">0 / 150</small>
+                </div>
+
                 <!-- Buttons -->
                 <div class="d-flex justify-content-start gap-4 mt-3">
                     <a href="{{ next|default:'' }}" class="btn btn-secondary btn-sm">
                         <i class="fas fa-arrow-left me-1"></i> Back
                     </a>
-                    <button type="submit" class="btn btn-success btn-sm">
+                    <button type="submit" id="save-btn" class="btn btn-success btn-sm">
                         <i class="fas fa-save me-1"></i> Save
                     </button>
                 </div>
@@ -90,4 +100,32 @@
         </div>
     </div>
 </div>
+
+<!-- Character Counter Script -->
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const commentField = document.getElementById("id_comment");
+        const counter = document.getElementById("comment-counter");
+        const saveBtn = document.getElementById("save-btn");
+        const maxLength = 150;
+
+        function updateCounter() {
+            const length = commentField.value.length;
+            counter.textContent = `${length} / ${maxLength}`;
+
+            if (length > maxLength) {
+                counter.classList.remove("text-muted");
+                counter.classList.add("text-danger", "fw-bold");
+                saveBtn.disabled = true;   // disable save
+            } else {
+                counter.classList.remove("text-danger", "fw-bold");
+                counter.classList.add("text-muted");
+                saveBtn.disabled = false;  // enable save
+            }
+        }
+
+        commentField.addEventListener("input", updateCounter);
+        updateCounter();  // run once on page load
+    });
+</script>
 {% endblock %}

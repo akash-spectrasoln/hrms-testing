@@ -1350,19 +1350,44 @@ class DeviceType(models.Model):
 class Devices(models.Model):
     id = models.AutoField(primary_key=True)
     device_model = models.CharField(max_length=100)   # Device model
-    device_type = models.ForeignKey(DeviceType, on_delete=models.CASCADE, db_column="type")
-    device_brand = models.ForeignKey(DeviceBrand, on_delete=models.CASCADE, db_column="brand")
+    device_type = models.ForeignKey(DeviceType, on_delete=models.CASCADE)
+    device_brand = models.ForeignKey(DeviceBrand, on_delete=models.CASCADE)
     serial_no = models.CharField(max_length=100, unique=True)
     proc_date = models.DateField()   # Procurement Date
     retire_date = models.DateField(null=True, blank=True)
     price = models.DecimalField(max_digits=12, decimal_places=2)
     active = models.BooleanField(default=True)
+    comment = models.TextField(
+        null=True,
+        blank=True,
+    )
+    # 👇 Audit fields
+    created_at = models.DateTimeField(auto_now_add=True)   # set once when row is created
+    updated_at = models.DateTimeField(auto_now=True)       # auto updates on save
+
+    created_by = models.ForeignKey(
+        "Employees",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="devices_created"
+    )
+    updated_by = models.ForeignKey(
+        "Employees",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="devices_updated"
+    )
+
+    def __str__(self):
+        return f"{self.device_model} ({self.serial_no})"
 
     class Meta:
         db_table = "devices"
 
     def __str__(self):
-        return f"{self.device_brand.device_brand} {self.device_model} ({self.serial_no})"
+        return f"{self.device_brand.device_brand} {self.device_model} | SN: {self.serial_no}"
     def save(self, *args, **kwargs):
         # Automatically set active based on retire_date
         if self.retire_date:
@@ -1393,6 +1418,24 @@ class DeviceTracker(models.Model):
     )
     start_date = models.DateField()
     end_date = models.DateField(null=True, blank=True)
+    # 👇 Audit fields
+    created_at = models.DateTimeField(auto_now_add=True)   # set once when row is created
+    updated_at = models.DateTimeField(auto_now=True)       # auto updates on save
+
+    created_by = models.ForeignKey(
+        "Employees",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="devices_tracker_created"
+    )
+    updated_by = models.ForeignKey(
+        "Employees",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="devices_tracker_updated"
+    )
 
     class Meta:
         db_table = "device_tracker"

@@ -342,13 +342,12 @@ class SetUpTableForm(forms.ModelForm):
             'value': forms.TextInput(attrs={'class': 'form-control form-control-sm'}),
         }
 
-
 class DeviceForm(forms.ModelForm):
     class Meta:
         model = Devices
         fields = [
             "device_model", "device_type", "device_brand", "serial_no",
-            "proc_date", "retire_date", "price", "active"
+            "proc_date", "retire_date", "price", "active", "comment"
         ]
         widgets = {
             "device_model": forms.TextInput(attrs={"class": "form-control form-control-sm"}),
@@ -359,11 +358,26 @@ class DeviceForm(forms.ModelForm):
             "retire_date": forms.DateInput(attrs={"type": "date", "class": "form-control form-control-sm"}),
             "price": forms.NumberInput(attrs={"class": "form-control form-control-sm"}),
             "active": forms.CheckboxInput(attrs={"class": "form-check-input"}),
+            "comment": forms.Textarea(attrs={"rows": 3, "class": "form-control form-control-sm"}),
         }
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        if not self.instance.pk:  # New instance
-            self.fields['active'].initial = True
+
+        # Hide retire_date in Add mode
+        if not self.instance.pk:
+            self.fields["retire_date"].widget = forms.HiddenInput()
+            self.fields["active"].initial = True
+        else:
+            # Edit mode: show retire_date normally
+            self.fields["retire_date"].required = False
+            self.fields["retire_date"].widget.attrs.update({
+                "type": "date", "class": "form-control form-control-sm"
+            })
+
+        # Friendly empty labels for dropdowns
+        self.fields["device_type"].empty_label = "Select Device Type"
+        self.fields["device_brand"].empty_label = "Select Device Brand"
 
     def clean(self):
         cleaned_data = super().clean()
@@ -374,6 +388,13 @@ class DeviceForm(forms.ModelForm):
             self.add_error("retire_date", "Retire date cannot be before procurement date.")
 
         return cleaned_data
+
+    def clean_comment(self):
+        comment = self.cleaned_data.get("comment")
+        if comment and len(comment) > 150:
+            raise forms.ValidationError("Comment cannot exceed 150 characters.")
+        return comment
+
 
 from django import forms
 from .models import DeviceTracker, Devices, Employees
@@ -408,31 +429,27 @@ class DeviceTrackerForm(forms.ModelForm):
         )
 
         # Base queryset for available devices
-        available_devices = Devices.objects.filter(
-            active=True, retire_date__isnull=True
-        ).exclude(
-            device_trackers__end_date__isnull=True  # Exclude actively assigned devices
+        # A device is available if:
+        # 1. It's active and not retired
+        # 2. It has no active assignments (no assignments with null end_date)
+        from django.db.models import Exists, OuterRef
+        
+        # Get devices with ongoing assignments
+        ongoing_assignments = DeviceTracker.objects.filter(
+            device=OuterRef('pk'),
+            end_date__isnull=True
         )
         
-        print(f"[DEBUG] Base available devices query: {available_devices.query}")
-
-        print(f"[DEBUG] Available devices before filters: {list(available_devices)}")
-
-        # Include current device in edit mode
+        available_devices = Devices.objects.filter(
+            active=True, 
+            retire_date__isnull=True
+        ).exclude(
+            Exists(ongoing_assignments)  # Exclude devices with ongoing assignments
+        )
+        
+        # Include current device in edit mode only
         if self.instance.pk and self.instance.device:
             available_devices = available_devices | Devices.objects.filter(pk=self.instance.device.pk)
-            print(f"[DEBUG] Available devices in edit mode (current device included): {list(available_devices)}")
-
-        # Include selected device in create mode if posted
-        if self.data and self.data.get("device"):
-            try:
-                device_id = int(self.data.get("device"))
-                available_devices = available_devices | Devices.objects.filter(pk=device_id)
-                print(f"[DEBUG] Available devices in create mode (selected device included): {list(available_devices)}")
-            except (TypeError, ValueError):
-                print(f"[DEBUG] Invalid device ID in POST: {self.data.get('device')}")
-
-        print(f"[DEBUG] Final available devices after queryset filtering: {list(available_devices)}")
 
         # Assign final queryset and label formatting
         self.fields["device"].queryset = available_devices.distinct().order_by(
@@ -441,7 +458,7 @@ class DeviceTrackerForm(forms.ModelForm):
             "device_model"
         )
         self.fields["device"].label_from_instance = (
-            lambda obj: f"{self._get_device_icon(obj.device_type.device_type)} {obj.device_brand.device_brand} {obj.device_model} - {obj.serial_no}"
+            lambda obj: f"{self._get_device_icon(obj.device_type.device_type)} {obj.device_brand.device_brand} {obj.device_model} | SN: {obj.serial_no}"
         )
 
     def clean(self):
@@ -450,27 +467,31 @@ class DeviceTrackerForm(forms.ModelForm):
         end_date = cleaned_data.get("end_date")
         device = cleaned_data.get("device")
         
-        # Debugging lines to check raw POST data and form state
-        print(f"[DEBUG] Raw POST data for device: {self.data.get('device') if self.data else 'No data'}")
-        print(f"[DEBUG] Form data keys: {list(self.data.keys()) if self.data else 'No data'}")
-        print(f"[DEBUG] Device field errors: {self.errors.get('device', [])}")
-        print(f"[DEBUG] All form errors: {self.errors}")
-        print(f"[DEBUG] Cleaning form: device={device}, start_date={start_date}, end_date={end_date}")
 
         if start_date and end_date and end_date < start_date:
             self.add_error("end_date", "End date cannot be before start date.")
 
         if device and start_date:
+            # Set end_compare to a far future date if end_date is None (ongoing assignment)
             end_compare = end_date or start_date
 
+            # Check for overlapping assignments
+            # Two assignments overlap if:
+            # 1. New assignment starts before existing assignment ends, AND
+            # 2. New assignment ends after existing assignment starts
             overlaps = DeviceTracker.objects.filter(device=device).exclude(pk=self.instance.pk).filter(
-                Q(end_date__isnull=True) | Q(end_date__gte=start_date),
-                start_date__lte=end_compare
+                Q(
+                    # Case 1: Existing assignment has no end_date (ongoing)
+                    Q(end_date__isnull=True) & Q(start_date__lte=end_compare)
+                ) | Q(
+                    # Case 2: Both assignments have end dates
+                    Q(end_date__isnull=False) & 
+                    Q(start_date__lte=end_compare) & 
+                    Q(end_date__gte=start_date)
+                )
             )
-            print(f"[DEBUG] Overlaps found for device {device}: {overlaps.exists()}")
-
+            
             if overlaps.exists() and (not self.instance.pk or self.instance.device != device):
-                print(f"[DEBUG] Overlap detected for device: {device}. Adding error.")
                 self.add_error("device", "This device is already assigned during the selected period.")
 
         return cleaned_data
@@ -479,12 +500,12 @@ class DeviceTrackerForm(forms.ModelForm):
         """Custom validation for device field to handle Select2 AJAX submissions."""
         device = self.cleaned_data.get('device')
         
-        print(f"[DEBUG] clean_device called with device: {device}")
-        print(f"[DEBUG] device type: {type(device)}")
-        
-        # If device is already a Devices instance, return it
+        # If device is already a Devices instance, check if it's available
         if isinstance(device, Devices):
-            print(f"[DEBUG] Device is already a Devices instance: {device}")
+            # Check if device is in the available devices list
+            available_devices = self.fields['device'].queryset
+            if device not in available_devices:
+                raise forms.ValidationError("This device is not available for assignment.")
             return device
             
         # If device is None or empty, check if it was provided in POST data
@@ -492,10 +513,14 @@ class DeviceTrackerForm(forms.ModelForm):
             try:
                 device_id = int(self.data.get('device'))
                 device = Devices.objects.get(pk=device_id)
-                print(f"[DEBUG] Retrieved device from POST data: {device}")
+                
+                # Check if device is in the available devices list
+                available_devices = self.fields['device'].queryset
+                if device not in available_devices:
+                    raise forms.ValidationError("This device is not available for assignment.")
+                
                 return device
             except (ValueError, TypeError, Devices.DoesNotExist) as e:
-                print(f"[DEBUG] Error retrieving device from POST data: {e}")
                 raise forms.ValidationError("Please select a valid device.")
         
         # If device is still None, raise validation error
@@ -506,34 +531,7 @@ class DeviceTrackerForm(forms.ModelForm):
 
     def full_clean(self):
         """Override full_clean to handle device field validation properly."""
-        # First, try to fix the device field before calling super().full_clean()
-        if self.data and self.data.get('device') and not hasattr(self, 'cleaned_data'):
-            try:
-                device_id = int(self.data.get('device'))
-                device = Devices.objects.get(pk=device_id)
-                print(f"[DEBUG] Pre-fixing device from POST data: {device}")
-                # Set the device in the form data to ensure it's included in validation
-                self.data = self.data.copy()
-                self.data['device'] = device_id
-            except (ValueError, TypeError, Devices.DoesNotExist) as e:
-                print(f"[DEBUG] Could not pre-fix device from POST data: {e}")
-                pass
-        
         super().full_clean()
-        
-        # If device field still has errors and we have device data in POST, try to fix it
-        if 'device' in self.errors and self.data and self.data.get('device'):
-            try:
-                device_id = int(self.data.get('device'))
-                device = Devices.objects.get(pk=device_id)
-                print(f"[DEBUG] Post-fixing device from POST data: {device}")
-                # Clear the error and set the cleaned data
-                if 'device' in self.errors:
-                    del self.errors['device']
-                self.cleaned_data['device'] = device
-            except (ValueError, TypeError, Devices.DoesNotExist) as e:
-                print(f"[DEBUG] Could not post-fix device from POST data: {e}")
-                pass
 
     def save(self, commit=True):
         """Override save method to ensure device is properly set."""
@@ -542,11 +540,9 @@ class DeviceTrackerForm(forms.ModelForm):
         # Ensure device is set from cleaned_data
         if 'device' in self.cleaned_data and self.cleaned_data['device']:
             instance.device = self.cleaned_data['device']
-            print(f"[DEBUG] Set device in save method: {instance.device}")
         
         if commit:
             instance.save()
-            print(f"[DEBUG] Saved instance with device: {instance.device}")
         
         return instance
 

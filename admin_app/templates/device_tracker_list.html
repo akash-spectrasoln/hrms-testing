@@ -59,14 +59,14 @@
             <form method="get" class="row g-2 filter-section align-items-end">
               <!-- Search -->
               <div class="col-md-4 col">
-                <label class="form-label mb-1">Search</label>
-                <input type="text" name="search" value="{{ search_query }}" placeholder="Search employee, device, serial..." class="form-control form-control-sm">
+                <label for="search-input" class="form-label mb-1">Search</label>
+                <input type="text" id="search-input" name="search" value="{{ search_query }}" placeholder="Search employee, device, serial..." class="form-control form-control-sm">
               </div>
 
               <!-- Status -->
               <div class="col-md-3 col">
-                <label class="form-label mb-1">Status</label>
-                <select name="status" class="form-select form-select-sm">
+                <label for="status-select" class="form-label mb-1">Status</label>
+                <select id="status-select" name="status" class="form-select form-select-sm">
                   <option value="">All</option>
                   <option value="active" {% if status_filter == 'active' %}selected{% endif %}>Active</option>
                   <option value="ended" {% if status_filter == 'ended' %}selected{% endif %}>Ended</option>
@@ -136,4 +136,5 @@
     </div>
   </div>
 </div>
+
 {% endblock %}

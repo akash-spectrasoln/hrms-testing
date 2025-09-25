@@ -72,6 +72,10 @@ def employee_login(request):
         user= authenticate(request, username=user_obj.email, password=password)
         print(user)
         if user is not None:
+            if not user.is_active:
+                messages.error(request, 'Your account is inactive. Please contact admin.')
+                return redirect('login')
+
             login(request, user)  # Log the user in
 
             # to initialize session activity tracking
