@@ -1,0 +1,164 @@
+{% extends 'device_partials/base.html' %}
+
+{% block styles %}
+<style>
+    html, body {
+        overflow-x: hidden;
+        margin: 0;
+        height: 100%;
+    }
+
+    .container {
+        padding: 40px 20px;
+        background-color: #f4f4f9;
+        display: flex;
+        justify-content: center;
+        align-items: flex-start;
+        min-height: calc(100vh - 72px);
+        margin-top: 72px;
+        overflow: auto;
+    }
+
+    .content-wrapper {
+        width: 95%;
+        max-width: 1100px;
+        margin: 0 auto;
+        position: relative;
+        left: 0;
+    }
+
+    .page-title {
+        text-align: center;
+        margin-bottom: 25px;
+        color: #2c3e50;
+        font-size: 1.5rem;
+        font-weight: 600;
+    }
+
+    .status-active {
+        color: #15803d;
+        font-weight: 600;
+    }
+    .status-returned {
+        color: #6b7280;
+        font-weight: 600;
+    }
+
+    .table-container {
+        width: 100%;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .table-title {
+        background-color: #3b82f6;
+        color: white;
+        padding: 12px 25px;
+        border-radius: 8px 8px 0 0;
+        font-size: 14px;
+        font-weight: 500;
+    }
+
+    .table-scroll {
+        overflow-y: auto;
+        max-height: 400px;
+        padding: 0 15px;
+        margin: 12px 0;
+    }
+
+    .table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0;
+    }
+
+    .table th {
+        background-color: #f8f9fa;
+        padding: 20px 25px;
+        text-align: left;
+        border-bottom: 2px solid #e2e8f0;
+        font-size: 14px;
+        font-weight: 1000;
+        color: #075098;             /* dark blue text */
+        position: sticky;
+        top: 0;
+        z-index: 1;
+    }
+
+    .table td {
+        padding: 15px 25px;
+        border-bottom: 1px solid #e2e8f0;
+        font-size: 14px;
+        color: #2c3e50;
+    }
+
+    .table tr:nth-child(even) {
+        background-color: #f8f9fa;
+    }
+
+    .table tr:hover {
+        background-color: #f1f5f9;
+    }
+
+    .no-data {
+        text-align: center;
+        padding: 20px;
+        color: #64748b;
+        font-size: 14px;
+        font-style: italic;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="content-wrapper">
+        <h2 class="page-title">My Equipments</h2>
+
+        <div class="table-container">
+            <div class="table-title">Device List</div>
+            <div class="table-scroll">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Device Type</th>
+                            <th>Brand</th>
+                            <th>Model</th>
+                            <th>Serial No</th>
+                            <th>Assigned Date</th>
+                            <th>Returned Date</th>
+                            <th>Status</th>
+
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if device_assignments %}
+                            {% for tracker in device_assignments %}
+                            <tr>
+                                <td>{{ tracker.device.device_type.device_type }}</td>
+                                <td>{{ tracker.device.device_brand.device_brand }}</td>
+                                <td>{{ tracker.device.device_model }}</td>
+                                <td>{{ tracker.device.serial_no }}</td>
+                                <td>{{ tracker.start_date }}</td>
+                                <td>{% if tracker.end_date %}{{ tracker.end_date }}{% else %}—{% endif %}</td>
+                                <td>
+                                    <span class="{% if not tracker.end_date %}status-active{% else %}status-returned{% endif %}">
+                                        {% if not tracker.end_date %}Active{% else %}Returned{% endif %}
+                                    </span>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr>
+                                <td colspan="8" class="no-data">No devices assigned.</td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,243 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="en" data-theme-mode="default"
+      data-bs-theme="{% if request.user.is_authenticated and request.user.is_dark_mode %}dark{% else %}light{% endif %}">
+
+<head>
+    <meta charset="utf-8" />
+    <link rel="icon" href="{% static 'tool/min-logo.png' %}" type="image/png">
+    <title>{% block title %}{% endblock title %}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    {% block css %}
+    {% block extra_css %}
+    <style>
+        /* === Responsive main content for sidebar === */
+        .content-wrapper {
+            margin-left: 250px;
+            transition: margin-left 0.3s;
+        }
+        body[data-sidebar-size="sm"] .content-wrapper {
+            margin-left: 70px;
+        }
+
+        .col-3, .col-4, .col-6 {
+            padding-top: 20px;
+            height: auto;
+            overflow-y: auto;
+        }
+
+        .vertical-menu {
+            width: 70px !important;
+            min-width: 70px !important;
+            max-width: 70px !important;
+            transition: width 0.3s;
+        }
+        .content-wrapper {
+            margin-left: 70px !important;
+            transition: margin-left 0.3s;
+        }
+        table.table thead th { font-weight: normal; border: none; }
+        .logo { max-width: 60px; max-height: 50px; margin-right: 5px; }
+        .active-button { border: 1px solid green; padding: 5px 10px; display: inline-block; border-radius: 5px; color: aquamarine; }
+        .custom-dropdown { width: 150px; padding: 5px; border: 1px solid #ced4da; border-radius: 4px; background-color: #fff; color: #495057; }
+        .custom-dropdown option { padding: 5px; }
+        .fixed-bottom-custom { position: fixed; bottom: 20px; left: 57%; width:20%; transform: translateX(-50%); z-index: 1000; }
+        .custom-control-input:checked ~ .custom-control-label::before { background-color: #28a745; }
+        .custom-control-input:checked ~ .custom-control-label::after { background-color: #ffffff; }
+        .collapse-row { display: none; }
+        .key-icon { font-size: 0.9em; color: #ffc107; }
+        .custom-list { list-style-type: none; padding-left: 0; }
+        .custom-list li::before { content: "♦ "; color: #4CAF50; }
+        .form-control { border: 1px solid #a3a2a2 !important; border-radius: 0.25rem !important; box-shadow: none !important; }
+        .form-control[readonly] { background-color: transparent; }
+        .form-control:focus { border: 1px solid #0d6efd !important; outline: none !important; box-shadow: none !important; }
+        #searchInput::placeholder { color: #6c757d !important; }
+        .form-select { border: 1px solid #a3a2a2 !important; border-radius: 0.25rem !important; box-shadow: none !important; }
+        .form-select:focus { border: 1px solid #0d6efd !important; outline: none !important; box-shadow: none !important; }
+        table td { height: 20px !important; padding: 3px !important; overflow: hidden !important; text-overflow: ellipsis !important; white-space: nowrap !important; }
+        table th { padding:6px !important; }
+        [data-bs-theme="light"] #page-topbar { background-color: white !important; border-bottom: 1px solid var(--bs-border-color) !important;}
+        [data-bs-theme="light"] .header-item { color: rgb(94, 89, 89) !important; }
+        [data-bs-theme="light"] .navbar-brand-box { background-color: white !important; border-color: white !important; }
+        [data-bs-theme="light"] .header-item.border-end, [data-bs-theme="light"] .header-item.border-start { border-color: rgba(0, 0, 0, 0.129) !important; }
+        [data-bs-theme="light"] .header-profile-user  { border: 1px solid rgba(9, 9, 9, 0.11) !important; background-color: rgba(73, 76, 77, 0.196) !important;}
+        body[data-sidebar-size="sm"] { min-height: auto !important; }
+
+        .spinner-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(255, 255, 255, 0.6);
+  display: none;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+}
+
+.spinner {
+  width: 50px;
+  height: 50px;
+  border: 6px solid #ccc;
+  border-top: 6px solid #007bff;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+    </style>
+    {% endblock extra_css %}
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" integrity="sha512-XXXXX" crossorigin="anonymous" />
+    <link href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.8.1/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-KyZXEAg3QhqLMpG8r+Knujsl7/1L_dstPt3HV5HzF6Gvk/e3s4Wz6iJgD/+ub2oU" crossorigin="anonymous">
+    <link rel="stylesheet" href="{% static 'tool/style.css' %}">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.12.1/jquery-ui.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+    <link rel="stylesheet" href="{% static 'css/preloader.min.css'%}" type="text/css" />
+    <link href="{% static 'css/bootstrap.min.css'%}" id="bootstrap-style" rel="stylesheet" type="text/css" />
+    <link href="{% static 'css/icons.min.css'%}" rel="stylesheet" type="text/css" />
+    <link href="{% static 'css/app.min.css'%}" id="app-style" rel="stylesheet" type="text/css" />
+    {% endblock css %}
+    {% block styles %}{% endblock %}
+    {% block scripts %}{% endblock %}
+</head>
+
+<body {% block extra_body %} data-topbar="dark"{% endblock extra_body %}
+      data-sidebar="{% if request.user.is_authenticated and request.user.is_dark_mode %}dark{% else %}light{% endif %}"
+      data-sidebar-size="sm">
+
+    <!-- Begin page -->
+    <div id="layout-wrapper">
+        {% block admin_header %}
+            {% include "device_partials/header.html" %}
+        {% endblock admin_header %}
+
+        {% block admin_left-sidebar %}
+            {% include 'device_partials/left-sidebar.html' %}
+        {% endblock admin_left-sidebar %}
+
+        {% block content %}
+            {% block footer %}
+            {% endblock footer %}
+        {% endblock content %}
+    </div>
+    <!-- END layout-wrapper -->
+
+    {% block javascript %}
+    <script src="{% static 'tool/main.js' %}"></script>
+    <!-- JAVASCRIPT -->
+    <script src="{% static 'libs/jquery/dist/jquery.min.js' %}"></script>
+    <script src="{% static 'libs/bootstrap/dist/js/bootstrap.bundle.min.js' %}"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="{% static 'libs/metismenu/dist/metisMenu.min.js' %}"></script>
+    <script src="{% static 'libs/simplebar/dist/simplebar.min.js' %}"></script>
+    <script src="{% static 'libs/node-waves/dist/waves.min.js' %}"></script>
+    <script src="{% static 'libs/feather-icons/dist/feather.min.js' %}"></script>
+    <script src="{% static 'libs/pace-js/pace.min.js' %}"></script>
+    {% block extra_js %}{% endblock extra_js %}
+<script src="{% static 'js/app.js' %}"></script>
+
+<!--  Table Search Script (unchanged) -->
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        var searchForm = document.querySelector('.app-search');
+        var searchInput = document.getElementById('searchInput');
+        var table = document.getElementById('searchableTable');
+        if (!searchForm || !searchInput || !table) return;
+        var tableRows = table.querySelectorAll('tbody tr');
+        var loadingOverlay = document.getElementById('loadingOverlay');
+
+        function filterRows() {
+            var searchQuery = searchInput.value.toLowerCase();
+            tableRows.forEach(function(row) {
+                var cells = row.querySelectorAll('td');
+                var matches = false;
+                cells.forEach(function(cell) {
+                    var isSearchable = cell.getAttribute('data-searchable') === 'true';
+                    if (isSearchable && cell.textContent.toLowerCase().includes(searchQuery)) {
+                        matches = true;
+                    }
+                });
+                row.style.display = matches ? 'table-row' : 'none';
+            });
+        }
+
+        searchInput.addEventListener('input', function() {
+            filterRows();
+        });
+
+        searchForm.addEventListener('submit', function(event) {
+            event.preventDefault();
+            loadingOverlay.style.display = 'flex';
+            filterRows();
+            setTimeout(function() {
+                loadingOverlay.style.display = 'none';
+            }, 300);
+        });
+    });
+</script>
+
+<script>
+    function showSpinnerAndDisableButtons() {
+        const spinner = document.getElementById('spinner-overlay');
+        if (spinner) {
+            spinner.style.display = 'flex';
+        }
+
+        document.querySelectorAll('button, input[type=submit]').forEach(el => {
+            el.disabled = true;
+        });
+    }
+
+    function hideSpinnerAndEnableButtons() {
+        const spinner = document.getElementById('spinner-overlay');
+        if (spinner) {
+            spinner.style.display = 'none';
+        }
+
+        document.querySelectorAll('button, input[type=submit]').forEach(el => {
+            el.disabled = false;
+        });
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        //  STOP spinner even if view renders same template (after error)
+        hideSpinnerAndEnableButtons();
+
+        // Spinner on form submit
+        document.querySelectorAll('form').forEach(form => {
+            form.addEventListener('submit', (e) => {
+                if (!form.checkValidity()) return;
+                showSpinnerAndDisableButtons();
+            });
+        });
+
+        // Spinner on navigation away
+        window.addEventListener('beforeunload', showSpinnerAndDisableButtons);
+    });
+
+    //  Extra safety: stop spinner on full load too
+    window.addEventListener('load', hideSpinnerAndEnableButtons);
+</script>
+
+
+{% endblock javascript %}
+
+
+<div id="spinner-overlay" class="spinner-overlay">
+  <div class="spinner"></div>
+</div>
+
+</body>
+</html>

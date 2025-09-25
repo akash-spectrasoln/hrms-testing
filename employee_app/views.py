@@ -172,6 +172,13 @@ from django.shortcuts import render, get_object_or_404
 from .models import Employees
 from django.utils.timezone import now
 from datetime import date, timedelta
+def set_from_devices(request, employee_id):
+    """
+    Marks in the session that the user came to the employee page from the devices page.
+    """
+    request.session['from_devices'] = True
+    return redirect('profile', employee_id=employee_id)
+
 def set_from_timesheet(request, employee_id):
     """
     Marks in the session that the user came to the employee page from the timesheet.
@@ -184,10 +191,14 @@ def set_from_timesheet(request, employee_id):
 @signin_required
 def employee_profile(request, employee_id):
     from_timesheet = request.session.pop('from_timesheet', False)
+    from_devices = request.session.pop('from_devices', False)
+
  
     base_template = 'partials/base.html'
     if from_timesheet:
         base_template = 'timesheet_partials/base.html'
+    elif from_devices:
+        base_template = 'device_partials/base.html'
     employee = get_object_or_404(Employees, pk=employee_id, is_deleted=False)
     today = now().date()
 
@@ -2338,3 +2349,14 @@ def leave_report(request):
 
     return render(request,"leave_report.html",context)
 
+def employee_devices_view(request, employee_id):
+    employee = get_object_or_404(Employees, pk=employee_id)
+    device_assignments = employee.device_trackers.select_related(
+        "device__device_type", "device__device_brand"
+    ).order_by("-start_date")
+
+    return render(
+        request,
+        "employee_devices.html",
+        {"employee": employee, "device_assignments": device_assignments},
+    )
