@@ -2430,11 +2430,13 @@ class DeviceCreateView(CreateView):
 
     def form_valid(self, form):
         self.object = form.save(commit=False)
-        employee = self.request.user.employee_profile  # logged-in employee
-        self.object.created_by = employee
-        self.object.updated_by = employee
+        employee = getattr(self.request.user, "employee_profile", None)
+        if employee:
+            self.object.created_by = employee
+            self.object.updated_by = employee
         self.object.save()
         return super().form_valid(form)
+
 
     def get_success_url(self):
         next_url = self.request.GET.get("next")
@@ -2454,10 +2456,12 @@ class DeviceUpdateView(UpdateView):
 
     def form_valid(self, form):
         self.object = form.save(commit=False)
-        employee = self.request.user.employee_profile  # logged-in employee
-        self.object.updated_by = employee
+        employee = getattr(self.request.user, "employee_profile", None)
+        if employee:
+            self.object.updated_by = employee
         self.object.save()
         return super().form_valid(form)
+
 
     def get_success_url(self):
         next_url = self.request.GET.get("next")
@@ -2617,11 +2621,13 @@ class DeviceTrackerCreateView(CreateView):
 
     def form_valid(self, form):
         self.object = form.save(commit=False)
-        employee = self.request.user.employee_profile  # logged-in employee
-        self.object.created_by = employee
-        self.object.updated_by = employee
+        employee = getattr(self.request.user, "employee_profile", None)
+        if employee:
+            self.object.created_by = employee
+            self.object.updated_by = employee
         self.object.save()
         return super().form_valid(form)
+
 
     def get_success_url(self):
         """Redirect back to the filtered list or default list if no 'next' is provided."""
@@ -2649,10 +2655,12 @@ class DeviceTrackerUpdateView(UpdateView):
 
     def form_valid(self, form):
         self.object = form.save(commit=False)
-        employee = self.request.user.employee_profile  # logged-in employee
-        self.object.updated_by = employee
+        employee = getattr(self.request.user, "employee_profile", None)
+        if employee:
+            self.object.updated_by = employee
         self.object.save()
         return super().form_valid(form)
+
 
     def get_queryset(self):
         """Select related fields to reduce database queries."""
