@@ -1356,6 +1356,15 @@ class Devices(models.Model):
     proc_date = models.DateField()   # Procurement Date
     retire_date = models.DateField(null=True, blank=True)
     price = models.DecimalField(max_digits=12, decimal_places=2)
+    currency = models.ForeignKey(
+    "Currency",
+    on_delete=models.PROTECT,
+    related_name="devices",
+    null=True,
+    blank=True,
+    default="INR"
+    )
+
     active = models.BooleanField(default=True)
     comment = models.TextField(
         null=True,
@@ -1389,11 +1398,11 @@ class Devices(models.Model):
     def __str__(self):
         return f"{self.device_brand.device_brand} {self.device_model} | SN: {self.serial_no}"
     def save(self, *args, **kwargs):
-        # Automatically set active based on retire_date
+        # If retire_date is set, automatically set active to False
         if self.retire_date:
             self.active = False
-        else:
-            self.active = True
+        # If no retire_date, allow manual control of active field
+        # (active field can be manually set to True or False)
         super().save(*args, **kwargs)
     @property
     def is_available(self):
@@ -1478,3 +1487,22 @@ class DeviceTracker(models.Model):
                 raise ValidationError(
                     f"{self.employee.first_name} already has an active {self.device.device_type} assigned."
                 )
+
+
+class Currency(models.Model):
+    currency_id = models.CharField(
+        max_length=3,
+        primary_key=True,       # ISO code (USD, INR, EUR) as PK
+        unique=True
+    )
+    symbol = models.CharField(
+        max_length=5,          # $, ₹, €, £
+        verbose_name="currency symbol"
+    )
+
+    class Meta:
+        db_table = "currency"
+        verbose_name_plural = "currencies"
+
+    def __str__(self):
+        return f"{self.currency_id} ({self.symbol})"

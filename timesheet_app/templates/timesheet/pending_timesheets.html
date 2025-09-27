@@ -2,8 +2,6 @@
 {% block body_class %}template-body-basic{% endblock %}
 {% load static %}
 
-
-
 {% block content %}
 <style>
     .container {
@@ -19,7 +17,6 @@
         font-family: 'Inter', sans-serif;
         font-size: 0.85rem;
     }
-    
 
     .leave-card {
         border-radius: 8px;
@@ -56,7 +53,6 @@
         border-radius: 4px;
     }
 
-
     #bulkApproveBtn {
         padding: 2px 10px;
         font-size: 0.75rem;
@@ -89,7 +85,78 @@
         font-size: 0.75rem;
     }
 
-    /* NEW: Styles for the details modal */
+    /* Prevent wrapping */
+    .table th,
+    .table td {
+        white-space: nowrap;
+        vertical-align: middle;
+    }
+
+    /* Employee column narrower */
+    .table th:nth-child(2),
+    .table td:nth-child(2) {
+        max-width: 200px;
+        width: 200px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    /* Week column */
+    .table th:nth-child(3),
+    .table td:nth-child(3) {
+        width: 120px;
+        text-align: center;
+    }
+
+    /* Equal widths for Weekday → Total */
+    .table th:nth-child(4),
+    .table th:nth-child(5),
+    .table th:nth-child(6),
+    .table th:nth-child(7),
+    .table th:nth-child(8),
+    .table td:nth-child(4),
+    .table td:nth-child(5),
+    .table td:nth-child(6),
+    .table td:nth-child(7),
+    .table td:nth-child(8) {
+        width: 100px;
+        text-align: right;
+    }
+
+    /* Status column */
+    .table th:nth-child(9),
+    .table td:nth-child(9) {
+        width: 120px;
+        text-align: center;
+    }
+
+    /* Actions column wider for 2 buttons */
+    .table th:nth-child(10),
+    .table td:nth-child(10) {
+        width: 120px;
+        text-align: center;
+    }
+
+    .table th {
+        font-weight: 600;
+        background-color: #f1f5f9;
+        color: #075098;
+        letter-spacing: 0.3px;
+    }
+
+    /* Action buttons inline */
+    .action-buttons {
+        display: flex;
+        gap: 0.3rem;
+        justify-content: flex-end;
+    }
+
+    /* Compact buttons */
+    .action-buttons .btn {
+        min-width: 70px;
+    }
+
+    /* Modal styles for timesheet details */
     .modal-dialog.modal-lg {
         max-width: 650px;
     }
@@ -154,75 +221,15 @@
         display: block;
         margin-bottom: 0px;
     }
-    /* Prevent wrapping */
-.table th,
-.table td {
-    white-space: nowrap;
-    vertical-align: middle;
-}
 
-/* Employee column narrower */
-.table th:nth-child(2),
-.table td:nth-child(2) {
-    max-width: 200px;
-    width: 200px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-/* Equal widths for Weekday → Total */
-.table th:nth-child(3),
-.table th:nth-child(4),
-.table th:nth-child(5),
-.table th:nth-child(6),
-.table th:nth-child(7),
-.table td:nth-child(3),
-.table td:nth-child(4),
-.table td:nth-child(5),
-.table td:nth-child(6),
-.table td:nth-child(7)
-{
-    width: 100px;
-    text-align: right;
-}
-
-/* Status column */
-.table th:nth-child(8),
-.table td:nth-child(8) {
-    width: 120px;
-    text-align: center;
-}
-
-/* Actions column wider for 2 buttons */
-.table th:nth-child(9),
-.table td:nth-child(9) {
-    width: 120px;
-    text-align: center;
-}
-.table th {
-  font-weight: 600;
-  background-color: #f1f5f9;
-  color: #075098; /* dark blue text */
-  letter-spacing: 0.3px;
-}
-
-/* Action buttons inline */
-.action-buttons {
-    display: flex;
-    gap: 0.3rem;
-    justify-content: flex-end;
-}
-/* Compact buttons */
-.action-buttons .btn {
-    min-width: 70px;
-}
 
 </style>
+
 <style>
     /* Mobile-specific adjustments */
     @media (max-width: 576px) {
         .container {
-            margin-top: 60px;
+            margin-top: 80px;
             padding: 8px;
             font-size: 0.8rem;
         }
@@ -233,59 +240,37 @@
         .table-responsive { -webkit-overflow-scrolling: touch; }
         .table th, .table td { padding: 0.3rem 0.4rem; font-size: 0.75rem; }
         /* Relax fixed widths on small screens */
-        .table th:nth-child(3), .table th:nth-child(4), .table th:nth-child(5), .table th:nth-child(6), .table th:nth-child(7),
-        .table td:nth-child(3), .table td:nth-child(4), .table td:nth-child(5), .table td:nth-child(6), .table td:nth-child(7),
-        .table th:nth-child(8), .table td:nth-child(8), .table th:nth-child(9), .table td:nth-child(9) { width: auto !important; }
+        .table th:nth-child(n), .table td:nth-child(n) { width: auto !important; }
         .action-buttons { gap: 0.25rem; justify-content: center; }
         .action-buttons .btn { min-width: auto; padding: 2px 6px; font-size: 0.7rem; }
-        .modal-dialog.modal-lg { max-width: 95vw; }
     }
 </style>
+
 <div class="container">
     <div class="content-wrapper">
         <div class="row justify-content-center">
             <div class="col-12 col-lg-12 col-xl-11">
-            <div class="leave-card">
+            <div class="leave-card mt-3 mb-4">
 
                 <div class="card-header">
-                    <h4 class="card-title">Timesheet Approvals</h4>
+                    <h4 class="card-title">Pending Timesheets (Late Submissions)</h4>
                 </div>
 
                 <div class="card-body p-2">
 
                     <form class="row g-2 mb-2 align-items-end" method="GET">
-                        <div class="col-sm-6 col-md-2">
-                            <label class="form-label">Week</label>
-                            <select name="week" class="form-select">
-                                {% for w in weeks_list %}
-                                    <option value="{{ w.week }}" {% if selected_week == w.week %}selected{% endif %}>{{ w.label }}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                        <div class="col-sm-6 col-md-1">
-                            <label class="form-label">Year</label>
-                            <select name="year" class="form-select form-select-sm">
-                                {% for y in unique_years %}
-                                <option value="{{ y }}" {% if selected_year == y %}selected{% endif %}>{{ y }}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                        <div class="col-sm-6 col-md-2">
+                        <div class="col-sm-6 col-md-4">
                             <label class="form-label">Status</label>
-                                <select name="status" class="form-select form-select-sm">
-                                    <option value="All" {% if selected_status == 'All' %}selected{% endif %}>All</option>
-                                    <option value="Approved" {% if selected_status == 'Approved' %}selected{% endif %}>Approved</option>
-                                    <option value="Pending" {% if selected_status == 'Pending' %}selected{% endif %}>Pending</option>
-                                    <option value="Incomplete" {% if selected_status == 'Incomplete' %}selected{% endif %}>Incomplete</option>
-                                    <option value="No Data" {% if selected_status == 'No Data' %}selected{% endif %}>No Data</option>
-                                </select>
+                            <select name="status" class="form-select form-select-sm">
+                                <option value="Pending" {% if selected_status == 'Pending' %}selected{% endif %}>Pending</option>
+                            </select>
                         </div>
                         <div class="col-sm-6 col-md-4">
                             <label class="form-label">Employee</label>
-                            <input type="text" name="search" class="form-control form-control-sm" placeholder="Search"
+                            <input type="text" name="search" class="form-control form-control-sm" placeholder="Search by Employee ID or Name"
                                 value="{{ search_query }}">
                         </div>
-                        <div class="col-sm-6 col-md-3 d-flex align-items-end gap-1">
+                        <div class="col-sm-6 col-md-4 d-flex align-items-end gap-1">
                             <button type="submit" class="btn btn-primary btn-sm flex-fill">Search</button>
                             <button type="button" class="btn btn-success btn-sm flex-fill" id="bulkApproveBtn"
                                 disabled>Approve Selected</button>
@@ -298,6 +283,7 @@
                                 <tr>
                                     <th class="text-center" style="width: 30px;"><input type="checkbox" id="select_all"></th>
                                     <th>Employee</th>
+                                    <th class="text-center">Week</th>
                                     <th class="text-end">Weekday Hrs</th>
                                     <th class="text-end">Leaves</th>
                                     <th class="text-end">Holidays</th>
@@ -309,16 +295,22 @@
                             </thead>
                             <tbody>
                                 {% for entry in timesheet_data %}
-                                <tr id="row-{{ entry.employee.id }}-{{ selected_year }}-{{ selected_week }}">
+                                <tr id="row-{{ entry.employee.id }}-{{ entry.year }}-{{ entry.week_num }}">
                                     <td class="text-center">
                                         {% if not entry.is_fully_approved and entry.can_approve %}
                                         <input type="checkbox" class="employee-checkbox"
-                                            value="{{ entry.employee.id }}-{{ selected_year }}-{{ selected_week }}">
+                                            value="{{ entry.employee.id }}-{{ entry.year }}-{{ entry.week_num }}">
                                         {% else %}
                                         <input type="checkbox" disabled>
                                         {% endif %}
                                     </td>
                                     <td>{{ entry.employee.employee_id }} - {{ entry.employee.first_name }} {{ entry.employee.last_name }}</td>
+                                    <td class="text-center">
+                                        <small>
+                                            {{ entry.week_start|date:"M d" }} - {{ entry.week_end|date:"M d" }}<br>
+                                            {{ entry.year }}
+                                        </small>
+                                    </td>
                                     <td class="text-end">{{ entry.weekday_hours }}</td>
                                     <td class="text-end">{{ entry.num_leaves }}</td>
                                     <td class="text-end">{{ entry.num_holidays }}</td>
@@ -336,40 +328,39 @@
                                         {% endif %}
                                     </td>
                                     <td class="text-center">
-                                    <div class="action-buttons">
-                                        {% if entry.is_fully_approved %}
-                                            <form action="{% url 'timesheet_unapprove' tsheet_id=entry.tsheet_id %}?next={{ request.get_full_path|urlencode }}" 
-                                                method="post" style="display:inline;">
-                                                {% csrf_token %}
-                                                <button type="submit" class="btn btn-warning btn-sm unapprove-btn" data-tsheet-id="{{ entry.tsheet_id }}">
-                                                    Back to Edit
+                                        <div class="action-buttons">
+                                            {% if entry.is_fully_approved %}
+                                                <form action="{% url 'timesheet_unapprove' tsheet_id=entry.tsheet_id %}?next={{ request.get_full_path|urlencode }}" 
+                                                    method="post" style="display:inline;">
+                                                    {% csrf_token %}
+                                                    <button type="submit" class="btn btn-warning btn-sm unapprove-btn" data-tsheet-id="{{ entry.tsheet_id }}">
+                                                        Back to Edit
+                                                    </button>
+                                                </form>
+                                            {% elif entry.has_timesheets and entry.can_approve %}
+                                                <button type="button" class="btn btn-sm btn-outline-success approve-btn"
+                                                    data-employee-id="{{ entry.employee.id }}"
+                                                    data-week="{{ entry.week_num }}" 
+                                                    data-year="{{ entry.year }}">
+                                                    Approve
                                                 </button>
-                                            </form>
-                                        {% elif entry.has_timesheets and entry.can_approve %}
-                                            <button type="button" class="btn btn-sm btn-outline-success approve-btn"
+                                            {% endif %}
+
+                                            <!-- View button ALWAYS last -->
+                                            <button type="button" class="btn btn-sm btn-info view-details-btn"
                                                 data-employee-id="{{ entry.employee.id }}"
-                                                data-week="{{ selected_week }}" 
-                                                data-year="{{ selected_year }}">
-                                                Approve
+                                                data-week="{{ entry.week_num }}" 
+                                                data-year="{{ entry.year }}"
+                                                data-employee-name="{{ entry.employee.first_name }} {{ entry.employee.last_name }}"
+                                                data-employee-code="{{ entry.employee.employee_id }}">
+                                                View
                                             </button>
-                                        {% endif %}
-
-                                        <!-- View button ALWAYS last -->
-                                        <button type="button" class="btn btn-sm btn-info view-details-btn"
-                                            data-employee-id="{{ entry.employee.id }}"
-                                            data-week="{{ selected_week }}" 
-                                            data-year="{{ selected_year }}"
-                                            data-employee-name="{{ entry.employee.first_name }} {{ entry.employee.last_name }}"
-                                            data-employee-code="{{ entry.employee.employee_id }}">
-                                            View
-                                        </button>
-                                    </div>
-                                </td>
-
+                                        </div>
+                                    </td>
                                 </tr>
                                 {% empty %}
                                 <tr>
-                                    <td colspan="9" class="text-center py-2">No timesheets found.</td>
+                                    <td colspan="10" class="text-center py-2">No pending timesheets found for late submissions.</td>
                                 </tr>
                                 {% endfor %}
                             </tbody>
@@ -440,6 +431,7 @@
         $('.employee-checkbox').on('change', function () {
             $('#bulkApproveBtn').prop('disabled', $('.employee-checkbox:checked').length === 0);
         });
+
         // --- Single Approve ---
         $(document).on('click', '.approve-btn', function (e) {
             e.preventDefault();
@@ -453,7 +445,7 @@
             const formData = new FormData();
             formData.append('employee_id', empId);
             formData.append('year', year);
-            formData.append('week', week);
+            formData.append('week', week + 1); // Convert 0-based to 1-based week
             formData.append('csrfmiddlewaretoken', csrftoken); 
 
             $.ajax({
@@ -486,7 +478,14 @@
 
             const formData = new FormData();
             ids.forEach(id => {
-                formData.append('ids[]', id); // Matches request.POST.getlist('ids[]')
+                // Convert format: employeeId-year-week to employeeId-year-week+1
+                const parts = id.split('-');
+                if (parts.length === 3) {
+                    const [empId, year, week] = parts;
+                    formData.append('ids[]', `${empId}-${year}-${parseInt(week) + 1}`);
+                } else {
+                    formData.append('ids[]', id);
+                }
             });
             formData.append('csrfmiddlewaretoken', csrftoken); 
 
@@ -513,147 +512,120 @@
         });
 
         // --- Unapprove ---
-//         // --- Unapprove ---
-// $(document).on('click', '.unapprove-btn', function (e) {
-//     e.preventDefault();
-//     const btn = $(this);
-//     const form = btn.closest('form');
-//     const tsheetId = btn.data('tsheet-id');
-    
-//     // Check if the form and tsheetId are valid
-//     if (form.length && tsheetId) {
-//         btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm"></span>');
-        
-//         // Submit the form instead of using AJAX
-//         form.submit();
-//     } else {
-//         showToast("Error finding form or timesheet ID.", "danger");
-//     }
-// });
-// --- Unapprove ---
-$(document).on('click', '.unapprove-btn', function (e) {
-    e.preventDefault();
-    const btn = $(this);
-    const form = btn.closest('form'); 
-    const tsheetId = btn.data('tsheet-id');
+        $(document).on('click', '.unapprove-btn', function (e) {
+            e.preventDefault();
+            const btn = $(this);
+            const form = btn.closest('form'); 
+            const tsheetId = btn.data('tsheet-id');
 
-    btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm"></span>');
+            btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm"></span>');
 
-    // Use the form's action (which includes ?next=...)
-    const url = form.attr('action');
+            const url = form.attr('action');
 
-    $.ajax({
-        url: url,
-        type: "POST",
-        data: form.serialize(), // includes csrf token
-        success: function (resp) {
-            // Safely get next URL from query params
-            const nextUrl = new URL(url, window.location.origin).searchParams.get('next');
-            if (nextUrl) {
-                window.location.href = decodeURIComponent(nextUrl);
-            } else {
-                location.reload();
-            }
-        },
-        error: function () {
-            btn.prop('disabled', false).text('Back to Edit');
-            showToast("Server error", "danger");
-        }
-    });
-});
-
-
-// --- View Details ---
-
-    // --- View Details ---
-$(document).on('click', '.view-details-btn', function () {
-    const employeeId = $(this).data('employee-id');
-    const employeeCode = $(this).data('employee-code');
-    const selectedWeek = parseInt($(this).data('week'));
-    const selectedYear = parseInt($(this).data('year'));
-    const employeeName = $(this).data('employee-name');
-
-    // ✅ Sunday–Saturday calculation (same as backend get_week_start_end using %U)
-    const jan1 = new Date(selectedYear, 0, 1);
-    const jan1Day = jan1.getDay(); // 0=Sunday
-    const firstSunday = new Date(jan1);
-    firstSunday.setDate(jan1.getDate() + ((7 - jan1Day) % 7));
-
-    const weekStart = new Date(firstSunday);
-    weekStart.setDate(firstSunday.getDate() + (selectedWeek - 1) * 7);
-
-    const weekEnd = new Date(weekStart);
-    weekEnd.setDate(weekStart.getDate() + 6);
-
-    const weekStartStr = weekStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-    const weekEndStr = weekEnd.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-
-    // Update the modal title
-    const newTitle = `Timesheet - ${employeeCode} - ${employeeName} (${weekStartStr} - ${weekEndStr}, ${selectedYear})`;
-    $('#weekDetailsModalLabel').text(newTitle);
-    $('#weekDetailsModal .modal-body').html('<p class="text-center">Loading details...</p>');
-    $('#weekDetailsModal').modal('show');
-
-    $.ajax({
-        url: '{% url "timesheet_week_details" %}',
-        data: { employee_id: employeeId, year: selectedYear, week: selectedWeek },
-        dataType: 'json',
-        success: function (resp) {
-            if (resp.success) {
-                let detailsHtml = '';
-                if (resp.entries?.length) {
-                    resp.entries.forEach(function (day) {
-    const totalHrs = day.total_hours ?? day.hours ?? 0;
-
-    detailsHtml += `
-        <div class="modal-day-section">
-            <div class="day-header">
-                <span>
-                    ${day.date_str} - ${day.day_name}
-                    ${day.is_holiday 
-                        ? ` - <span style="color: #d64352;">Holiday - ${day.holiday_name || 'Holiday'}</span>` 
-                        : day.is_leave 
-                            ? ' - <span style="color: #a46fe5;">Leave</span>' 
-                            : day.is_weekend 
-                                ? '' 
-                                : ''}
-                </span>
-                <span>${totalHrs} hrs</span>
-            </div>
-    `;
-
-    if (day.timesheet_entries?.length) {
-        day.timesheet_entries.forEach(function (entry) {
-            detailsHtml += `
-                <div class="entry-details">
-                    Project : ${entry.project_name || ''}  ${entry.costcenter_name || ''} - Hours : ${entry.hours}<br>
-                    Activity : ${entry.activity || 'N/A'} - Work Location : ${entry.work_location || 'N/A'}<br>
-                    Description : ${entry.description || 'N/A'}
-                </div>
-            `;
-        });
-    }
-
-    detailsHtml += '</div>';
-});
-
-                } else {
-                    detailsHtml = '<p class="text-center">No entries, leaves, or holidays found for this week.</p>';
+            $.ajax({
+                url: url,
+                type: "POST",
+                data: form.serialize(),
+                success: function (resp) {
+                    const nextUrl = new URL(url, window.location.origin).searchParams.get('next');
+                    if (nextUrl) {
+                        window.location.href = decodeURIComponent(nextUrl);
+                    } else {
+                        location.reload();
+                    }
+                },
+                error: function () {
+                    btn.prop('disabled', false).text('Back to Edit');
+                    showToast("Server error", "danger");
                 }
-                $('#weekDetailsModal .modal-body').html(detailsHtml);
-            } else {
-                $('#weekDetailsModal .modal-body').html('<p class="text-center text-danger">' + (resp.message || 'Error loading details.') + '</p>');
-            }
-        },
-        error: function () {
-            $('#weekDetailsModal .modal-body').html('<p class="text-center text-danger">Error loading details. Please try again.</p>');
-        }
-    });
+            });
+        });
 
-});
+        // --- View Details ---
+        $(document).on('click', '.view-details-btn', function () {
+            const employeeId = $(this).data('employee-id');
+            const employeeCode = $(this).data('employee-code');
+            const selectedWeek = parseInt($(this).data('week'));
+            const selectedYear = parseInt($(this).data('year'));
+            const employeeName = $(this).data('employee-name');
 
+            // ✅ Sunday–Saturday calculation (same as backend get_week_start_end using %U)
+            const jan1 = new Date(selectedYear, 0, 1);
+            const jan1Day = jan1.getDay(); // 0=Sunday
+            const firstSunday = new Date(jan1);
+            firstSunday.setDate(jan1.getDate() + ((7 - jan1Day) % 7));
+
+            const weekStart = new Date(firstSunday);
+            weekStart.setDate(firstSunday.getDate() + (selectedWeek - 1) * 7);
+
+            const weekEnd = new Date(weekStart);
+            weekEnd.setDate(weekStart.getDate() + 6);
+
+            const weekStartStr = weekStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+            const weekEndStr = weekEnd.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+
+            // Update the modal title
+            const newTitle = `Timesheet - ${employeeCode} - ${employeeName} (${weekStartStr} - ${weekEndStr}, ${selectedYear})`;
+            $('#weekDetailsModalLabel').text(newTitle);
+            $('#weekDetailsModal .modal-body').html('<p class="text-center">Loading details...</p>');
+            $('#weekDetailsModal').modal('show');
+
+            $.ajax({
+                url: '{% url "timesheet_week_details" %}',
+                data: { employee_id: employeeId, year: selectedYear, week: selectedWeek + 1 }, // Convert to 1-based week
+                dataType: 'json',
+                success: function (resp) {
+                    if (resp.success) {
+                        let detailsHtml = '';
+                        if (resp.entries?.length) {
+                            resp.entries.forEach(function (day) {
+                                const totalHrs = day.total_hours ?? day.hours ?? 0;
+
+                                detailsHtml += `
+                                    <div class="modal-day-section">
+                                        <div class="day-header">
+                                            <span>
+                                                ${day.date_str} - ${day.day_name}
+                                                ${day.is_holiday 
+                                                    ? ` - <span style="color: #d64352;">Holiday - ${day.holiday_name || 'Holiday'}</span>` 
+                                                    : day.is_leave 
+                                                        ? ' - <span style="color: #a46fe5;">Leave</span>' 
+                                                        : day.is_weekend 
+                                                            ? '' 
+                                                            : ''}
+                                            </span>
+                                            <span>${totalHrs} hrs</span>
+                                        </div>
+                                `;
+
+                                if (day.timesheet_entries?.length) {
+                                    day.timesheet_entries.forEach(function (entry) {
+                                        detailsHtml += `
+                                            <div class="entry-details">
+                                                Project : ${entry.project_name || ''}  ${entry.costcenter_name || ''} - Hours : ${entry.hours}<br>
+                                                Activity : ${entry.activity || 'N/A'} - Work Location : ${entry.work_location || 'N/A'}<br>
+                                                Description : ${entry.description || 'N/A'}
+                                            </div>
+                                        `;
+                                    });
+                                }
+
+                                detailsHtml += '</div>';
+                            });
+                        } else {
+                            detailsHtml = '<p class="text-center">No entries, leaves, or holidays found for this week.</p>';
+                        }
+                        $('#weekDetailsModal .modal-body').html(detailsHtml);
+                    } else {
+                        $('#weekDetailsModal .modal-body').html('<p class="text-center text-danger">' + (resp.message || 'Error loading details.') + '</p>');
+                    }
+                },
+                error: function () {
+                    $('#weekDetailsModal .modal-body').html('<p class="text-center text-danger">Error loading details. Please try again.</p>');
+                }
+            });
+        });
     });
 </script>
-
 
 {% endblock %}

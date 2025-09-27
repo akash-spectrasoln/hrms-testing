@@ -2411,7 +2411,8 @@ class DeviceListView(ListView):
             # Default: initial page load -> show only active devices
             qs = qs.filter(active=True, retire_date__isnull=True)
 
-        return qs
+        # Order by procurement date (newest first), then type, brand, and model
+        return qs.order_by('-proc_date', 'device_type__device_type', 'device_brand__device_brand', 'device_model')
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)

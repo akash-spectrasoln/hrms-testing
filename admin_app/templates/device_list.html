@@ -126,7 +126,13 @@
                       <td>{{ device.device_type.device_type }}</td>
                       <td>{{ device.serial_no }}</td>
                       <td>{{ device.proc_date }}</td>
-                      <td>{{ device.price }}</td>
+                      <td>
+                        {% if device.currency %}
+                          {{ device.currency.symbol }}{{ device.price }}
+                        {% else %}
+                          ₹{{ device.price }}
+                        {% endif %}
+                      </td>
                       <td>{{ device.retire_date|default:"-" }}</td>
                       <td>{{ device.comment|default:"-"|truncatechars:50 }}</td>                     
                       <td>

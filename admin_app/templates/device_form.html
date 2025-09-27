@@ -8,6 +8,61 @@
     .form-label { margin-bottom: 2px; font-weight: 500; }
     .form-control-sm { padding: 0.3rem 0.5rem; font-size: 0.875rem; }
     .card-header h5 { width: 100%; text-align: center; margin: 0; }
+    
+    /* Price & Currency input group styling */
+    .input-group .flex-fill:first-child .form-control {
+        border-top-right-radius: 0;
+        border-bottom-right-radius: 0;
+        border-right: 0;
+        height: 31px; /* Match form-select height */
+    }
+    .input-group .flex-fill:last-child .form-select {
+        border-top-left-radius: 0 !important;
+        border-bottom-left-radius: 0 !important;
+        border-left: 0;
+        height: 31px; /* Ensure consistent height */
+        border-radius: 0 0.375rem 0.375rem 0 !important; /* Only right corners rounded */
+    }
+    .input-group .flex-fill .form-control:focus,
+    .input-group .flex-fill .form-select:focus {
+        border-color: #86b7fe;
+        box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+    }
+    
+    /* Ensure both inputs have identical styling */
+    .input-group .flex-fill .form-control,
+    .input-group .flex-fill .form-select {
+        padding: 0.3rem 0.5rem;
+        font-size: 0.875rem;
+        line-height: 1.5;
+        border: 1px solid #ced4da;
+        border-radius: 0.375rem;
+    }
+    
+    /* Force seamless connection between price and currency */
+    .input-group .flex-fill:first-child .form-control {
+        border-top-right-radius: 0 !important;
+        border-bottom-right-radius: 0 !important;
+        border-right: 0 !important;
+    }
+    .input-group .flex-fill:last-child .form-select {
+        border-top-left-radius: 0 !important;
+        border-bottom-left-radius: 0 !important;
+        border-left: 0 !important;
+        margin-left: -1px; /* Overlap to eliminate any gap */
+    }
+    
+    /* Responsive adjustments */
+    @media (max-width: 576px) {
+        .input-group .flex-fill:first-child {
+            flex: 0 0 70% !important;
+            max-width: 70% !important;
+        }
+        .input-group .flex-fill:last-child {
+            flex: 0 0 30% !important;
+            max-width: 30% !important;
+        }
+    }
 </style>
 
 <div class="container my-4">
@@ -21,25 +76,26 @@
                 {% csrf_token %}
                 {{ form.non_field_errors }}
 
-                <!-- Model -->
-                <div class="mb-2">
-                    <label for="id_device_model" class="form-label">Model</label>
-                    {{ form.device_model|add_class:"form-control form-control-sm" }}
-                    {{ form.device_model.errors }}
-                </div>
 
                 <!-- Type -->
                 <div class="mb-2">
-                    <label for="id_device_type" class="form-label">Type</label>
+                    <label for="id_device_type" class="form-label">Device Type</label>
                     {{ form.device_type|add_class:"form-control form-control-sm" }}
                     {{ form.device_type.errors }}
                 </div>
 
                 <!-- Brand -->
                 <div class="mb-2">
-                    <label for="id_device_brand" class="form-label">Brand</label>
+                    <label for="id_device_brand" class="form-label">Device Brand</label>
                     {{ form.device_brand|add_class:"form-control form-control-sm" }}
                     {{ form.device_brand.errors }}
+                </div>
+
+                <!-- Model -->
+                <div class="mb-2">
+                    <label for="id_device_model" class="form-label">Device Model</label>
+                    {{ form.device_model|add_class:"form-control form-control-sm" }}
+                    {{ form.device_model.errors }}
                 </div>
 
                 <!-- Serial No -->
@@ -57,11 +113,24 @@
                 </div>
 
                 <!-- Price -->
+                <!-- Price with Currency -->
                 <div class="mb-2">
-                    <label for="id_price" class="form-label">Price</label>
-                    {{ form.price|add_class:"form-control form-control-sm" }}
+                    <label class="form-label">Price</label>
+                    <div class="input-group">
+                        <!-- Price Input -->
+                        <div class="flex-fill" style="flex: 0 0 75%; max-width: 75%;">
+                            {{ form.price|add_class:"form-control form-control-sm" }}
+                        </div>
+                        
+                        <!-- Currency Dropdown -->
+                        <div class="flex-fill" style="flex: 0 0 25%; max-width: 25%;">
+                            {{ form.currency|add_class:"form-select form-select-sm" }}
+                        </div>
+                    </div>
                     {{ form.price.errors }}
+                    {{ form.currency.errors }}
                 </div>
+
 
                 {% if form.instance.pk %}
                 <!-- Retire Date (only in edit mode) -->
@@ -101,7 +170,7 @@
     </div>
 </div>
 
-<!-- Character Counter Script -->
+<!-- Character Counter and Active/Retire Date Logic Script -->
 <script>
     document.addEventListener("DOMContentLoaded", function () {
         const commentField = document.getElementById("id_comment");
@@ -126,6 +195,29 @@
 
         commentField.addEventListener("input", updateCounter);
         updateCounter();  // run once on page load
+
+        // Handle retire_date and active field interaction
+        const retireDateField = document.getElementById("id_retire_date");
+        const activeField = document.getElementById("id_active");
+
+        if (retireDateField && activeField) {
+            function handleRetireDateChange() {
+                if (retireDateField.value) {
+                    // If retire date is set, automatically uncheck active
+                    activeField.checked = false;
+                    activeField.disabled = true; // Disable manual control
+                } else {
+                    // If no retire date, enable manual control of active field
+                    activeField.disabled = false;
+                }
+            }
+
+            // Run on page load
+            handleRetireDateChange();
+
+            // Run when retire date changes
+            retireDateField.addEventListener("change", handleRetireDateChange);
+        }
     });
 </script>
 {% endblock %}

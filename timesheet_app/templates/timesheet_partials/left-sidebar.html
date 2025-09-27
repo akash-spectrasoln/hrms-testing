@@ -35,10 +35,24 @@
                     </a>
                 </li>
                 <li>
-                    <a href="{% url 'timesheet_approval_list' %}">
+                    <a href="javascript: void(0);" class="has-arrow">
                         <i data-feather="archive"></i>
-                        <span data-key="t-dashboard"><strong>Approve Timesheet</strong></span>
+                        <span data-key="t-approvals"><strong>Timesheet Approvals</strong></span>
                     </a>
+                    <ul class="sub-menu" aria-expanded="false" style="width: 210px;">
+                        <li>
+                            <a href="{% url 'timesheet_approval_list' %}">
+                                <i data-feather="calendar"></i>
+                                <span><strong>Weekly Approvals</strong></span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="{% url 'pending_timesheets' %}">
+                                <i data-feather="clock"></i>
+                                <span><strong>Pending Timesheets</strong></span>
+                            </a>
+                        </li>
+                    </ul>
                 </li>
                  <li>
                     <a href="javascript: void(0);" class="has-arrow">

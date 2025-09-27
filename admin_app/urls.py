@@ -111,6 +111,7 @@ path('admin-leavereport/',admin_leave_reports,name='admin_leave_reports'),
 path("work-utilization/", ts_views.admin_work_utilization_view, name="admin_work_utilization"),
 path("work-utilization/export/", ts_views.export_admin_utilization, name="export_admin_utilization"),
 path("project-cc-utilization/", ts_views.admin_project_cc_utilization_view, name="admin_project_cc_utilization"),
+path("pending-timesheets/", ts_views.pending_timesheets, name="pending_timesheets"),
 
 ]
 

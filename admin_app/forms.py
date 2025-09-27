@@ -341,13 +341,12 @@ class SetUpTableForm(forms.ModelForm):
             'field': forms.TextInput(attrs={'class': 'form-control form-control-sm'}),
             'value': forms.TextInput(attrs={'class': 'form-control form-control-sm'}),
         }
-
 class DeviceForm(forms.ModelForm):
     class Meta:
         model = Devices
         fields = [
             "device_model", "device_type", "device_brand", "serial_no",
-            "proc_date", "retire_date", "price", "active", "comment"
+            "proc_date", "retire_date", "price", "currency", "active", "comment"
         ]
         widgets = {
             "device_model": forms.TextInput(attrs={"class": "form-control form-control-sm"}),
@@ -356,7 +355,8 @@ class DeviceForm(forms.ModelForm):
             "serial_no": forms.TextInput(attrs={"class": "form-control form-control-sm"}),
             "proc_date": forms.DateInput(attrs={"type": "date", "class": "form-control form-control-sm"}),
             "retire_date": forms.DateInput(attrs={"type": "date", "class": "form-control form-control-sm"}),
-            "price": forms.NumberInput(attrs={"class": "form-control form-control-sm"}),
+            "price": forms.NumberInput(attrs={"class": "form-control form-control-sm", "min": "0", "step": "0.01"}),
+            "currency": forms.Select(attrs={"class": "form-select form-select-sm"}),  # NEW
             "active": forms.CheckboxInput(attrs={"class": "form-check-input"}),
             "comment": forms.Textarea(attrs={"rows": 3, "class": "form-control form-control-sm"}),
         }
@@ -368,6 +368,8 @@ class DeviceForm(forms.ModelForm):
         if not self.instance.pk:
             self.fields["retire_date"].widget = forms.HiddenInput()
             self.fields["active"].initial = True
+            # Set default currency to INR for new devices
+            self.fields["currency"].initial = 'INR'
         else:
             # Edit mode: show retire_date normally
             self.fields["retire_date"].required = False
@@ -378,14 +380,20 @@ class DeviceForm(forms.ModelForm):
         # Friendly empty labels for dropdowns
         self.fields["device_type"].empty_label = "Select Device Type"
         self.fields["device_brand"].empty_label = "Select Device Brand"
+        # Currency field will show INR as default without empty label
+        self.fields["currency"].empty_label = None  # Remove empty choice
 
     def clean(self):
         cleaned_data = super().clean()
         proc_date = cleaned_data.get("proc_date")
         retire_date = cleaned_data.get("retire_date")
+        price = cleaned_data.get("price")
 
         if proc_date and retire_date and retire_date < proc_date:
             self.add_error("retire_date", "Retire date cannot be before procurement date.")
+        
+        if price is not None and price < 0:
+            self.add_error("price", "Price cannot be negative.")
 
         return cleaned_data
 
@@ -399,6 +407,7 @@ class DeviceForm(forms.ModelForm):
 from django import forms
 from .models import DeviceTracker, Devices, Employees
 from django.db.models import Q
+
 class DeviceTrackerForm(forms.ModelForm):
     start_date = forms.DateField(
         widget=forms.DateInput(attrs={"type": "date", "class": "form-control form-control-sm"})
@@ -470,6 +479,17 @@ class DeviceTrackerForm(forms.ModelForm):
 
         if start_date and end_date and end_date < start_date:
             self.add_error("end_date", "End date cannot be before start date.")
+
+        if device and start_date:
+        # 🚨 Check if start_date is before procurement date
+            if start_date < device.proc_date:
+                self.add_error(
+                    "start_date",
+                    f"This device cannot be assigned before its procurement date"
+                    f"({device.proc_date.strftime('%m/%d/%Y')})."
+                )
+        
+
 
         if device and start_date:
             # Set end_compare to a far future date if end_date is None (ongoing assignment)

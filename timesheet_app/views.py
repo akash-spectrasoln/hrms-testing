@@ -1948,6 +1948,104 @@ from django.contrib.auth.decorators import login_required
 from django.utils import timezone
 from datetime import date
 
+def pending_timesheets(request):
+    """
+    Shows all pending timesheet entries for weeks older than the previous week.
+    Example: If current week is Sun 21 – Sat 28, shows only weeks ending on or before Sat 20.
+    """
+    try:
+        manager = Employees.objects.get(user=request.user)
+    except Employees.DoesNotExist:
+        messages.error(request, "Employee profile not found. Please contact administrator.")
+        return redirect('timesheet_approval_list')
+
+    # Get current date and calculate cutoff
+    today = datetime.now().date()
+    current_week_num = int(today.strftime("%U"))  # Current week (0-based from %U)
+    
+    # Calculate cutoff: previous week's end (include previous week)
+    cutoff_week = current_week_num - 1  # Previous week
+    cutoff_year = today.year
+    
+    # Get cutoff week's end date (Saturday) - this will be the previous week's end
+    cutoff_week_start, cutoff_week_end = get_week_start_end(cutoff_year, cutoff_week)
+    if not cutoff_week_end:
+        # Handle year boundary
+        cutoff_year -= 1
+        cutoff_week = 52
+        cutoff_week_start, cutoff_week_end = get_week_start_end(cutoff_year, cutoff_week)
+    
+    
+    # Get subordinates
+    subordinates = Employees.objects.filter(manager=manager).select_related(
+        'country', 'state'
+    ).order_by('employee_id', 'first_name', 'last_name')
+    
+    # Search filter
+    search_query = request.GET.get('search', '').strip()
+    if search_query:
+        subordinates = subordinates.filter(
+            Q(employee_id__icontains=search_query) |
+            Q(first_name__icontains=search_query) |
+            Q(last_name__icontains=search_query)
+        )
+    
+    # Get pending timesheets for weeks older than cutoff
+    pending_timesheets = TimesheetHdr.objects.filter(
+        employee__in=subordinates,
+        week_end__lte=cutoff_week_end,  # Only weeks ending on or before cutoff
+        is_approved=False  # Only unapproved timesheets
+    ).select_related('employee').prefetch_related('timesheet_items').order_by(
+        '-week_end', 'employee__employee_id'  # Newest weeks first, then by employee
+    )
+    
+    # Build timesheet data with additional fields
+    timesheet_data = []
+    for ts_hdr in pending_timesheets:
+        # Calculate week info
+        week_start, week_end = ts_hdr.week_start, ts_hdr.week_end
+        week_num = int(week_end.strftime("%U")) - 1
+        year = week_end.year
+        
+        
+        # Get employee stats for that week
+        employee_ids = [ts_hdr.employee.id]
+        leave_days = build_leave_days(employee_ids, week_start, week_end)
+        holidays_cache = build_holidays_cache([ts_hdr.employee], week_start, week_end)
+        stats = calculate_timesheet_stats(ts_hdr.employee, ts_hdr, week_start, leave_days, holidays_cache)
+        
+        # Add additional fields
+        stats.update({
+            'tsheet_id': ts_hdr.tsheet_id,
+            'week_start': week_start,
+            'week_end': week_end,
+            'week_num': week_num,
+            'year': year,
+            'submitted_date': ts_hdr.updated_at,  # Use updated_at for more accurate submission time
+            'updated_date': ts_hdr.updated_at,
+            'is_delayed': ts_hdr.is_delayed,
+            'can_approve': stats.get('can_approve', False)
+        })
+        
+        timesheet_data.append(stats)
+    
+    # Apply status filter - default to Pending
+    status_filter = request.GET.get('status', 'Pending')
+    if status_filter == 'Pending':
+        timesheet_data = [d for d in timesheet_data if d.get('can_approve')]
+    
+    context = {
+        'timesheet_data': timesheet_data,
+        'search_query': search_query,
+        'selected_status': status_filter,
+        'employee': manager,
+        'is_manager': subordinates.exists(),
+        'cutoff_date': cutoff_week_end,
+        'current_week': f"Week {current_week_num}, {today.year}"
+    }
+    
+    return render(request, 'timesheet/pending_timesheets.html', context)
+
 employee_signin_required
 @require_POST
 def approve_timesheet(request):
