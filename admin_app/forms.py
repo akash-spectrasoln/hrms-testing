@@ -431,8 +431,13 @@ class DeviceTrackerForm(forms.ModelForm):
         # Make device field not required initially to handle AJAX submissions
         self.fields['device'].required = False
 
-        # Employee dropdown
-        self.fields["employee"].queryset = Employees.objects.all().order_by("employee_id")
+        # Employee dropdown - only show employed employees with active users
+        self.fields["employee"].queryset = Employees.objects.filter(
+            is_deleted=False,
+            user__isnull=False,            # ensure user relationship exists
+            user__is_active=True,          # exclude inactive users
+            employee_status='employed'     # only show employed employees
+        ).select_related('user').order_by("employee_id")
         self.fields["employee"].label_from_instance = (
             lambda obj: f"{obj.employee_id} - {obj.first_name} {obj.last_name}"
         )
@@ -511,7 +516,8 @@ class DeviceTrackerForm(forms.ModelForm):
                 )
             )
             
-            if overlaps.exists() and (not self.instance.pk or self.instance.device != device):
+            # Always check for overlaps, regardless of whether we're editing or creating
+            if overlaps.exists():
                 self.add_error("device", "This device is already assigned during the selected period.")
 
         return cleaned_data

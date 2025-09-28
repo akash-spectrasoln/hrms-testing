@@ -2483,12 +2483,22 @@ def employee_search(request):
     employees = Employees.objects.filter(
         Q(first_name__icontains=term) |
         Q(last_name__icontains=term) |
-        Q(employee_id__icontains=term)
-    ).order_by("employee_id", "first_name", "last_name")
+        Q(employee_id__icontains=term),
+        is_deleted=False,              # exclude deleted employees
+        user__isnull=False,            # ensure user relationship exists
+        user__is_active=True,          # exclude inactive users
+        employee_status='employed'     # only show employed employees
+    ).select_related('user').order_by("employee_id", "first_name", "last_name")
+
+    # Additional safety check - filter out any employees with inactive users
+    active_employees = []
+    for emp in employees:
+        if emp.user and emp.user.is_active:
+            active_employees.append(emp)
 
     results = [
         {"id": emp.pk, "text": f"{emp.employee_id} - {emp.first_name} {emp.last_name}"}
-        for emp in employees
+        for emp in active_employees
     ]
 
     return JsonResponse({"results": results})

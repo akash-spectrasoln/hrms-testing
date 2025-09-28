@@ -394,7 +394,14 @@ def client_search(request):
 
 def employee_search(request):
     term = request.GET.get("term", "")
-    qs = Employees.objects.all().order_by('employee_id','first_name','last_name')
+    
+    # Only show employed employees with active users
+    qs = Employees.objects.filter(
+        is_deleted=False,
+        user__isnull=False,            # ensure user relationship exists
+        user__is_active=True,          # exclude inactive users
+        employee_status='employed'     # only show employed employees
+    ).select_related('user').order_by('employee_id','first_name','last_name')
 
     if term:
         qs = qs.filter(
@@ -403,9 +410,15 @@ def employee_search(request):
             Q(last_name__icontains=term)
         ).order_by('employee_id','first_name','last_name')
 
+    # Additional safety check - filter out any employees with inactive users
+    active_employees = []
+    for emp in qs:
+        if emp.user and emp.user.is_active:
+            active_employees.append(emp)
+
     results = [
         {"id": e.pk, "text": f"{e.employee_id} - {e.first_name} {e.last_name}"}
-        for e in qs
+        for e in active_employees
     ]
     return JsonResponse({"results": results})
 
