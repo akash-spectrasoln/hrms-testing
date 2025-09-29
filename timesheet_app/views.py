@@ -1655,7 +1655,7 @@ def calculate_timesheet_stats(emp, ts_hdr, week_start, leave_days, holidays_cach
 
  
 
-    print("Leave days for", emp.id, ":", sorted([d.strftime("%Y-%m-%d") for d in leave_dates]))
+    
 
 
 
@@ -1960,7 +1960,7 @@ from django.views.decorators.http import require_POST
 from django.contrib.auth.decorators import login_required
 from django.utils import timezone
 from datetime import date
-
+@employee_signin_required
 def pending_timesheets(request):
     """
     Shows all pending timesheet entries for weeks older than the previous week.
