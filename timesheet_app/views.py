@@ -934,6 +934,7 @@ def timesheet_calendar(request):
     return render(request, 'timesheet/calendar.html', context)
 
 @employee_signin_required
+@transaction.atomic
 def submit_timesheet(request):
     """
     Create or update a TimesheetHdr (weekly) and TimesheetItem (daily)
@@ -1079,7 +1080,7 @@ def submit_timesheet(request):
     # 1️⃣1️⃣ Prepare success response
     response_data = {
         'status': 'success',
-        'message': f"Timesheet for {date_obj} {'submitted' if created else 'updated'} successfully.",
+        'message': f"Timesheet for {date_obj.strftime('%m/%d/%Y')} {'submitted' if created else 'updated'} successfully.",
         'date': date_obj.strftime('%Y-%m-%d'),
         'entry': {
             'id': item.pk,
@@ -2009,7 +2010,7 @@ def pending_timesheets(request):
         week_end__lte=cutoff_week_end,  # Only weeks ending on or before cutoff
         is_approved=False  # Only unapproved timesheets
     ).select_related('employee').prefetch_related('timesheet_items').order_by(
-        '-week_end', 'employee__employee_id'  # Newest weeks first, then by employee
+        'week_end', 'employee__employee_id' ,'employee__first_name','employee__last_name' # Newest weeks first, then by employee
     )
     
     # Build timesheet data with additional fields

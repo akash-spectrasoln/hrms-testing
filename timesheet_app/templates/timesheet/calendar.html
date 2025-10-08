@@ -1,7 +1,52 @@
 {% extends 'timesheet_partials/base.html' %}
 {% load static %}
 {% block page_css %}
-
+<style>
+  /* Critical CSS for initial render - prevents FOUC */
+  .content-wrapper {
+    margin-left: 0;
+    margin-top: 0;
+    padding: 16px 6px 6px 6px;
+    opacity: 0;
+    transition: opacity 0.3s ease-in-out;
+  }
+  
+  .content-wrapper.loaded {
+    opacity: 1;
+  }
+  
+  /* Loading skeleton as a clean full-screen overlay */
+  .calendar-skeleton {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+  }
+  
+  .calendar-skeleton.hidden { display: none; }
+  
+  .skeleton-spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid #e9eef5;
+    border-top-color: #0d6efd;
+    border-radius: 50%;
+    animation: spin 0.9s linear infinite;
+  }
+  
+  @keyframes spin { to { transform: rotate(360deg); } }
+  
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+  }
+</style>
 {% endblock page_css %}
 {% block content %}
 <style>
@@ -222,9 +267,24 @@
 
   /* ---------------- Calendar ---------------- */
   .calendar-container {
-    overflow-x: hidden;
+    overflow: hidden; /* completely disable all scrolling */
     margin-top: 4px;
-    -webkit-overflow-scrolling: touch;
+  }
+  /* Force no scrollbars anywhere in calendar */
+  .calendar-wrapper,
+  .calendar-wrapper .card,
+  .calendar-wrapper .card-body,
+  .calendar-wrapper .calendar-container {
+    overflow: hidden !important;
+    max-height: none !important;
+  }
+  /* Ensure calendar grid never overflows */
+  .calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 2px;
+    height: auto;
+    min-height: auto;
   }
   .calendar-wrapper {
   margin-bottom: 0; /* remove bottom space */
@@ -683,7 +743,13 @@ input[type="date"] {
 
 </style>
 
-<div class="content-wrapper">
+<!-- Loading Skeleton (full-screen overlay) -->
+<div class="calendar-skeleton" id="calendar-skeleton">
+  <div class="skeleton-spinner"></div>
+  <span class="visually-hidden">Loading...</span>
+</div>
+
+<div class="content-wrapper" id="main-content">
   <h2 class="page-title">Time and Activity Recording</h2>
   <div class="container-fluid mt-0 pt-0">
     <div class="row gx-0 justify-content-center">
@@ -735,7 +801,7 @@ input[type="date"] {
                 <button id="legend-btn" class="btn btn-sm btn-light px-1 py-0 ms-1" title="Legend">&#9776;</button>
               </div>
 
-              <div class="card-body p-0">
+              <div class="card-body p-1">
                 <!-- Calendar Grid -->
                 <div class="calendar-container mb-1">
                   <!-- Week Headers -->
@@ -770,13 +836,13 @@ input[type="date"] {
 
                 <!-- Legend Popup -->
                 <div id="legend-popup" class="legend-popup shadow-sm">
-                  <div class="legend-item"><span class="legend-color-box bg-success"></span>Entered</div>
-                  <div class="legend-item"><span class="legend-color-box bg-warning text-dark"></span>Not Entered</div>
+                  <div class="legend-item"><span class="legend-color-box" style="background-color:#28a745;"></span>Entered</div>
+                  <div class="legend-item"><span class="legend-color-box" style="background-color:#ffc107;"></span>Not Entered</div>
                   <div class="legend-item"><span class="legend-color-box" style="background-color:#f5c6cb;"></span>Holiday</div>
                   <div class="legend-item"><span class="legend-color-box" style="background-color:#d6c8f4;"></span>Leave</div>
-                  <div class="legend-item"><span class="legend-color-box bg-secondary"></span>Weekend</div>
-                  <div class="legend-item"><span class="legend-color-box border border-primary"></span>Today</div>
-                  <div class="legend-item"><span class="legend-color-box" style="border:1px solid #fc37ff;"></span>Selected</div>
+                  <div class="legend-item"><span class="legend-color-box" style="background-color:#adb5bd;"></span>Weekend</div>
+                  <div class="legend-item"><span class="legend-color-box" style="background-color:transparent;border:1px solid #0d6efd;"></span>Today</div>
+                  <div class="legend-item"><span class="legend-color-box" style="background-color:transparent;border:1px solid #fc37ff;"></span>Selected</div>
                 </div>
               </div>
             </div>
@@ -923,6 +989,24 @@ input[type="date"] {
 
     // 🔹 Global variable available everywhere
     const csrfToken = getCSRFToken();
+    
+    // Keep skeleton visible until full window load to avoid any flash
+    const skeletonEl = document.getElementById('calendar-skeleton');
+    const mainEl = document.getElementById('main-content');
+    if (skeletonEl) skeletonEl.classList.remove('hidden');
+    if (mainEl) mainEl.classList.remove('loaded');
+
+    // Swap only when everything (CSS, fonts, images) is fully loaded
+    window.addEventListener('load', () => {
+        if (skeletonEl) skeletonEl.classList.add('hidden');
+        if (mainEl) mainEl.classList.add('loaded');
+    });
+    
+    // Ensure CSRF token is available before any AJAX calls
+    if (!csrfToken) {
+        console.error('CSRF token not found');
+        showToastMessage('Security token missing. Please refresh the page.', 'error');
+    }
 
     document.addEventListener('DOMContentLoaded', () => {
         /** -------------------- DOM Elements -------------------- **/
@@ -1065,6 +1149,11 @@ input[type="date"] {
             }
         };
 
+        const ensureCenteredLayout = () => {
+            const container = document.querySelector('.calendar-timesheet-container');
+            if (container) container.classList.remove('form-visible');
+        };
+
         const clearForm = (preserveDate = false) => {
             const currentDate = dateField.value;
             form.reset();
@@ -1072,7 +1161,7 @@ input[type="date"] {
             remainingDaysInfo.textContent = '';
             formContainer.style.display = 'none';
             // Remove form-visible class to return to centered layout
-            document.querySelector('.calendar-timesheet-container').classList.remove('form-visible');
+            ensureCenteredLayout();
             if (preserveDate && currentDate) dateField.value = currentDate;
         };
 
@@ -1501,11 +1590,14 @@ input[type="date"] {
                 // 🔹 Reset any selections
                 resetSelection();
 
-                // 🔹 Re-bind calendar day click listeners
+                // 🔹 Re-bind calendar day click listeners and ensure centered layout
                 bindCalendarDayListener();
+                ensureCenteredLayout();
                 
                 // 🔹 Re-attach navigation handlers
                 attachNavHandlers();
+                // 🔹 Rebind legend toggle for the newly inserted DOM
+                rebindLegend();
             }
         
           })
@@ -1672,6 +1764,7 @@ async function refreshCalendarDates(dates, maxRetries = 4, baseDelay = 250) {
             pasteBtn.classList.add('d-none');
             formContainer.style.display = 'none';
             entryDetails.classList.add('d-none');
+            ensureCenteredLayout();
         };
 
         /** -------------------- Paste Entries (fixed) -------------------- **/
@@ -1738,6 +1831,13 @@ async function refreshCalendarDates(dates, maxRetries = 4, baseDelay = 250) {
         if (form) {
             form.addEventListener('submit', async e => {
     e.preventDefault();
+    
+    // Validate CSRF token before submission
+    if (!csrfToken) {
+        showToastMessage('Security token missing. Please refresh the page.', 'error');
+        return;
+    }
+    
     showSpinnerAndDisableButtons();
 
     const formData = new FormData(form);
@@ -1745,59 +1845,96 @@ async function refreshCalendarDates(dates, maxRetries = 4, baseDelay = 250) {
     formData.append('project', projectSelect.value);
 
     let success = false;
+    let retryCount = 0;
+    const maxRetries = 3;
 
-    try {
-        const resp = await fetch("{% url 'submit_timesheet' %}", {
-            method: 'POST',
-            body: formData,
-            headers: {
-                'X-Requested-With': 'XMLHttpRequest',
-                'X-CSRFToken': '{{ csrf_token }}'
-            }
-        });
-
-        let data = {};
+    const submitWithRetry = async () => {
         try {
-            data = await resp.json();
-        } catch {
-            showToastMessage("Invalid server response.", "error");
-            return;
-        }
+            const resp = await fetch("{% url 'submit_timesheet' %}", {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRFToken': csrfToken
+                }
+            });
 
-        // Handle success
-        if (resp.ok && data.status === 'success') {
-            success = true;
-            showToastMessage(data.message || "Timesheet saved.", "success");
-
-            const cell = document.querySelector(`.calendar-day[data-date="${data.date}"]`);
-            if (cell) {
-                cell.classList.remove('status-not-entered');
-                cell.classList.add('status-entered');
-                clearDayHours(cell);
-
-                const el = document.createElement('span');
-                el.className = 'day-hours';
-                el.textContent = data.entry.hours_worked + 'h';
-                cell.appendChild(el);
+            let data = {};
+            try {
+                data = await resp.json();
+            } catch {
+                throw new Error("Invalid server response");
             }
 
-            const submitBtn = document.getElementById('submit-timesheet-btn');
-            if (submitBtn && data.entry.is_approved) {
-                submitBtn.disabled = true;
+            // Handle success
+            if (resp.ok && data.status === 'success') {
+                success = true;
+                showToastMessage(data.message || "Timesheet saved.", "success");
+
+                const cell = document.querySelector(`.calendar-day[data-date="${data.date}"]`);
+                if (cell) {
+                    cell.classList.remove('status-not-entered');
+                    cell.classList.add('status-entered');
+                    clearDayHours(cell);
+
+                    const el = document.createElement('span');
+                    el.className = 'day-hours';
+                    el.textContent = data.entry.hours_worked + 'h';
+                    cell.appendChild(el);
+                }
+
+                const submitBtn = document.getElementById('submit-timesheet-btn');
+                if (submitBtn && data.entry.is_approved) {
+                    submitBtn.disabled = true;
+                }
+
+                try { await refreshCalendarDates([data.date]); } catch (e) { console.error(e); }
+                try { await loadDayData(data.date, true); } catch (e) { console.error(e); }
+                return; // Success, exit retry loop
+
+            } else {
+                // Handle error even if HTTP status is 400/403
+                const errMsg = data.message || data.error || "Submission failed.";
+                
+                // Check if it's a CSRF error that we can retry
+                if (resp.status === 403 && (errMsg.includes('CSRF') || errMsg.includes('token'))) {
+                    throw new Error('CSRF_TOKEN_ERROR');
+                }
+                
+                throw new Error(errMsg);
             }
 
-            try { await refreshCalendarDates([data.date]); } catch (e) { console.error(e); }
-            try { await loadDayData(data.date, true); } catch (e) { console.error(e); }
-
-        } else {
-            // Handle error even if HTTP status is 400/403
-            const errMsg = data.message || data.error || "Submission failed.";
-            showToastMessage(errMsg, "error");
+        } catch (err) {
+            console.error('Submit error:', err);
+            
+            // Retry logic for CSRF token errors
+            if (err.message === 'CSRF_TOKEN_ERROR' && retryCount < maxRetries) {
+                retryCount++;
+                console.log(`Retrying submission (attempt ${retryCount}/${maxRetries})`);
+                
+                // Wait a bit before retry
+                await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
+                
+                // Refresh CSRF token
+                const newToken = getCSRFToken();
+                if (newToken) {
+                    formData.set('csrfmiddlewaretoken', newToken);
+                    return submitWithRetry();
+                }
+            }
+            
+            throw err;
         }
+    };
 
+    // Execute submission with retry logic
+    try {
+        await submitWithRetry();
     } catch (err) {
-        console.error(err);
-        if (!success) showToastMessage("Submission failed.", "error");
+        console.error('Final submission error:', err);
+        if (!success) {
+            showToastMessage(err.message || "Submission failed. Please try again.", "error");
+        }
     } finally {
         hideSpinnerAndEnableButtons();
     }
@@ -1808,25 +1945,34 @@ async function refreshCalendarDates(dates, maxRetries = 4, baseDelay = 250) {
 </script>
 
 <script>
-  const legendBtn = document.getElementById('legend-btn');
-  const legendPopup = document.getElementById('legend-popup');
+  // Rebind legend events after DOM updates (navigation reloads calendar DOM)
+  function rebindLegend() {
+    const legendBtn = document.getElementById('legend-btn');
+    const legendPopup = document.getElementById('legend-popup');
+    if (!legendBtn || !legendPopup) return;
 
-   if (legendBtn && legendPopup) {
-     legendBtn.addEventListener('click', (e) => {
-       if (!e) return;
-       e.stopPropagation();
-       legendPopup.style.display = (legendPopup.style.display === 'block') ? 'none' : 'block';
-     });
+    // Remove previous listeners by cloning
+    const newBtn = legendBtn.cloneNode(true);
+    legendBtn.parentNode.replaceChild(newBtn, legendBtn);
 
-     document.addEventListener('click', () => {
-       legendPopup.style.display = 'none';
-     });
+    newBtn.addEventListener('click', (e) => {
+      if (!e) return;
+      e.stopPropagation();
+      legendPopup.style.display = (legendPopup.style.display === 'block') ? 'none' : 'block';
+    });
 
-     legendPopup.addEventListener('click', (e) => {
-       if (!e) return;
-       e.stopPropagation(); // prevent close when clicking inside popup
-     });
-   }
+    document.addEventListener('click', () => {
+      if (legendPopup) legendPopup.style.display = 'none';
+    });
+
+    legendPopup.addEventListener('click', (e) => {
+      if (!e) return;
+      e.stopPropagation();
+    });
+  }
+
+  // Initial bind
+  rebindLegend();
 </script>
 
 {% endblock %}

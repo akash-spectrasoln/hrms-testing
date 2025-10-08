@@ -351,6 +351,8 @@
                                                 data-employee-id="{{ entry.employee.id }}"
                                                 data-week="{{ entry.week_num }}" 
                                                 data-year="{{ entry.year }}"
+                                                data-week-start="{{ entry.week_start|date:'Y-m-d' }}"
+                                                data-week-end="{{ entry.week_end|date:'Y-m-d' }}"
                                                 data-employee-name="{{ entry.employee.first_name }} {{ entry.employee.last_name }}"
                                                 data-employee-code="{{ entry.employee.employee_id }}">
                                                 View
@@ -391,7 +393,6 @@
 </div>
 
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
 
 <script>
     // --- CSRF Token Handling ---
@@ -548,18 +549,12 @@
             const selectedWeek = parseInt($(this).data('week'));
             const selectedYear = parseInt($(this).data('year'));
             const employeeName = $(this).data('employee-name');
+            const weekStartDate = $(this).data('week-start');
+            const weekEndDate = $(this).data('week-end');
 
-            // ✅ Sunday–Saturday calculation (same as backend get_week_start_end using %U)
-            const jan1 = new Date(selectedYear, 0, 1);
-            const jan1Day = jan1.getDay(); // 0=Sunday
-            const firstSunday = new Date(jan1);
-            firstSunday.setDate(jan1.getDate() + ((7 - jan1Day) % 7));
-
-            const weekStart = new Date(firstSunday);
-            weekStart.setDate(firstSunday.getDate() + (selectedWeek - 1) * 7);
-
-            const weekEnd = new Date(weekStart);
-            weekEnd.setDate(weekStart.getDate() + 6);
+            // Use the actual week start and end dates from backend
+            const weekStart = new Date(weekStartDate);
+            const weekEnd = new Date(weekEndDate);
 
             const weekStartStr = weekStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
             const weekEndStr = weekEnd.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
