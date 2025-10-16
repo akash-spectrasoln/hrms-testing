@@ -101,7 +101,91 @@ def send_birthday_emails():
                 fail_silently=False
             )
 
+@shared_task
+def send_birthday_emails_today():
+    """
+    Send birthday notification emails to administrators for employees 
+    whose birthday is TODAY.
+    """
+    # Get today's date
+    today = datetime.now().date()
 
+    # Get all users from communication model who should receive the email
+    admin_employees = Communication.objects.all()
+
+    # Get all employees to check their birthdays
+    employees = Employees.objects.all()
+
+    # Prepare a list of employees with birthdays TODAY
+    employees_with_birthday_today = []
+
+    for employee in employees:
+        try:
+            # Replace year in DOB to current year for comparison
+            dob = employee.enc_date_of_birth.replace(year=today.year)
+
+            # Check if the birthday is TODAY
+            if dob == today:
+                employees_with_birthday_today.append({
+                    "first_name": employee.first_name,
+                    "last_name": employee.last_name,
+                    "birth_day_date": dob
+                })
+        except:
+            # Skip employees with invalid DOB or error in date conversion
+            pass
+
+    if employees_with_birthday_today:
+        for admin in admin_employees:
+            subject = "🎂 Employee Birthday Today!"
+
+            # Plain text fallback
+            plain_message = f"Hi {admin.user.first_name},\n\nPlease view this email in HTML format to see today's birthday celebrants.\n\nBest regards,\nYour Leave Management System"
+
+            # HTML content
+            html_message = f"""
+            <html>
+            <body style="font-family: Arial, sans-serif; color: #333;">
+                <p>Hi {admin.user.first_name},</p>
+                <p>🎉 The following employee(s) are celebrating their birthday <strong>TODAY</strong>:</p>
+                
+                <table border="1" cellpadding="8" cellspacing="0" style="border-collapse: collapse; width: 80%;">
+                    <thead style="background-color: #f2f2f2;">
+                        <tr>
+                            <th align="left">Name</th>
+                            <th align="left">Date</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            """
+
+            for emp in employees_with_birthday_today:
+                formatted_date = emp['birth_day_date'].strftime('%B %d, %Y')
+                html_message += f"""
+                    <tr>
+                        <td>{emp['first_name']} {emp['last_name']}</td>
+                        <td>{formatted_date}</td>
+                    </tr>
+                """
+
+            html_message += """
+                    </tbody>
+                </table>
+
+                <p style="margin-top: 20px;">Don't forget to wish them a happy birthday! 🎈</p>
+                <p style="margin-top: 20px;">Best regards,<br>Your LMS</p>
+            </body>
+            </html>
+            """
+
+            send_mail(
+                subject=subject,
+                message=plain_message,
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[admin.user.email],
+                html_message=html_message,
+                fail_silently=False
+            )
 @shared_task
 def send_anniversary_emails():
     """
