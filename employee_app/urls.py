@@ -45,7 +45,7 @@ path('allocate-leave/<int:employee_id>/',allocate_leave, name='allocate_leave'),
 path('check-floating-holidays/', check_floating_holidays, name='check_floating_holidays'),
 path('check-leave-conflicts/', check_leave_conflicts, name='check_leave_conflicts'),
 path('delete-leave/<int:leave_id>/', delete_leave, name='delete_leave'),
-path("employees/<int:employee_id>/devices/", employee_devices_view, name="employee_devices"),
+path("devices/<int:employee_id>/", employee_devices_view, name="employee_devices"),
 
 path('tsheet_index/',ts_views.tsheet_index,name='tsheet_index'),
 path('timesheet/', ts_views.timesheet_calendar, name='timesheet_calendar'),
