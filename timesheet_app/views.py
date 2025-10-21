@@ -821,7 +821,29 @@ def timesheet_calendar(request):
 
 
 
-    # 6️⃣ Build calendar_data — include outside-month days, add is_current_month flag
+    # 6️⃣ Check week approval status for each week
+    week_approval_status = {}
+    for week in month_days:
+        # Get the Sunday of each week (first day in the week)
+        week_start = week[0]  # Sunday
+        week_end = week_start + timedelta(days=6)  # Saturday
+        
+        # Check if this week has an approved timesheet header
+        try:
+            ts_hdr = TimesheetHdr.objects.get(
+                employee=employee,
+                week_start=week_start,
+                week_end=week_end
+            )
+            is_week_approved = ts_hdr.is_approved
+        except TimesheetHdr.DoesNotExist:
+            is_week_approved = False
+        
+        # Store approval status for all days in this week
+        for day in week:
+            week_approval_status[day] = is_week_approved
+
+    # 7️⃣ Build calendar_data — include outside-month days, add is_current_month flag
     calendar_data = []
     for week in month_days:
         week_data = []
@@ -836,9 +858,12 @@ def timesheet_calendar(request):
             is_future = day > today
             is_approved = day in approved_dates
             is_before_joining_date = day < effective_start_date
+            is_week_approved = week_approval_status.get(day, False)
 
-            # Disabled logic (same as your previous rule)
+            # Disabled logic - only disable if week is approved AND day has no entries
             is_disabled = any([ on_leave, is_future, is_before_joining_date])
+            if is_week_approved and not is_entered:
+                is_disabled = True
             # NOTE: we DO NOT automatically disable outside-month days here. Let frontend decide.
             # if you want to disable outside-month cells too, uncomment:
             # if not is_current_month:
@@ -870,6 +895,7 @@ def timesheet_calendar(request):
                 'is_entered': is_entered,
                 'is_approved': is_approved,
                 'is_disabled': is_disabled,
+                'is_week_approved': is_week_approved,
                 'status': status,
                 'total_hours': hours,
                 'holiday_name': holiday_name,
@@ -1747,8 +1773,9 @@ def calculate_timesheet_stats(emp, ts_hdr, week_start, leave_days, holidays_cach
     can_approve = has_timesheets
 
     if can_approve:
-        if total_hours < weekly_threshold:
-            can_approve = False
+        # Commented out weekly threshold check - now any hours > 0 can be approved
+        # if total_hours < weekly_threshold:
+        #     can_approve = False
 
         # Daily check
         for i in range(7):

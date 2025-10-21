@@ -817,6 +817,8 @@ input[type="date"] {
                           <div
                             class="calendar-day {{ day.status }} {% if day.is_today %}today-outline{% endif %} {% if day.is_disabled %}disabled{% endif %}"
                             data-date="{{ day.date|date:'Y-m-d' }}"
+                            data-week-approved="{{ day.is_week_approved|yesno:'true,false' }}"
+                            data-has-entries="{{ day.is_entered|yesno:'true,false' }}"
                             {% if day.holiday_name %}data-holiday="{{ day.holiday_name }}" title="{{ day.holiday_name }}"{% endif %}>
                             <span class="day-number">{{ day.day }}</span>
                             {% if day.total_hours %}
@@ -1524,6 +1526,11 @@ input[type="date"] {
     // 🚫 Block before joining date
     if (joiningDate && date < joiningDate) {
         return showToastMessage(`Invalid date: before your joining date (${joiningDate})`, "error");
+    }
+
+    // 🚫 Block if week is approved and day has no entries
+    if (btn.dataset.weekApproved === 'true' && btn.dataset.hasEntries === 'false') {
+        return showToastMessage("Timesheet for this week is already approved. Cannot add new entries.", "error");
     }
 
     // ✅ Normal flow
