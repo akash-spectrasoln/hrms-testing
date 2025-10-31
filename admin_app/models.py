@@ -7,6 +7,7 @@ from django.dispatch import receiver
 from encryption.encryption import encrypt_field, decrypt_field 
 from datetime import date
 from django.utils import timezone
+from math import ceil
 
 
 # Create your models here.
@@ -215,28 +216,141 @@ class Employees(models.Model):
         super().save(*args, **kwargs)
 
         if is_new:
-            # creating leavedetails record
+            # Calculate and create leave details for new employee with pro-rata calculation
+            self._create_leave_details_for_new_employee()
 
-            current_year = date.today().year
-
-            reset_period = HolidayResetPeriod.objects.filter(country=self.country).first()
-
-            if not reset_period:
-                raise Exception("Holiday reset period not configured for this country")
-
-            start_month = reset_period.start_month
-            start_day = reset_period.start_day
-
-            financial_year_start_date = date(current_year, start_month, start_day)
-            created_date = self.created_on or timezone.now()
-
-            year_to_use = current_year - 1 if created_date.date() < financial_year_start_date else current_year
-
-            LeaveDetails.objects.create(employee=self, year=year_to_use)
-
-
-            
-            # LeaveDetails.objects.create(employee=self)
+    def _create_leave_details_for_new_employee(self):
+        """
+        Calculate and create leave details for new employee based on pro-rata formula.
+        
+        Business Logic:
+        - Financial year runs from April 1 to March 31
+        - Total annual leaves (15) is stored in HolidayPolicy.ordinary_holidays_count
+        - For new joinees, leaves are calculated pro-rata based on job start date (valid_from)
+        
+        Formula for New Joinee:
+        (Days from Job Start Date to March 31) * Total Annual Leaves / 365
+        Always round up to ceiling (e.g., 12.1 => 13)
+        
+        Example:
+        - If employee's job starts on Oct 1, 2024 (FY 2024-25: Apr 1, 2024 to Mar 31, 2025)
+        - Days remaining: Oct 1, 2024 to Mar 31, 2025 = 182 days
+        - Pro-rata leaves: (182 * 15) / 365 = 7.48 => 8 leaves (rounded up)
+        
+        Note: Uses enc_valid_from (job start date) not created_on (record creation date)
+        """
+        print("\n" + "="*80)
+        print("🔄 CALCULATING PRO-RATA LEAVES FOR NEW EMPLOYEE")
+        print("="*80)
+        
+        # Get the holiday reset period configuration for this country
+        reset_period = HolidayResetPeriod.objects.filter(country=self.country).first()
+        
+        if not reset_period:
+            raise Exception(f"Holiday reset period not configured for country: {self.country.country_name}")
+        
+        # Extract financial year start parameters (e.g., April 1)
+        fy_start_month = reset_period.start_month  # Should be 4 for April
+        fy_start_day = reset_period.start_day      # Should be 1
+        fy_end_month = reset_period.end_month      # Should be 3 for March
+        fy_end_day = reset_period.end_day          # Should be 31
+        
+        print(f"\n📋 Employee Details:")
+        print(f"   Employee ID: {self.employee_id}")
+        print(f"   Name: {self.first_name} {self.last_name}")
+        print(f"   Country: {self.country.country_name}")
+        
+        # Determine the employee's joining date (job start date from valid_from field)
+        # This field is mandatory for leave calculation
+        if not self.enc_valid_from:
+            raise Exception(f"Job start date (valid_from) is required for employee {self.employee_id} to calculate leaves")
+        
+        joining_date = self.enc_valid_from
+        print(f"   Joining Date (Job Start): {joining_date.strftime('%B %d, %Y')}")
+        
+        # Determine which financial year the employee belongs to
+        # Financial year logic: If joining date is on or after April 1, they belong to current FY
+        # Otherwise, they belong to previous FY
+        if joining_date.month > fy_start_month or (joining_date.month == fy_start_month and joining_date.day >= fy_start_day):
+            # Employee joined in current financial year (e.g., joined in Apr-Dec 2024 => FY 2024-25)
+            fy_start = date(joining_date.year, fy_start_month, fy_start_day)
+            fy_end = date(joining_date.year + 1, fy_end_month, fy_end_day)
+            year_to_use = joining_date.year
+        else:
+            # Employee joined in previous financial year (e.g., joined in Jan-Mar 2024 => FY 2023-24)
+            fy_start = date(joining_date.year - 1, fy_start_month, fy_start_day)
+            fy_end = date(joining_date.year, fy_end_month, fy_end_day)
+            year_to_use = joining_date.year - 1
+        
+        print(f"\n📅 Financial Year {year_to_use}-{year_to_use + 1}:")
+        print(f"   Start Date: {fy_start.strftime('%B %d, %Y')}")
+        print(f"   End Date: {fy_end.strftime('%B %d, %Y')}")
+        
+        # Get the holiday policy for this financial year
+        # The policy contains ordinary_holidays_count which should be 15 as per company policy
+        policy = HolidayPolicy.objects.filter(
+            country=self.country,
+            year=year_to_use
+        ).first()
+        
+        if not policy:
+            raise Exception(f"No holiday policy configured for {self.country.country_name} for year {year_to_use}")
+        
+        # ==================== PRO-RATA LEAVE CALCULATION ====================
+        
+        # Total leaves per year from policy (should be 15 as per company policy)
+        total_leaves_per_year = policy.ordinary_holidays_count
+        
+        print(f"\n📊 Holiday Policy:")
+        print(f"   Total Annual Leaves: {total_leaves_per_year} leaves")
+        print(f"   Policy Year: {policy.year}")
+        
+        # Calculate total days in the financial year (should be 365 or 366 for leap year)
+        total_days_in_fy = (fy_end - fy_start).days + 1
+        
+        # Calculate days remaining from joining date to end of financial year
+        # +1 because both start and end dates are inclusive
+        days_remaining = (fy_end - joining_date).days + 1
+        
+        print(f"\n🧮 Calculation Details:")
+        print(f"   Total Days in FY: {total_days_in_fy} days")
+        print(f"   Days Remaining (from {joining_date.strftime('%b %d')} to {fy_end.strftime('%b %d')}): {days_remaining} days")
+        
+        # Apply the pro-rata formula:
+        # Pro-rata Leaves = (Days Remaining * Total Annual Leaves) / Total Days in FY
+        # Example: (182 * 15) / 365 = 7.48
+        pro_rata_leaves = (days_remaining * total_leaves_per_year) / total_days_in_fy
+        
+        print(f"\n📐 Pro-rata Formula:")
+        print(f"   Formula: (Days Remaining × Total Annual Leaves) ÷ Total Days in FY")
+        print(f"   Calculation: ({days_remaining} × {total_leaves_per_year}) ÷ {total_days_in_fy}")
+        print(f"   Result: {pro_rata_leaves:.4f} leaves")
+        
+        # Round up to ceiling as per company policy
+        # Example: 7.48 => 8, 12.1 => 13
+        calculated_leaves = ceil(pro_rata_leaves)
+        
+        print(f"\n✅ Final Result:")
+        print(f"   Before Rounding: {pro_rata_leaves:.4f} leaves")
+        print(f"   After Ceiling: {calculated_leaves} leaves")
+        print(f"   (Always round UP: {pro_rata_leaves:.2f} → {calculated_leaves})")
+        
+        # ==================== CREATE LEAVE DETAILS RECORD ====================
+        
+        # Create the LeaveDetails record with calculated pro-rata leaves
+        LeaveDetails.objects.create(
+            employee=self,
+            year=year_to_use,
+            total_casual_leaves=calculated_leaves
+        )
+        
+        print(f"\n💾 Leave Details Record Created:")
+        print(f"   Employee: {self.employee_id} - {self.first_name} {self.last_name}")
+        print(f"   Year: {year_to_use}")
+        print(f"   Total Casual Leaves: {calculated_leaves}")
+        print("="*80)
+        print("✨ Pro-rata leave calculation completed successfully!")
+        print("="*80 + "\n")
 
     def __str__(self):
         return f"{self.employee_id} "
