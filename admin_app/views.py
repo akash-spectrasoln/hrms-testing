@@ -1316,6 +1316,21 @@ def accept_leave_request(request, leave_request_id):
         leave_request.leave_days = casual_days + floating_days  # or just "leave_days" if consistent
         leave_request.save()
 
+        # Recalculate timesheet totals for affected weeks (if timesheet already exists)
+        # If timesheet doesn't exist yet, it will be calculated correctly when created
+        print(f"[DEBUG] accept_leave_request: Leave approved for employee {employee.id} ({employee.first_name}) from {leave_request.start_date} to {leave_request.end_date}")
+        affected_timesheets = TimesheetHdr.objects.filter(
+            employee=employee,
+            week_start__lte=leave_request.end_date,
+            week_end__gte=leave_request.start_date
+        )
+        print(f"[DEBUG] accept_leave_request: Found {affected_timesheets.count()} timesheet(s) overlapping with leave period")
+        for ts_hdr in affected_timesheets:
+            print(f"[DEBUG] accept_leave_request: Recalculating timesheet {ts_hdr.tsheet_id} (week {ts_hdr.week_start} to {ts_hdr.week_end})")
+            print(f"[DEBUG] accept_leave_request: Before recalculation - tot_hrs_wrk={ts_hdr.tot_hrs_wrk}, tot_lev_hrs={ts_hdr.tot_lev_hrs}, tot_hol_hrs={ts_hdr.tot_hol_hrs}")
+            ts_hdr.recalc_totals()
+            print(f"[DEBUG] accept_leave_request: After recalculation - tot_hrs_wrk={ts_hdr.tot_hrs_wrk}, tot_lev_hrs={ts_hdr.tot_lev_hrs}, tot_hol_hrs={ts_hdr.tot_hol_hrs}")
+
         # Email to Employee
         employee_email = employee.user.email
         employee_subject = "Leave Request Approved"

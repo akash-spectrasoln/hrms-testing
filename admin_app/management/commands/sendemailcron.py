@@ -8,40 +8,40 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         # UTC times corresponding to local reminder times:
-        # India 4 PM IST → 10:30 AM UTC
-        # US 4 PM ET   → 20:00 UTC (adjust if DST)
-        # India 9 AM IST → 3:30 AM UTC
-        # US 9 AM ET   → 13:00 UTC (adjust if DST)
+        # India 10 AM IST → 4:30 AM UTC
+        # US 10 AM ET   → 14:00 UTC (adjust if DST)
+        # India 5 PM IST → 11:30 AM UTC
+        # US 5 PM ET   → 21:00 UTC (adjust if DST)
         schedules = [
-            # Friday reminders
+            # Monday 10 AM reminders (previous week)
             {
-                "name": "Timesheet Reminder Friday India",
-                "hour": "10",
-                "minute": "30",
-                "day_of_week": "5",  # Friday
-                "args": ["friday", 1],  # region_id=1 (India)
-            },
-            {
-                "name": "Timesheet Reminder Friday US",
-                "hour": "20",
-                "minute": "00",
-                "day_of_week": "5",  # Friday
-                "args": ["friday", 2],  # region_id=2 (US)
-            },
-            # Monday reminders
-            {
-                "name": "Timesheet Reminder Monday India",
-                "hour": "03",
+                "name": "Timesheet Reminder Monday 10AM India",
+                "hour": "04",
                 "minute": "30",
                 "day_of_week": "1",  # Monday
-                "args": ["monday", 1],
+                "args": ["monday_morning", 1],  # region_id=1 (India)
             },
             {
-                "name": "Timesheet Reminder Monday US",
-                "hour": "13",
+                "name": "Timesheet Reminder Monday 10AM US",
+                "hour": "14",
                 "minute": "00",
                 "day_of_week": "1",  # Monday
-                "args": ["monday", 2],
+                "args": ["monday_morning", 2],  # region_id=2 (US)
+            },
+            # Monday 5 PM reminders (previous week)
+            {
+                "name": "Timesheet Reminder Monday 5PM India",
+                "hour": "11",
+                "minute": "30",
+                "day_of_week": "1",  # Monday
+                "args": ["monday_evening", 1],
+            },
+            {
+                "name": "Timesheet Reminder Monday 5PM US",
+                "hour": "21",
+                "minute": "00",
+                "day_of_week": "1",  # Monday
+                "args": ["monday_evening", 2],
             },
         ]
 

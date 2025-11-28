@@ -295,24 +295,24 @@ from celery import shared_task
 logger = logging.getLogger(__name__)
 
 @shared_task
-def send_timesheet_reminder(day_type="friday", country_id=None):
+def send_timesheet_reminder(day_type="monday_morning", country_id=None):
     """
     Send reminder emails to employees with incomplete timesheets.
-    Runs on Friday 4 PM (for current week) and Monday 9 AM (for previous week).
+    Runs on Monday 10 AM (monday_morning) and Monday 5 PM (monday_evening) for previous week.
     Logs detailed processing steps for each employee.
     """
     today = timezone.localdate()
     logger.info("Task started for day_type=%s, country_id=%s", day_type, country_id)
 
-    # Calculate week range (Sunday → Saturday)
-    if day_type.lower() == "friday":
-        week_start = today - timedelta(days=today.weekday() + 1)  # last Sunday
-        week_end = week_start + timedelta(days=6)
-        message_text = f"It is time to submit your timesheet for the week {week_start} to {week_end}."
-    elif day_type.lower() == "monday":
+    # Calculate week range (Sunday → Saturday) - both reminders are for previous week
+    if day_type.lower() == "monday_morning":
         week_start = today - timedelta(days=today.weekday() + 8)  # previous Sunday
         week_end = week_start + timedelta(days=6)
-        message_text = f"Friendly reminder: submit your timesheet for last week {week_start} to {week_end}."
+        message_text = f"It is time to submit your timesheet for the week {week_start} to {week_end}."
+    elif day_type.lower() == "monday_evening":
+        week_start = today - timedelta(days=today.weekday() + 8)  # previous Sunday
+        week_end = week_start + timedelta(days=6)
+        message_text = f"Your timesheet is delayed. Friendly reminder: Please Submit your timesheet for the last week {week_start} to {week_end}."
     else:
         logger.error("Invalid day_type provided: %s", day_type)
         return
