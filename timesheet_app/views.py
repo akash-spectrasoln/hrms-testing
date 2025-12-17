@@ -1028,11 +1028,22 @@ def submit_timesheet(request):
         return _error_response(request, "Invalid hours value.", 400)
 
     # 5️⃣ Get or create TimesheetHdr for the week
-    hdr, _ = TimesheetHdr.objects.get_or_create(
+    hdr, created = TimesheetHdr.objects.get_or_create(
         employee=employee,
         week_start=week_start,
-        week_end=week_end
+        week_end=week_end,
+        defaults={"updated_at": timezone.now()}  # Temporary value to satisfy NOT NULL constraint
     )
+    
+    # Set updated_at to match created_at for newly created records
+    if created:
+        hdr.updated_at = hdr.created_at
+        hdr.save(update_fields=["updated_at"])
+    else:
+        # Safety check: ensure updated_at is set for existing records
+        if not hdr.updated_at:
+            hdr.updated_at = hdr.created_at if hdr.created_at else timezone.now()
+            hdr.save(update_fields=["updated_at"])
     
     # 6️⃣ Detect edit mode by entry ID
     entry_id = request.POST.get('entry_id')
@@ -1099,9 +1110,8 @@ def submit_timesheet(request):
         created = True
 
     # 🔟 Recalculate totals and delayed status
-    hdr.recalc_totals()
+    hdr.recalc_totals() #this will now calculate the totals for the week based on the new entry and  update updated_at
     hdr.check_delayed_status()
-    hdr.save()
 
     # 1️⃣1️⃣ Prepare success response
     response_data = {
@@ -1499,12 +1509,25 @@ def copy_timesheet_entries(request):
             week_start = date_obj - timedelta(days=date_obj.weekday() + 1 if date_obj.weekday() != 6 else 0)
             week_end = week_start + timedelta(days=6)
 
-            hdr, _ = TimesheetHdr.objects.get_or_create(
+            hdr, created = TimesheetHdr.objects.get_or_create(
                 employee=employee,
                 week_start=week_start,
                 week_end=week_end,
-                defaults={"is_approved": False}
+                defaults={
+                    "is_approved": False,
+                    "updated_at": timezone.now()  # Temporary value to satisfy NOT NULL constraint
+                }
             )
+            
+            # Set updated_at to match created_at for newly created records
+            if created:
+                hdr.updated_at = hdr.created_at
+                hdr.save(update_fields=["updated_at"])
+            else:
+                # Safety check: ensure updated_at is set for existing records
+                if not hdr.updated_at:
+                    hdr.updated_at = hdr.created_at if hdr.created_at else timezone.now()
+                    hdr.save(update_fields=["updated_at"])
 
             for item in items:
                 key = (item.project_assignment_id, item.costcenter_id)
@@ -1562,7 +1585,8 @@ def copy_timesheet_entries(request):
                 existing_map.setdefault(date_obj, {})[key] = item.wrk_hours
 
         if entries_copied > 0:
-            hdr.save()
+            hdr.updated_at = timezone.now()
+            hdr.save(update_fields=["updated_at"])
             copied_dates.append(td)
         else:
             skipped_details.setdefault(td, []).append("No entries copied for this date")
@@ -1851,7 +1875,7 @@ def timesheet_unapprove(request: HttpRequest, tsheet_id: int):
             hdr.is_approved = False
             hdr.approved_by = None
             hdr.approved_date = None
-            hdr.save()
+            hdr.save(update_fields=["is_approved", "approved_by", "approved_date"])  # Exclude updated_at
             messages.success(request, f"Timesheet for {hdr.employee.first_name} set to 'Pending Approval'.")
         else:
             messages.warning(request, "Timesheet is already pending approval.")
@@ -2112,7 +2136,7 @@ def approve_timesheet(request):
         hdr.is_approved = True
         hdr.approved_by = request.user.employee_profile
         hdr.approved_date = timezone.now()
-        hdr.save()
+        hdr.save(update_fields=["is_approved", "approved_by", "approved_date"])
 
         return JsonResponse({"success": True, "message": "Timesheet approved."})
 
@@ -2148,7 +2172,7 @@ def approve_selected_timesheets(request):
                 hdr.is_approved = True
                 hdr.approved_by = request.user.employee_profile
                 hdr.approved_date = timezone.now()
-                hdr.save()
+                hdr.save(update_fields=["is_approved", "approved_by", "approved_date"])
                 approved.append(composite_id)
 
         except TimesheetHdr.DoesNotExist:

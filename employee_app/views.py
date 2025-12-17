@@ -1837,7 +1837,7 @@ def manage_leave_request(request, leave_request_id):
             for ts_hdr in affected_timesheets:
                 print(f"[DEBUG] manage_leave_request: Recalculating timesheet {ts_hdr.tsheet_id} (week {ts_hdr.week_start} to {ts_hdr.week_end})")
                 print(f"[DEBUG] manage_leave_request: Before recalculation - tot_hrs_wrk={ts_hdr.tot_hrs_wrk}, tot_lev_hrs={ts_hdr.tot_lev_hrs}, tot_hol_hrs={ts_hdr.tot_hol_hrs}")
-                ts_hdr.recalc_totals()
+                ts_hdr.recalc_totals(update_timestamp=False)  # Don't update timestamp for manager actions
                 print(f"[DEBUG] manage_leave_request: After recalculation - tot_hrs_wrk={ts_hdr.tot_hrs_wrk}, tot_lev_hrs={ts_hdr.tot_lev_hrs}, tot_hol_hrs={ts_hdr.tot_hol_hrs}")
 
             
@@ -2214,7 +2214,7 @@ def allocate_leave(request, employee_id):
             for ts_hdr in affected_timesheets:
                 print(f"[DEBUG] allocate_leave: Recalculating timesheet {ts_hdr.tsheet_id} (week {ts_hdr.week_start} to {ts_hdr.week_end})")
                 print(f"[DEBUG] allocate_leave: Before recalculation - tot_hrs_wrk={ts_hdr.tot_hrs_wrk}, tot_lev_hrs={ts_hdr.tot_lev_hrs}, tot_hol_hrs={ts_hdr.tot_hol_hrs}")
-                ts_hdr.recalc_totals()
+                ts_hdr.recalc_totals(update_timestamp=False)  # Don't update timestamp for manager actions
                 print(f"[DEBUG] allocate_leave: After recalculation - tot_hrs_wrk={ts_hdr.tot_hrs_wrk}, tot_lev_hrs={ts_hdr.tot_lev_hrs}, tot_hol_hrs={ts_hdr.tot_hol_hrs}")
            
             current_year=date.today().year

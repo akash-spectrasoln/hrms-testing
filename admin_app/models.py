@@ -1309,7 +1309,7 @@ class TimesheetHdr(models.Model):
     tot_hol_hrs = models.IntegerField(default=0)
     tot_lev_hrs = models.IntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+    updated_at = models.DateTimeField(auto_now=False)
     is_delayed = models.BooleanField(default=False)
     is_approved = models.BooleanField(default=False)
     approved_date = models.DateTimeField(null=True, blank=True)
@@ -1319,22 +1319,68 @@ class TimesheetHdr(models.Model):
         db_table='timesheet_hdr'
 
     def check_delayed_status(self):
-        # Deadline = Monday after week_end, end of day
+        # Deadline = Monday after week_end (Saturday), end of day
+        # Since week_end is Saturday, Monday is 2 days later
         deadline = timezone.datetime.combine(
-            self.week_end + timedelta(days=1),  # Monday
+            self.week_end + timedelta(days=2),  # Monday (Saturday + 2 days)
             timezone.datetime.max.time()        # 23:59:59
         )
         deadline = timezone.make_aware(deadline)
-
+        
         now = timezone.now()
-
+        
+        # Ensure updated_at is set (safety check for NOT NULL constraint)
+        if not self.updated_at:
+            self.updated_at = self.created_at if self.created_at else timezone.now()
+            self.save(update_fields=["updated_at"])
+        
+        # Calculate conditions
+        now_after_deadline = now > deadline
+        created_after_deadline = self.created_at > deadline
+        updated_after_deadline = self.updated_at > deadline
+        
         # Delayed if created/updated after deadline
-        self.is_delayed = now > deadline and (self.created_at > deadline or self.updated_at > deadline)
+        self.is_delayed = now_after_deadline and (created_after_deadline or updated_after_deadline)
+        
+        # ========== DEBUG OUTPUT ==========
+        print("\n" + "="*80)
+        print("🔍 CHECKING DELAYED STATUS FOR TIMESHEET")
+        print("="*80)
+        print(f"📅 Week Start:            {self.week_start.strftime('%Y-%m-%d (%A)')}")
+        print(f"📅 Week End:              {self.week_end.strftime('%Y-%m-%d (%A)')}")
+        print(f"⏰ Deadline:              {deadline.strftime('%Y-%m-%d %H:%M:%S (%A)')} (Monday after Saturday, 23:59:59)")
+        print(f"🕐 Current Time:          {now.strftime('%Y-%m-%d %H:%M:%S')}")
+        print(f"📝 Created At:             {self.created_at.strftime('%Y-%m-%d %H:%M:%S')}")
+        print(f"✏️  Updated At:             {self.updated_at.strftime('%Y-%m-%d %H:%M:%S')}")
+        print("-"*80)
+        print("🔎 CONDITION CHECKS:")
+        print(f"   • Is current time after deadline?     {now_after_deadline} ({'YES' if now_after_deadline else 'NO'})")
+        print(f"   • Was created after deadline?         {created_after_deadline} ({'YES' if created_after_deadline else 'NO'})")
+        print(f"   • Was updated after deadline?        {updated_after_deadline} ({'YES' if updated_after_deadline else 'NO'})")
+        print("-"*80)
+        print("🧮 CALCULATION:")
+        print(f"   Formula: is_delayed = (now > deadline) AND (created_at > deadline OR updated_at > deadline)")
+        print(f"   Result:  is_delayed = {now_after_deadline} AND ({created_after_deadline} OR {updated_after_deadline})")
+        print(f"   Result:  is_delayed = {now_after_deadline} AND {created_after_deadline or updated_after_deadline}")
+        print(f"   Final:   is_delayed = {self.is_delayed}")
+        print("-"*80)
+        if self.is_delayed:
+            print("⚠️  STATUS: DELAYED (Timesheet was submitted/updated after deadline)")
+        else:
+            print("✅ STATUS: ON TIME (Timesheet was submitted/updated before deadline)")
+        print("="*80 + "\n")
+        
         self.save(update_fields=["is_delayed"])
 
 
-
-    def recalc_totals(self):
+    def recalc_totals(self, update_timestamp=True):
+        """
+        Recalculate totals for the timesheet.
+        
+        Args:
+            update_timestamp (bool): If True, update updated_at field (for employee actions).
+                                   If False, don't update updated_at (for manager actions like leave allocation).
+        """
         work_hours_per_day = getattr(self.employee.country, "working_hours", 9)
         items = list(self.timesheet_items.all())
         self.tot_hrs_wrk = 0
@@ -1377,7 +1423,7 @@ class TimesheetHdr(models.Model):
                     # Employee worked on holiday → count only as work hours
                     self.tot_hrs_wrk += total_daily_work_hours
                 else:
-                    # Employee didn’t work → count as holiday hours
+                    # Employee didn't work → count as holiday hours
                     self.tot_hol_hrs += work_hours_per_day
             elif is_leave and not is_weekend:
                 # Leave day logic, but only if it's not a weekend
@@ -1389,7 +1435,18 @@ class TimesheetHdr(models.Model):
             
             current_date += timedelta(days=1)
         
-        self.save(update_fields=["tot_hrs_wrk", "tot_hol_hrs", "tot_lev_hrs"])
+        # Update updated_at only when employee makes changes (not manager actions)
+        if update_timestamp:
+            # Ensure updated_at is always set (safety check for NOT NULL constraint)
+            self.updated_at = timezone.now()
+            self.save(update_fields=["tot_hrs_wrk", "tot_hol_hrs", "tot_lev_hrs", "updated_at"])
+        else:
+            # Even for manager actions, ensure updated_at is set if it's None
+            if not self.updated_at:
+                self.updated_at = self.created_at if self.created_at else timezone.now()
+                self.save(update_fields=["tot_hrs_wrk", "tot_hol_hrs", "tot_lev_hrs", "updated_at"])
+            else:
+                self.save(update_fields=["tot_hrs_wrk", "tot_hol_hrs", "tot_lev_hrs"])  
     
     def __str__(self):
         return f"Timesheet {self.tsheet_id} - {self.employee.first_name}{self.employee.middle_name}{self.employee.last_name}"
