@@ -842,6 +842,9 @@ def request_leave(request):
 
             messages.success(request, "Leave request submitted successfully.")
             return redirect('request_leave')
+        
+        messages.error(request,f"Please correct the errors in forms")
+        return redirect('request_leave')
 
     else:
         form = LeaveRequestForm(user=request.user)
@@ -1713,6 +1716,11 @@ from datetime import timedelta
 def manage_leave_request(request, leave_request_id):
     leave_request = get_object_or_404(LeaveRequest, id=leave_request_id)
 
+    if leave_request.status in ['Approved', 'Rejected']:
+        messages.warning(request, f"Leave request has already been {leave_request.status.lower()}.")
+        return redirect('manager_leave_requests')
+    
+
     # Ensure the logged-in manager or admin is allowed to act on this leave request
     if not request.user.is_superuser and leave_request.employee_master.manager.user != request.user:
         return render(request, 'employee_app/error.html', {'message': 'Unauthorized action.'})
@@ -1762,17 +1770,18 @@ def manage_leave_request(request, leave_request_id):
         fy_start, fy_end = get_financial_year_dates(request, employee)
         fy_end_extended = fy_end + relativedelta(months=9) # for fetching next years holidays 
 
-        holidays = set(Holiday.objects.filter(date__range=(fy_start, fy_end_extended)).values_list('date', flat=True))
+        holidays = set(Holiday.objects.filter(date__range=(fy_start, fy_end_extended),country=employee.country).values_list('date', flat=True))
         state_holiday_dates = set(
             StateHoliday.objects.filter(
                 state=employee.state,
-                date__range=(fy_start, fy_end_extended)
+                date__range=(fy_start, fy_end_extended),
+                country=employee.country
             ).values_list('date', flat=True)
         )
         #combine both 
         holidays |= state_holiday_dates
 
-        floating_holidays = set(FloatingHoliday.objects.filter(date__range=(fy_start, fy_end_extended)).values_list('date', flat=True))
+        floating_holidays = set(FloatingHoliday.objects.filter(date__range=(fy_start, fy_end_extended),country=employee.country).values_list('date', flat=True))
         state_excluded = set(
         StateHoliday.objects.filter(
             country=employee.country,
@@ -2048,7 +2057,8 @@ def allocate_leave(request, employee_id):
     state_holiday_dates = set(
         StateHoliday.objects.filter(
             state=employee.state,
-            date__range=(financial_year_start, fy_end_extended)
+            date__range=(financial_year_start, fy_end_extended),
+            country=employee.country
         ).values_list('date', flat=True)
     )
 

@@ -1211,6 +1211,10 @@ def accept_leave_request(request, leave_request_id):
     if request.method == "POST":
         leave_request = get_object_or_404(LeaveRequest, id=leave_request_id)
         employee = leave_request.employee_master
+
+        if leave_request.status in ['Approved','Rejected']:
+            messages.warning(request,f"Leave request has already been {leave_request.status.lower()}.")
+            return redirect('leave_request_display')
         
 
         #choosing emp details
@@ -1244,17 +1248,18 @@ def accept_leave_request(request, leave_request_id):
         floating_entitlement = floating_holiday_policy
 
         # Get all holiday dates for efficiency
-        holiday_dates = set(Holiday.objects.filter(date__range=(fy_start, fy_end_extended)).values_list('date', flat=True))
+        holiday_dates = set(Holiday.objects.filter(date__range=(fy_start, fy_end_extended),country=employee.country).values_list('date', flat=True))
         state_holiday_dates = set(
             StateHoliday.objects.filter(
                 state=employee.state,
-                date__range=(fy_start, fy_end_extended)
+                date__range=(fy_start, fy_end_extended),
+                country=employee.country
             ).values_list('date', flat=True)
         )
         #combine both 
         holiday_dates |= state_holiday_dates
 
-        floating_dates = set(FloatingHoliday.objects.filter(date__range=(fy_start, fy_end_extended)).values_list('date', flat=True))
+        floating_dates = set(FloatingHoliday.objects.filter(date__range=(fy_start, fy_end_extended),country=employee.country).values_list('date', flat=True))
         state_excluded = set(
         StateHoliday.objects.filter(
             country=employee.country,
