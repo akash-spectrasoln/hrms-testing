@@ -1381,7 +1381,10 @@ def reject_leave_request(request, leave_request_id):
     if request.method == "POST":
         leave_request = get_object_or_404(LeaveRequest, id=leave_request_id)
 
-
+        if leave_request.status in ['Approved','Rejected']:
+            messages.warning(request,f"Leave request has already been {leave_request.status.lower()}.")
+            return redirect('leave_request_display')
+        
         # Get employee object
         employee = leave_request.employee_master
         employee_email = employee.user.email
