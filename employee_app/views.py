@@ -656,15 +656,15 @@ def request_leave(request):
             employee, fy_start, fy_end, policy, floating_policy = info
 
             #financial year
-            current_year=date.today().year
+            current_year=fy_start.year
 
 
+            # checking in which finanical year the leave request is.
             if fy_start <= leave_request.start_date <= fy_end:
                 pass
             elif leave_request.start_date > fy_end:
                 current_year += 1 
-            else:
-                current_year-=1
+
 
             leave_details=get_leave_policy_details(employee,current_year)
             holiday_policy = leave_details['allowed_holiday_policy']
