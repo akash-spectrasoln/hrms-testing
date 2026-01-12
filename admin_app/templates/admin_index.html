@@ -177,21 +177,31 @@ document.getElementById('downloadEmployees').addEventListener('click', function 
         headers: { 'X-Requested-With': 'XMLHttpRequest' }
     })
     .then(response => {
-        if (!response.ok) throw new Error('Network response was not ok');
+        console.log('[Download] Status:', response.status);
+        console.log('[Download] OK:', response.ok);
+        if (!response.ok){ 
+            console.error('[Download] Response not OK');
+            throw new Error('Network response was not ok');
+        }
+        console.log('[Download] Converting response to blob');
         return response.blob();
     })
     .then(blob => {
+        console.log('[Download] Blob created');
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
         a.download = "employees.xlsx";
         document.body.appendChild(a);
+        console.log('[Download] Triggering download')
         a.click();
         a.remove();
+        console.log('[Download] Cleanup done');
         window.URL.revokeObjectURL(url);
     })
     .catch(error => {
         console.error('Download failed:', error);
+        console.error('[Download] Error message:', error.message);
         alert("Something went wrong during download.");
     })
     .finally(() => {
