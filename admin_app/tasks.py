@@ -699,7 +699,7 @@ def delayed_timesheet_entry():
     # First day of previous month
     first_day_previous_month = last_day_previous_month.replace(day=1)
 
-    employees = Employees.objects.all().exclude(employee_status="resigned")
+    employees = Employees.objects.all().exclude(employee_status="resigned",excl_folup = True)
 
     for emp in employees:
         delayed_entries = TimesheetHdr.objects.filter(
