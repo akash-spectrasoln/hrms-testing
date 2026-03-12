@@ -795,6 +795,16 @@ document.addEventListener("DOMContentLoaded", function () {
     // When user checks Next Year
     nextYearCheckbox.addEventListener("change", function () {
         if (this.checked) {
+            // Disable date pickers immediately
+            if (startDateInput._flatpickr) {
+                startDateInput._flatpickr.input.setAttribute("disabled", true);
+                startDateInput._flatpickr.altInput.setAttribute("disabled", true);
+            }
+
+            if (endDateInput._flatpickr) {
+                endDateInput._flatpickr.input.setAttribute("disabled", true);
+                endDateInput._flatpickr.altInput.setAttribute("disabled", true);
+            }
             // Pass fy_end_month as query parameter
             fetch(`{% url 'get_next_year_leave_counts' %}?fy_end_year=${fyEndDateStr}`, {
                 method: "GET",
@@ -814,7 +824,16 @@ document.addEventListener("DOMContentLoaded", function () {
                     </option>
                 `;
                 leaveTypeSelect.disabled = (data.remaining_casual_leaves <= 0 && data.remaining_floating_leaves <= 0);
+                // Re-enable date pickers
+                if (startDateInput._flatpickr) {
+                    startDateInput._flatpickr.input.removeAttribute("disabled");
+                    startDateInput._flatpickr.altInput.removeAttribute("disabled");
+                }
 
+                if (endDateInput._flatpickr) {
+                    endDateInput._flatpickr.input.removeAttribute("disabled");
+                    endDateInput._flatpickr.altInput.removeAttribute("disabled");
+                }
             })
             .catch(err => {
                 console.error("Error fetching next year leave counts:", err);

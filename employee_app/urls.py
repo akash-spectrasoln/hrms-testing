@@ -46,6 +46,8 @@ path('check-floating-holidays/', check_floating_holidays, name='check_floating_h
 path('check-leave-conflicts/', check_leave_conflicts, name='check_leave_conflicts'),
 path('delete-leave/<int:leave_id>/', delete_leave, name='delete_leave'),
 path("devices/<int:employee_id>/", employee_devices_view, name="employee_devices"),
+path("employee_leaves/",list_emp_leave_details,name="emp_leaves"),
+path("export_emp_leaves/",export_employees_leaves,name="export_subordinates_leaves"),
 
 path('tsheet_index/',ts_views.tsheet_index,name='tsheet_index'),
 path('timesheet/', ts_views.timesheet_calendar, name='timesheet_calendar'),
@@ -65,6 +67,8 @@ path("work-utilization/export/", ts_views.export_employee_utilization, name="exp
 path("project-cc-utilization/", ts_views.employee_project_cc_utilization_view, name="project_cc_utilization"),
 # Excel Export
 path("export/project-cc-utilization/", ts_views.export_project_cc_utilization, name="export_project_cc_utilization"),
+path("pending-timesheets/", ts_views.pending_timesheets, name="pending_timesheets"),
+path("subordinates-missing-timsheets",ts_views.subordinatesmissingtimesheet,name="subo-missing-tsheets")
 ]
 
 

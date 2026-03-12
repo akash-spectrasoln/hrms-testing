@@ -4,21 +4,22 @@ import json
 
 
 class Command(BaseCommand):
-    help = "Set up periodic task for sending daily work anniversary emails at 1 AM IST."
+    help = "Set up periodic task for sending emails to manager if any pending timesheet approvals."
 
     def handle(self, *args, **options):
-        # Define crontab: every day at 1 AM IST
+        # Define crontab: every wednesday 9 am IST
+        # crontabschedule should be mentioned in UTC
         schedule, _ = CrontabSchedule.objects.get_or_create(
             minute='30',
-            hour='19', # utc 19:30 - 1 am in india
-            day_of_week='*',
+            hour='3', 
+            day_of_week='3',
             day_of_month='*',
             month_of_year='*',
-        )
+        ) 
 
         # Unique task name
-        task_name = 'Daily Work Anniversary Email Task'
-        task_path = 'admin_app.tasks.send_anniversary_emails'  # update app name if different
+        task_name = 'pending timesheet approvals'
+        task_path = 'admin_app.tasks.send_pendingtimesheet_emails'  # update app name if different
 
         # Create or update the periodic task
         task, created = PeriodicTask.objects.update_or_create(
@@ -35,5 +36,3 @@ class Command(BaseCommand):
             self.stdout.write(self.style.SUCCESS(f" Created periodic task: {task_name}"))
         else:
             self.stdout.write(self.style.SUCCESS(f" Updated periodic task: {task_name}"))
-
-

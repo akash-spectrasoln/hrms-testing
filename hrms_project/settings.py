@@ -125,7 +125,6 @@ DATABASES = {
         'PASSWORD': os.getenv('HRMS_PASSWORD'),
         'HOST': os.getenv('HRMS_HOST'),  # or 'localhost' if using Cloud SQL Proxy
         'PORT': '5432',  # PostgreSQL default port, or '3306' for MySQL
-
     }
 }
 
@@ -216,10 +215,8 @@ ADMIN_EMAIL = os.getenv('ADMIN_EMAIL')
 ADMIN_PASSWORD = os.getenv('ADMIN_PASSWORD')
 
 
-
 CELERY_BROKER_URL =  'redis://redis:6379/0'
 CELERY_RESULT_BACKEND = CELERY_BROKER_URL
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers:DatabaseScheduler'
-

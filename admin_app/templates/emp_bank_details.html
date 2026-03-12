@@ -44,6 +44,11 @@
 .card-body {
     padding-top: 0rem; 
 }
+
+.tr-resigned td {
+    background-color: #f8d7da !important;
+    color: #721c24 !important;
+}
 </style>
 {% endblock %}
 
@@ -64,12 +69,18 @@
                     {% endfor %}
                 </select>
             </div>
-            
+            <div class="form-group mr-2">
+                <select name="employee_status" class="form-control form-control-sm" id="statusSelect" style="width:150px;">
+                    <option value="all" {% if current_filters.status == 'all' %}selected{% endif %}>All Statuses</option>
+                    <option value="employed" {% if current_filters.status == 'employed' %}selected{% endif %}>Employed</option>
+                    <option value="resigned" {% if current_filters.status == 'resigned' %}selected{% endif %}>Resigned</option>
+                </select>
+            </div>            
         </form>
  
         <div class="" style="margin-left: 20px;">
             <a id="downloadBtn"
-            href="{% url 'export_employee_bank_details' %}?country_id={{ current_filters.country_id }}"
+            href="{% url 'export_employee_bank_details' %}?country_id={{ current_filters.country_id }}&employee_status={{ current_filters.status }}"
             class="btn btn-success btn-sm px-1 py-1 {% if not queryset %}disabled{% endif %}"
             {% if not queryset %}aria-disabled="true" onclick="return false;"{% endif %}>
                 <i class="fas fa-download"></i> Download Excel
@@ -95,7 +106,7 @@
                         <tbody>
                             {% if queryset %}
                                 {% for employee in queryset %}
-                                <tr>
+                                <tr class="{% if employee.employee_status == 'resigned' %}tr-resigned{% endif %}">
                                     <td>{{ employee.employee_id }}</td>
                                     <td>{{ employee.first_name }} {{ employee.last_name }}</td>
                                     <td>{{ employee.country.country_name }}</td>
@@ -127,8 +138,12 @@
 document.addEventListener('DOMContentLoaded', function() {
     const form = document.getElementById('employeeFilterForm');
     const countrySelect = document.getElementById('countrySelect');
+    const statusSelect = document.getElementById('statusSelect');
 
     countrySelect.addEventListener('change', function() {
+        form.submit();
+    });
+    statusSelect.addEventListener('change', function() {
         form.submit();
     });
 });

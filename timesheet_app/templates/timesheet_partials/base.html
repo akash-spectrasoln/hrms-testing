@@ -212,6 +212,10 @@
                 window.addEventListener('beforeunload', showSpinnerAndDisableButtons);
             });
             window.addEventListener('load', hideSpinnerAndEnableButtons);
+
+            window.addEventListener('pageshow', function() {
+                hideSpinnerAndEnableButtons()
+            });
         </script>
     {% endblock javascript %}
 

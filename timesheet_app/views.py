@@ -1938,7 +1938,7 @@ def timesheet_approval_list(request):
     # --- 3. Get Subordinates ---
     subordinates = Employees.objects.filter(manager=manager).select_related(
         'country', 'state'
-    ).order_by('employee_id', 'first_name', 'last_name')
+    ).filter(Q(resignation_date__isnull=True) | Q(resignation_date__gte=week_start)).order_by('employee_id', 'first_name', 'last_name')
 
     if search_query:
         subordinates = subordinates.filter(
@@ -2263,12 +2263,12 @@ def generate_utilization_report(logged_in_employee, start_date, end_date):
     """
     # Step 1: Choose employees for report
     if logged_in_employee is None:  # Admin
-        employees = Employees.objects.all().order_by("employee_id", "first_name", "last_name")
+        employees = Employees.objects.filter(Q(resignation_date__isnull=True) | Q(resignation_date__gte=start_date)).order_by("employee_id", "first_name", "last_name")
     else:
         if logged_in_employee.user.is_staff or logged_in_employee.user.is_superuser:
-            employees = Employees.objects.all().order_by("employee_id", "first_name", "last_name")
+            employees = Employees.objects.filter(Q(resignation_date__isnull=True) | Q(resignation_date__gte=start_date)).order_by("employee_id", "first_name", "last_name")
         elif logged_in_employee.employees_managed.exists():
-            employees = logged_in_employee.employees_managed.all().order_by("employee_id", "first_name", "last_name")
+            employees = Employees.objects.filter(manager=logged_in_employee).filter(Q(resignation_date__isnull=True) | Q(resignation_date__gte=start_date)).order_by("employee_id", "first_name", "last_name")
         else:
             raise PermissionDenied("You are not authorized to view this report.")
 
@@ -2566,11 +2566,11 @@ def generate_project_cc_utilization_report(logged_in_employee, start_date, end_d
 
     # --- Employee scope ---
     if logged_in_employee is None:
-        employees = Employees.objects.all().order_by('employee_id', 'first_name', 'last_name')
+        employees = Employees.objects.filter(Q(resignation_date__isnull=True) | Q(resignation_date__gte=start_date)).order_by('employee_id', 'first_name', 'last_name')
     elif logged_in_employee.user.is_staff or logged_in_employee.user.is_superuser:
-        employees = Employees.objects.all().order_by('employee_id','first_name','last_name')
+        employees = Employees.objects.filter(Q(resignation_date__isnull=True) | Q(resignation_date__gte=start_date)).order_by('employee_id','first_name','last_name')
     elif logged_in_employee.employees_managed.exists():
-        employees = logged_in_employee.employees_managed.all().order_by('employee_id','first_name','last_name')
+        employees = logged_in_employee.employees_managed.all().filter(Q(resignation_date__isnull=True) | Q(resignation_date__gte=start_date)).order_by('employee_id','first_name','last_name')
     else:
         raise PermissionDenied("You are not authorized to view this report.")
 
@@ -2853,3 +2853,187 @@ def export_project_cc_utilization(request):
     response["Content-Disposition"] = 'attachment; filename="Project_CC_Utilization.xlsx"'
     wb.save(response)
     return response
+
+from collections import defaultdict
+from datetime import timedelta
+
+@employee_signin_required
+def subordinatesmissingtimesheet(request):
+    """
+    listing subordinates who missed to enter the timsheet
+    """
+
+    manager = Employees.objects.get(user=request.user)
+    # Check if the employee is a manager (has subordinates) (this is for displaying icons for manager on sidebar)
+    if manager.employees_managed.exists():  # If there are employees managed by this employee
+        is_manager = True
+    else:
+        is_manager = False
+
+    today = datetime.now().date()
+
+    days_since_saturday = (today.weekday() - 5) % 7
+    previous_week_end = today - timedelta(days=days_since_saturday)
+
+    previous_week_start = previous_week_end - timedelta(days=6)
+
+    
+    week_start_param = request.GET.get("week_start")
+    name_param = request.GET.get("name","").strip()
+
+
+    if week_start_param:
+        previous_week_start = datetime.strptime(week_start_param, "%Y-%m-%d").date()
+
+
+    if name_param:
+        employees = list(
+            Employees.objects.filter(
+                Q(resignation_date__isnull=True) |
+                Q(resignation_date__gte=previous_week_start),
+                first_name__icontains=name_param,manager=manager
+            )
+        )
+    else:
+        employees = list(
+            Employees.objects.filter(
+                Q(resignation_date__isnull=True) |
+                Q(resignation_date__gte=previous_week_start),
+                manager=manager
+            )
+        )
+
+
+
+    employee_ids = [e.id for e in employees]
+
+    # fetch all timesheets
+    timesheet_items = TimesheetItem.objects.filter(
+        hdr__employee_id__in=employee_ids,
+        wrk_date__range=(previous_week_start, previous_week_end)
+    ).values("hdr__employee_id","wrk_date")
+
+    emp_timesheet_dates = defaultdict(set)
+
+    for row in timesheet_items:
+        emp_timesheet_dates[row["hdr__employee_id"]].add(row["wrk_date"])
+
+    holidays = Holiday.objects.filter(
+        date__range=(previous_week_start, previous_week_end)
+    ).values("country", "date")
+
+    state_holidays = StateHoliday.objects.filter(
+        date__range=(previous_week_start,previous_week_end)
+    ).values("state","date")
+
+    # fetch holidays
+    country_holidays = defaultdict(set)
+    state_holiday_map = defaultdict(set)
+
+    for h in holidays:
+        country_holidays[h["country"]].add(h["date"])
+
+    for h in state_holidays:
+        state_holiday_map[h["state"]].add(h["date"])
+
+
+    # fetch leave dates
+    leaves = LeaveRequest.objects.filter(
+        employee_master_id__in=employee_ids,
+        status="Approved",
+        start_date__lte=previous_week_end,
+        end_date__gte=previous_week_start
+    ).values("employee_master_id", "start_date", "end_date")
+
+    emp_leave_days = defaultdict(set)
+
+    for leave in leaves:
+
+        start = max(leave["start_date"], previous_week_start)
+        end = min(leave["end_date"], previous_week_end)
+
+        for i in range((end - start).days + 1):
+            emp_leave_days[leave["employee_master_id"]].add(start + timedelta(days=i))
+
+
+    # Compute working days once
+    working_days = []
+    d = previous_week_start
+
+    while d <= previous_week_end:
+        if d.weekday() < 5:
+            working_days.append(d)
+        d += timedelta(days=1)
+
+
+    # Final calculation
+    not_entered = []
+
+    for emp in employees:
+
+        entered_dates = emp_timesheet_dates.get(emp.id, set())
+        leave_days = emp_leave_days.get(emp.id, set())
+
+        emp_holidays = set()
+        emp_holidays |= country_holidays.get(emp.country_id, set())
+        emp_holidays |= state_holiday_map.get(emp.state_id, set())
+
+        for date in working_days:
+
+            if emp.resignation_date and date > emp.resignation_date:
+                break
+
+            if date in leave_days or date in emp_holidays:
+                continue
+
+            if date not in entered_dates:
+
+                week_start = date - timedelta(days=(date.weekday() + 1) % 7)
+                week_end = week_start + timedelta(days=6)
+
+                not_entered.append({
+                    "employee": f"{emp.first_name} {emp.last_name}",
+                    "date": date,
+                    "week_start": week_start,
+                    "week_end": week_end
+                })
+            # SORT HERE
+    not_entered = sorted(not_entered, key=lambda x: (x["week_start"], x["employee"].lower()))
+
+    download = request.GET.get("download")
+
+    if download:
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = "Missing Timesheets"
+
+        # Header row
+        ws.append(["Week Start", "Week End","Employee", "Missing Date"])
+
+        for row in not_entered:
+            ws.append([
+                row["week_start"].strftime("%Y-%m-%d"),
+                row["week_end"].strftime("%Y-%m-%d"),
+                row["employee"],
+                row["date"].strftime("%Y-%m-%d")
+            ])
+
+        response = HttpResponse(
+            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+
+        filename = f"missing_timesheets_{previous_week_start}.xlsx"
+        response["Content-Disposition"] = f'attachment; filename="{filename}"'
+
+        wb.save(response)
+
+        return response
+    
+    context={
+        "employee":manager,
+        "is_manager":is_manager,
+        "not_entered": not_entered,
+        "week_start":previous_week_start,
+        "name":name_param
+    }
+    return render(request, "timesheet/sub_missing_tsheet_list.html", context)

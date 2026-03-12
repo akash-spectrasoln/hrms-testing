@@ -1,0 +1,264 @@
+{% extends 'admin_partials/admin_base.html' %}
+{% load static %}
+
+{% block styles %}
+
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+<link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+
+<style>
+
+.main-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.card {
+    border: none;
+    border-radius: 12px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.table-responsive {
+    overflow-x: auto;
+}
+
+.table th, .table td {
+    vertical-align: middle;
+    white-space: nowrap;
+    font-size: 0.85rem;
+    text-align: left;
+}
+
+.table th {
+    background-color: #4683fd;
+    font-weight: 600;
+    color: white;
+}
+
+.no-data {
+    text-align: center;
+    padding: 20px;
+    color: #6b7280;
+}
+
+.card-body {
+    padding-top: 0rem;
+}
+
+.filter-bar{
+    margin-left:20px;
+}
+
+
+
+</style>
+
+{% endblock %}
+
+
+
+{% block content %}
+
+<div class="container">
+
+    <div class="main-content">
+
+        <!-- FILTERS -->
+        <form method="GET" class="form-inline mb-3 filter-bar">
+
+            <div class="form-group mr-2">
+                <label for="weekStart" class="mr-2 font-weight-bold">Start Week</label>
+                <input
+                    type="text"
+                    name="week_start"
+                    id="weekStart"
+                    class="form-control form-control-sm"
+                    placeholder="Week Start (Sunday)"
+                    value="{{ week_start|date:'Y-m-d' }}"
+                >
+            </div>
+
+            <div class="form-group mr-2">
+                <input
+                    type="text"
+                    name="name"
+                    class="form-control form-control-sm"
+                    placeholder="Employee Name"
+                    value="{{ name }}"
+                >
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-sm">
+                <i class="fas fa-search"></i> Search
+            </button>
+
+        </form>
+
+        <div class="" style="margin-left: 20px;">
+            <button id="downloadExcel" class="btn btn-success btn-sm px-1 py-1"
+                    {% if not not_entered %}disabled{% endif %}>
+                <i class="fas fa-download"></i> Download Excel
+            </button>
+        </div>
+
+
+
+    <div class="card">
+
+        <div class="card-body">
+
+            <div class="table-responsive">
+
+            <table class="table table-hover">
+
+            <thead>
+            <tr>
+            <th>Week Start</th>
+            <th>Week End</th>
+            <th>Name</th>
+            <th>Missing Date</th>
+            </tr>
+            </thead>
+
+            <tbody>
+
+            {% if not_entered %}
+
+            {% for record in not_entered %}
+
+            <tr>
+            <td>{{ record.week_start }}</td>
+            <td>{{ record.week_end }}</td>
+            <td>{{ record.employee }}</td>
+            <td>{{ record.date }}</td>
+            </tr>
+
+            {% endfor %}
+
+            {% else %}
+
+            <tr>
+            <td colspan="4" class="no-data">
+            <i class="fas fa-user-slash"></i> No Records Found
+            </td>
+            </tr>
+
+            {% endif %}
+
+            </tbody>
+
+            </table>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    </div>
+
+</div>
+
+
+
+<!-- JS -->
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+
+<script>
+
+document.addEventListener("DOMContentLoaded", function () {
+
+    flatpickr("#weekStart", {
+
+        dateFormat: "Y-m-d",
+        maxDate: "today",
+        altInput: true,
+        altFormat: "m/d/Y",
+
+        enable: [
+            function(date) {
+
+                // Only Sundays
+                return date.getDay() === 0;
+
+            }
+        ]
+
+    });
+
+});
+
+
+$(document).ready(function () {
+
+    $("#downloadExcel").click(async function (e) {
+
+        e.preventDefault();
+
+        const spinner = document.getElementById("spinner-overlay");
+        if (spinner) spinner.style.display = "flex";
+
+        let weekStart = $("#weekStart").val();
+        let name = $("input[name='name']").val();
+
+        try {
+
+            let response = await fetch(`?download=1&week_start=${weekStart}&name=${name}`);
+            if (!response.ok) throw new Error("Network error");
+
+            let blob = await response.blob();
+
+            if (window.showSaveFilePicker) {
+
+                const handle = await window.showSaveFilePicker({
+                    suggestedName: `missing_timesheets_${weekStart}.xlsx`,
+                    types: [{
+                        description: "Excel Files",
+                        accept: {
+                            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": [".xlsx"]
+                        }
+                    }]
+                });
+
+                const writable = await handle.createWritable();
+                await writable.write(blob);
+                await writable.close();
+
+                // hide spinner AFTER file save completes
+                if (spinner) spinner.style.display = "none";
+
+            } else {
+
+                let url = window.URL.createObjectURL(blob);
+                let a = document.createElement("a");
+                a.href = url;
+                a.download = `missing_timesheets_${weekStart}.xlsx`;
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+
+                window.URL.revokeObjectURL(url);
+
+                // hide spinner after fallback download
+                if (spinner) spinner.style.display = "none";
+            }
+
+        } catch (err) {
+
+            alert("Error while downloading Excel: " + err.message);
+            console.error(err);
+
+            if (spinner) spinner.style.display = "none";
+        }
+
+    });
+
+});
+</script>
+
+
+{% endblock %}

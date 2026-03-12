@@ -229,7 +229,7 @@ def export_employees_to_excel(request):
         sheet[f'{col_letter}1'] = header
 
     # Query all employees
-    employees = Employees.objects.select_related('salutation', 'country', 'state', 'role', 'department', 'manager').order_by('employee_id')
+    employees = Employees.objects.select_related('salutation', 'country', 'state', 'role', 'department', 'manager').order_by('employee_id').exclude(employee_status="resigned")
 
     # Write employee data to the sheet
     for row_num, employee in enumerate(employees, 2):
@@ -323,7 +323,6 @@ from datetime import date
 def list_employees(request):
     queryset = Employees.objects.filter(is_deleted=False).order_by('-modified_on')
     country_list = Country.objects.all().order_by('country_name')
-    
     # Get filter parameters
     emp_id = request.GET.get('employee_id', '').strip()
     name = request.GET.get('name', '').strip()
@@ -409,28 +408,49 @@ from datetime import date
 from .models import LeaveRequest, Employees  # Adjust this import if your app name/model name differs
 @signin_required
 def delete_leave_request(request, leave_id):
-    leave = get_object_or_404(LeaveRequest, id=leave_id)
-    employee = leave.employee_user
-    leave_days = leave.leave_days  # Ensure this exists in your model
-    try:
-        current_user = Employees.objects.get(user=request.user)
-    except Employees.DoesNotExist:
-        messages.error(request, "You are not registered as an employee.")
+    if request.method == "POST":
+        leave_request = get_object_or_404(LeaveRequest, id=leave_id)
+
+        if leave_request.status in ['Approved','Rejected','Deleted']:
+            messages.warning(request,f"Leave request has already been {leave_request.status.lower()}.")
+            return redirect('leave_request_display')
+        
+        # Get employee object
+        employee = leave_request.employee_master
+
+        #fetching the correct year record from leavedetails
+        current_year=date.today().year
+        reset_period = HolidayResetPeriod.objects.filter(country=employee.country).first()
+        if reset_period:
+            start_month = reset_period.start_month
+            start_day = reset_period.start_day
+            end_month=reset_period.end_month
+            end_day=reset_period.end_day
+            financial_year_start_date = date(current_year, start_month, start_day)
+            financial_year_end_date = date(current_year+1, end_month, end_day)
+
+        if financial_year_start_date <= leave_request.start_date <= financial_year_end_date:
+            pass
+        elif leave_request.start_date > financial_year_end_date:
+            current_year += 1 
+        else:
+            current_year-=1
+
+        year=leave_request.start_date.year
+        emp_leave_details=get_object_or_404(LeaveDetails,employee=employee,year=current_year)
+
+        if leave_request.leave_type == 'Floating Leave':
+            emp_leave_details.pending_float -= leave_request.leave_days
+        else:
+            emp_leave_details.pending_casual -= leave_request.leave_days
+        emp_leave_details.save()
+
+        leave_request.status = "Deleted"
+        leave_request.approved_by = request.user  # Set who deleted
+        leave_request.save()
+        messages.success(request, "Leave request deleted successfully.")
+
         return redirect("leave_request_display")
-
-    try:
-        emp_obj = Employees.objects.get(company_email=employee.email)
-    except Employees.DoesNotExist:
-        emp_obj = None
-
-
-    # Soft delete instead of hard delete
-    leave.status='Deleted'
-    leave.approved_by=current_user.user
-    leave.save()
-    messages.success(request, "Leave request deleted successfully.")
-
-    return redirect("leave_request_display")
 
 
 
@@ -618,7 +638,7 @@ class EmployeeUpdateView(UpdateView):
                 user_obj.save()
             # ------------------------------------------
 
-            messages.success(self.request, "✅ Employee details updated successfully.")
+            messages.success(self.request, " Employee details updated successfully.")
             return super().form_valid(form)
 
         except ValidationError as ve:
@@ -711,13 +731,12 @@ class EmployeeExcelCreateView(View):
             df = pd.read_excel(excel_file)
             df = df.where(pd.notnull(df), None)  # Now, all NaNs are None
             df.columns = [c.strip() for c in df.columns]
-            print("[DEBUG] Excel columns:", list(df.columns))
 
             for index, row in df.iterrows():
                 try:
                     
                     excel_row_num = int(index) + 2
-                    print(f"[DEBUG] Processing row {excel_row_num} ")
+
 
                     first_name_display = str(row.get("First Name", "")).strip() or f"Row {excel_row_num}"
                     
@@ -727,7 +746,7 @@ class EmployeeExcelCreateView(View):
                         if field not in row or pd.isnull(row[field]) or row[field] == ''
                     ]
                     if missing_fields:
-                        print(f"[DEBUG] Row {excel_row_num}: Missing fields: {missing_fields}")
+
                         failed_rows.append({
                             "first_name": f"{excel_row_num} - {first_name_display}",
                             
@@ -744,17 +763,15 @@ class EmployeeExcelCreateView(View):
                     try:
                         float(row['Base Salary'])
                     except Exception as te:
-                        print(f"[DEBUG] Row {excel_row_num}: Invalid Base Salary: {row['Base Salary']}")
+
                         type_errors.append(f'"Base Salary": "{row["Base Salary"]}"')
                     if 'Incentive' in row and not pd.isnull(row['Incentive']):
                         try:
                             float(row['Incentive'])
                         except Exception as te:
-                            print(f"[DEBUG] Row {excel_row_num}: Invalid Incentive: {row['Incentive']}")
                             type_errors.append(f'"Incentive": "{row["Incentive"]}"')
 
                     if type_errors:
-                        print(f"[DEBUG] Row {excel_row_num}: Type errors: {type_errors}")
                         failed_rows.append({
                             "first_name": f"{excel_row_num} - {first_name_display}",
                             
@@ -764,31 +781,30 @@ class EmployeeExcelCreateView(View):
 
                     # FK LOOKUPS
                     try:
-                        print(f"[DEBUG] Row {excel_row_num}: Fetching FKs")
                         country = Country.objects.get(code=row['Country Code'])
-                        print(f"   Country: {country}")
+
                         state_obj = state.objects.get(code=(row['State Code']),country_id=country.id)
-                        print(f"   State: {state_obj}")
+
                         department = Department.objects.get(id=int(row['Department ID']))
-                        print(f"   Department: {department}")
+
                         salutation = Salutation.objects.get(id=int(row['Salutation ID']))
-                        print(f"   Salutation: {salutation}")
+
                         employee_type_obj=EmployeeType.objects.get(id=int(row['Employee Type']))
                         role_obj = None
                         role_obj = Role.objects.get(role_id=int(row['Role ID']))
                         manager=None
                         
-                        print(row.get('Manager', ''))
+
                         manager_val = row.get('Manager')
                         if pd.isnull(manager_val) or manager_val == '':
                             manager = None
                         else:
                             manager = Employees.objects.get(employee_id=manager_val)
-                        # ✅ Required Cost Center lookup by costcenter_id field
+                        #  Required Cost Center lookup by costcenter_id field
                         cost_center = CostCenter.objects.get(costcenter_id=row['Cost Center ID'].strip())
                     except Exception as e:
                         debug_info = traceback.format_exc()
-                        print(f"[DEBUG] Row {excel_row_num}: Foreign key error:\n{debug_info}")
+
                         failed_rows.append({
                             "first_name": f"{excel_row_num} - {first_name_display}",
                             
@@ -819,7 +835,7 @@ class EmployeeExcelCreateView(View):
 
 
                     try:
-                        print(f"[DEBUG] Row {excel_row_num}: Creating Employee object")
+
                         with transaction.atomic():
                             # Create employee with non-encrypted fields first
                             employee = Employees(
@@ -1993,7 +2009,7 @@ from .models import Holiday, FloatingHoliday
 
 from django.http import JsonResponse
 from .models import Holiday, FloatingHoliday,LeaveDetails,Employees,state,HolidayResetPeriod
-
+from employee_app.utils import update_total_leaves 
 @signin_required
 def list_emp_leave_details(request):
 
@@ -2003,6 +2019,7 @@ def list_emp_leave_details(request):
     state_filter = request.GET.get('state_id', '').strip()
     year_filter = request.GET.get('year', '').strip()
     name = request.GET.get('name', '').strip()
+    status = request.GET.get('employee_status','employed').strip() # default value employed
 
     if not country_filter:
         india = Country.objects.filter(country_name__iexact='India').first()
@@ -2031,7 +2048,7 @@ def list_emp_leave_details(request):
     else:
         year_filter = current_year
 
-    queryset=LeaveDetails.objects.filter(year=year_filter)
+    queryset=LeaveDetails.objects.filter(year=year_filter).select_related('employee')
     states=state.objects.all()
 
     #country filter
@@ -2050,6 +2067,9 @@ def list_emp_leave_details(request):
     if state_filter.isdigit():
         queryset = queryset.filter(employee__state=state_filter).order_by('-year')
 
+    if status and status != "all":
+        queryset = queryset.filter(employee__employee_status=status)
+
    #fetch total floating leaves 
     policy=FloatingHolidayPolicy.objects.filter(country=country_filter,year=year_filter).first()
     total_float = policy.allowed_floating_holidays if policy else 0
@@ -2059,7 +2079,27 @@ def list_emp_leave_details(request):
     queryset=queryset.order_by('employee__employee_id')
     #adding remaining leaves count on each record
     for record in queryset:
+
+        employee = record.employee
+
         total = record.total_casual_leaves or 0
+
+        # check employee resigned
+        if employee.employee_status == "resigned" and employee.resignation_date:
+
+            year = record.year
+
+            # calculate FY for this record
+            fy_start = date(year, start_month, start_day)
+            fy_end = date(year + 1, end_month, end_day)
+            
+            
+            # update only if resignation falls inside this FY
+            if fy_start <= employee.resignation_date <= fy_end:
+                
+                total = update_total_leaves(employee, employee.resignation_date,fy_start,fy_end) or 0
+                record.total_casual_leaves = total
+            
         used = record.casual_leaves_used or 0
         planned = record.planned_casual or 0
         record.remaining_casual = total - used - planned
@@ -2076,6 +2116,7 @@ def list_emp_leave_details(request):
             'state_id': state_filter,
             'year': year_filter,
             'name': name,
+            'status':status
         }
     }
     return render(request,"list_emp_leaves.html",context)
@@ -2092,8 +2133,14 @@ def export_employees_leaves(request):
     state_filter = request.GET.get('state_id', '').strip()
     year_filter = request.GET.get('year', '').strip()
     name = request.GET.get('name', '').strip()
+    status = request.GET.get('employee_status','employed').strip() # default value employed
 
-
+    reset_period = HolidayResetPeriod.objects.filter(country=country_filter).first()
+    if reset_period:
+        start_month = reset_period.start_month
+        start_day = reset_period.start_day
+        end_month=reset_period.end_month
+        end_day=reset_period.end_day
 
     if not year_filter or not year_filter.isdigit():
         return HttpResponseBadRequest("Year parameter is required.")
@@ -2123,6 +2170,8 @@ def export_employees_leaves(request):
             Q(employee__last_name__icontains=name)
         )
     
+    if status and status != "all":
+        queryset = queryset.filter(employee__employee_status=status)
 
     workbook = openpyxl.Workbook()
     sheet = workbook.active
@@ -2140,8 +2189,28 @@ def export_employees_leaves(request):
     # Data rows
     queryset=queryset.order_by('employee__employee_id')
     for record in queryset:
+
+        employee = record.employee
+
+        total = record.total_casual_leaves or 0
+
+        # check employee resigned
+        if employee.employee_status == "resigned" and employee.resignation_date:
+
+            year = record.year
+
+            # calculate FY for this record
+            fy_start = date(year, start_month, start_day)
+            fy_end = date(year + 1, end_month, end_day)
+            
+            
+            # update only if resignation falls inside this FY
+            if fy_start <= employee.resignation_date <= fy_end:
+                
+                total = update_total_leaves(employee, employee.resignation_date,fy_start,fy_end) or 0
+                record.total_casual_leaves = total
         # Calculate and attach derived fields (same as list_emp_leave_details)
-        record.remaining_casual = (record.total_casual_leaves or 0) - (record.casual_leaves_used or 0) - (record.planned_casual or 0)
+        record.remaining_casual = (total or 0) - (record.casual_leaves_used or 0) - (record.planned_casual or 0)
         record.total_float = total_float
         record.remaining_float = total_float - (record.floating_holidays_used or 0) - (record.planned_float or 0)
 
@@ -2149,7 +2218,7 @@ def export_employees_leaves(request):
             record.employee.employee_id,
             record.employee.first_name,
             record.employee.last_name,
-            record.total_casual_leaves or 0,
+            total or 0,
             record.casual_leaves_used or 0,
             record.planned_casual or 0,
             record.remaining_casual,
@@ -2172,6 +2241,7 @@ def employeeBankDetails(request):
 
     country_list = Country.objects.all().order_by('country_name')
     country_filter=request.GET.get('country_id', '').strip()
+    status = request.GET.get('employee_status','employed').strip() # default value employed
 
     if not country_filter:
         india = Country.objects.filter(country_name__iexact='India').first()
@@ -2184,13 +2254,16 @@ def employeeBankDetails(request):
     if country_filter.isdigit():
         queryset = queryset.filter(country=country_filter)
 
+    if status and status != "all":
+        queryset = queryset.filter(employee_status=status)
 
 
     context={
         "country_list":country_list,
         "queryset":queryset,
         'current_filters': {
-            'country_id': country_filter
+            'country_id': country_filter,
+            'status':status
         }
     }
 
@@ -2202,10 +2275,14 @@ from dateutil.relativedelta import relativedelta
 @signin_required
 def export_employee_bank_details(request):
     country_id = request.GET.get('country_id', '').strip()
+    status = request.GET.get('employee_status','employed').strip() # default value employed
 
     queryset = Employees.objects.filter(is_deleted=False).select_related('country', 'user')  # Add more if needed
     if country_id.isdigit():
         queryset = queryset.filter(country_id=country_id)
+
+    if status and status != "all":
+        queryset = queryset.filter(employee_status=status)
 
     # Create a workbook and worksheet
     wb = openpyxl.Workbook()
@@ -2737,3 +2814,172 @@ class DeviceTrackerUpdateView(UpdateView):
             "deviceData": device_data,
         }
         return context
+
+
+from collections import defaultdict
+from datetime import timedelta
+
+@signin_required
+def employeesmissingtimesheet(request):
+    
+
+    today = datetime.now().date()
+
+    days_since_saturday = (today.weekday() - 5) % 7
+    previous_week_end = today - timedelta(days=days_since_saturday)
+
+    previous_week_start = previous_week_end - timedelta(days=6)
+
+    
+    week_start_param = request.GET.get("week_start")
+    name_param = request.GET.get("name","").strip()
+
+
+    if week_start_param:
+        previous_week_start = datetime.strptime(week_start_param, "%Y-%m-%d").date()
+
+
+    if name_param:
+        employees = list(
+            Employees.objects.filter(
+                Q(resignation_date__isnull=True) |
+                Q(resignation_date__gte=previous_week_start),
+                first_name__icontains=name_param
+            ).exclude(user=request.user)
+        )
+    else:
+        employees = list(
+            Employees.objects.filter(
+                Q(resignation_date__isnull=True) |
+                Q(resignation_date__gte=previous_week_start)
+            ).exclude(user=request.user)
+        )
+
+
+
+    employee_ids = [e.id for e in employees]
+
+    # fetch all timesheets
+    timesheet_items = TimesheetItem.objects.filter(
+        hdr__employee_id__in=employee_ids,
+        wrk_date__range=(previous_week_start, previous_week_end)
+    ).values("hdr__employee_id","wrk_date")
+
+    emp_timesheet_dates = defaultdict(set)
+
+    for row in timesheet_items:
+        emp_timesheet_dates[row["hdr__employee_id"]].add(row["wrk_date"])
+
+    holidays = Holiday.objects.filter(
+        date__range=(previous_week_start, previous_week_end)
+    ).values("country", "date")
+
+    state_holidays = StateHoliday.objects.filter(
+        date__range=(previous_week_start,previous_week_end)
+    ).values("state","date")
+
+    # fetch holidays
+    country_holidays = defaultdict(set)
+    state_holiday_map = defaultdict(set)
+
+    for h in holidays:
+        country_holidays[h["country"]].add(h["date"])
+
+    for h in state_holidays:
+        state_holiday_map[h["state"]].add(h["date"])
+
+
+    # fetch leave dates
+    leaves = LeaveRequest.objects.filter(
+        employee_master_id__in=employee_ids,
+        status="Approved",
+        start_date__lte=previous_week_end,
+        end_date__gte=previous_week_start
+    ).values("employee_master_id", "start_date", "end_date")
+
+    emp_leave_days = defaultdict(set)
+
+    for leave in leaves:
+
+        start = max(leave["start_date"], previous_week_start)
+        end = min(leave["end_date"], previous_week_end)
+
+        for i in range((end - start).days + 1):
+            emp_leave_days[leave["employee_master_id"]].add(start + timedelta(days=i))
+
+
+    # Compute working days once
+    working_days = []
+    d = previous_week_start
+
+    while d <= previous_week_end:
+        if d.weekday() < 5:
+            working_days.append(d)
+        d += timedelta(days=1)
+
+
+    # Final calculation
+    not_entered = []
+
+    for emp in employees:
+
+        entered_dates = emp_timesheet_dates.get(emp.id, set())
+        leave_days = emp_leave_days.get(emp.id, set())
+
+        emp_holidays = set()
+        emp_holidays |= country_holidays.get(emp.country_id, set())
+        emp_holidays |= state_holiday_map.get(emp.state_id, set())
+
+        for date in working_days:
+
+            if emp.resignation_date and date > emp.resignation_date:
+                break
+
+            if date in leave_days or date in emp_holidays:
+                continue
+
+            if date not in entered_dates:
+
+                week_start = date - timedelta(days=(date.weekday() + 1) % 7)
+                week_end = week_start + timedelta(days=6)
+
+                not_entered.append({
+                    "employee": f"{emp.first_name} {emp.last_name}",
+                    "date": date,
+                    "week_start": week_start,
+                    "week_end": week_end
+                })
+            # SORT HERE
+    not_entered = sorted(not_entered, key=lambda x: (x["week_start"], x["employee"].lower()))
+
+    download = request.GET.get("download")
+
+    if download:
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = "Missing Timesheets"
+
+        # Header row
+        ws.append(["Week Start", "Week End","Employee", "Missing Date"])
+
+        for row in not_entered:
+            ws.append([
+                row["week_start"].strftime("%Y-%m-%d"),
+                row["week_end"].strftime("%Y-%m-%d"),
+                row["employee"],
+                row["date"].strftime("%Y-%m-%d")
+            ])
+
+        response = HttpResponse(
+            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+
+        filename = f"missing_timesheets_{previous_week_start}.xlsx"
+        response["Content-Disposition"] = f'attachment; filename="{filename}"'
+
+        wb.save(response)
+
+        return response
+    
+    return render(request, "missing_timesheet_list.html", {"not_entered": not_entered,"week_start":previous_week_start,"name":name_param})
+ 

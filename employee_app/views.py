@@ -10,7 +10,7 @@ import datetime
 import time
 from django.contrib.auth.decorators import login_required
 from .utils import get_leave_policy_details
-from .models import LeaveDetails
+from .models import LeaveDetails, TimesheetItem
 TIMEOUT_DURATION = 60 * 60  # 60 minutes
 
 def signin_required(fn):
@@ -1931,8 +1931,8 @@ def manage_leave_request(request, leave_request_id):
 
         if request.user.is_superuser:
             leave_request.approved_by = request.user
+
         else:
-            
             leave_request.approved_by = request.user
 
         leave_request.save()
@@ -1974,7 +1974,7 @@ def view_subordinates(request):
         return render(request, 'employee_app/error.html', {'message': 'Employee profile not found.'})
 
     # Fetch employees who report to this manager
-    subordinates = Employees.objects.filter(manager=manager)
+    subordinates = Employees.objects.filter(manager=manager).exclude(employee_status="resigned")
 
     # Check if the logged-in employee is actually a manager
     is_manager = subordinates.exists()  # If they have subordinates, they're a manager
@@ -2401,3 +2401,180 @@ def employee_devices_view(request, employee_id):
         "employee_devices.html",
         {"employee": employee, "device_assignments": device_assignments},
     )
+
+@signin_required
+def list_emp_leave_details(request):
+
+    country_list = Country.objects.all().order_by('country_name')
+    country_filter=request.GET.get('country_id', '').strip()
+    state_filter = request.GET.get('state_id', '').strip()
+    year_filter = request.GET.get('year', '').strip()
+    name = request.GET.get('name', '').strip()
+
+    manager=Employees.objects.get(company_email=request.user.username)
+
+    is_manager=True if getattr(manager,"employees_managed") else False
+
+    if not country_filter:
+        india = Country.objects.filter(country_name__iexact='India').first()
+        country_filter = str(india.id) if india else ''
+    elif not country_filter.isdigit():
+        country_filter = ''
+    
+    
+    #for calculating financial year
+    current_year=date.today().year
+    reset_period = HolidayResetPeriod.objects.filter(country=country_filter).first()
+    if reset_period:
+        start_month = reset_period.start_month
+        start_day = reset_period.start_day
+        end_month=reset_period.end_month
+        end_day=reset_period.end_day
+        financial_year_start_date = date(current_year, start_month, start_day)
+    
+        if date.today() < financial_year_start_date:
+            current_year-=1
+    
+       
+    #making year_filter default to current year
+    if year_filter.isdigit():
+        year_filter = int(year_filter)
+    else:
+        year_filter = current_year
+
+    queryset=LeaveDetails.objects.filter(year=year_filter,employee__manager=manager).exclude(employee__employee_status="resigned")
+    states=state.objects.all()
+
+    #country filter
+    if country_filter.isdigit():
+        queryset = queryset.filter(employee__country=country_filter).order_by('-year')
+        states=state.objects.filter(country=country_filter).order_by('name')
+
+    if name:
+        queryset = queryset.filter(
+            Q(employee__first_name__icontains=name) |
+            Q(employee__last_name__icontains=name)
+        )
+    
+
+    # Filter by state (optional)
+    if state_filter.isdigit():
+        queryset = queryset.filter(employee__state=state_filter).order_by('-year')
+
+   #fetch total floating leaves 
+    policy=FloatingHolidayPolicy.objects.filter(country=country_filter,year=year_filter).first()
+    total_float = policy.allowed_floating_holidays if policy else 0
+
+
+    queryset=queryset.order_by('employee__employee_id')
+    #adding remaining leaves count on each record
+    for record in queryset:
+        total = record.total_casual_leaves or 0
+        used = record.casual_leaves_used or 0
+        planned = record.planned_casual or 0
+        record.remaining_casual = total - used - planned
+        record.total_float=total_float
+        record.remaining_float = (record.total_float or 0) - (record.floating_holidays_used or 0) - (record.planned_float or 0)
+
+    
+    context={
+        "employee":manager,
+        "is_manager":is_manager,
+        "queryset":queryset,
+        "country_list":country_list,
+        "states":states,
+        'current_filters': {
+            'country_id': country_filter,
+            'state_id': state_filter,
+            'year': year_filter,
+            'name': name,
+        }
+    }
+    return render(request,"manager_emp_leaves.html",context)
+
+from django.http import HttpResponse, HttpResponseBadRequest
+
+@signin_required
+def export_employees_leaves(request):
+
+    country_filter = request.GET.get('country_id', '').strip()
+    state_filter = request.GET.get('state_id', '').strip()
+    year_filter = request.GET.get('year', '').strip()
+    name = request.GET.get('name', '').strip()
+
+    manager=Employees.objects.get(company_email=request.user.username)
+
+    if not year_filter or not year_filter.isdigit():
+        return HttpResponseBadRequest("Year parameter is required.")
+
+    year_filter = int(year_filter)
+
+    queryset = LeaveDetails.objects.filter(year=year_filter,employee__manager=manager).exclude(employee__employee_status="resigned")
+
+    if country_filter.isdigit():
+        queryset = queryset.filter(employee__country=country_filter)
+
+    if state_filter.isdigit():
+        queryset = queryset.filter(employee__state=state_filter)
+
+
+
+    # Fetch total float for that country and year
+    total_float = 0
+    if country_filter.isdigit():
+        float_policy = FloatingHolidayPolicy.objects.filter(country=country_filter, year=year_filter).first()
+        total_float = float_policy.allowed_floating_holidays if float_policy else 0
+
+
+    if name:
+        queryset = queryset.filter(
+            Q(employee__first_name__icontains=name) |
+            Q(employee__last_name__icontains=name)
+        )
+    
+
+    workbook = openpyxl.Workbook()
+    sheet = workbook.active
+    sheet.title = 'Employee Leave Summary'
+
+    # Header
+    headers = [
+        'Employee ID', 'First Name', 'Last Name',
+        'Total Casual Leaves', 'Used Casual Leaves', 'Planned Casual Leaves', 'Available Casual Leaves',
+        'Total Floating leaves','Used Floating Leaves', 'Planned Floating Leaves', 'Available Floating Leaves',
+        'Year'
+    ]
+    sheet.append(headers)
+
+    # Data rows
+    queryset=queryset.order_by('employee__employee_id')
+    for record in queryset:
+        # Calculate and attach derived fields (same as list_emp_leave_details)
+        record.remaining_casual = (record.total_casual_leaves or 0) - (record.casual_leaves_used or 0) - (record.planned_casual or 0)
+        record.total_float = total_float
+        record.remaining_float = total_float - (record.floating_holidays_used or 0) - (record.planned_float or 0)
+
+        sheet.append([
+            record.employee.employee_id,
+            record.employee.first_name,
+            record.employee.last_name,
+            record.total_casual_leaves or 0,
+            record.casual_leaves_used or 0,
+            record.planned_casual or 0,
+            record.remaining_casual,
+            record.total_float,
+            record.floating_holidays_used or 0,
+            record.planned_float or 0,
+            record.remaining_float,
+            record.year
+        ])
+
+    response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    response['Content-Disposition'] = 'attachment; filename=Employee_Leave_Summary.xlsx'
+    workbook.save(response)
+    return response
+
+
+
+ 
+
