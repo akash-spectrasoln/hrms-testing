@@ -351,7 +351,7 @@ class Employees(models.Model):
         print("="*80)
         print("✨ Pro-rata leave calculation completed successfully!")
         print("="*80 + "\n")
-
+    
     def __str__(self):
         return f"{self.employee_id} "
 

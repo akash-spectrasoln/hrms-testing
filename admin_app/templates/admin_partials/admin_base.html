@@ -144,7 +144,6 @@
     <!-- END layout-wrapper -->
 
     {% block javascript %}
-    <script>   </script>
     <script src="{% static 'tool/main.js' %}"></script>
     <!-- JAVASCRIPT -->
     <script src="{% static 'libs/bootstrap/dist/js/bootstrap.bundle.min.js' %}"></script>
@@ -198,138 +197,88 @@
     });
 </script>
 
-<!-- ✅ Form Submit Spinner + Page Navigation Spinner -->
+<!--  Form Submit Spinner + Page Navigation Spinner -->
 <script>
-    function showSpinnerAndDisableButtons() {
+(function() {
+    'use strict';
+    
+    window.addEventListener('error', function(e) {
+        if (e.message && e.message.includes('Cannot read properties of null (reading \'dataset\')')) {
+            e.preventDefault();
+            e.stopPropagation();
+            return true;
+        }
+    });
+    
+    if (document.getElementById('spinner-overlay')) {
+        document.getElementById('spinner-overlay').style.display = 'none';
+    }
+    
+    function showSpinner() {
         const spinner = document.getElementById('spinner-overlay');
         if (spinner) {
             spinner.style.display = 'flex';
         }
-
+    }
+    
+    function hideSpinner() {
+        const spinner = document.getElementById('spinner-overlay');
+        if (spinner) {
+            spinner.style.display = 'none';
+        }
+    }
+    
+    function enableButtons() {
+        document.querySelectorAll('button, input[type=submit]').forEach(el => {
+            el.disabled = false;
+        });
+    }
+    
+    function disableButtons() {
         document.querySelectorAll('button, input[type=submit]').forEach(el => {
             el.disabled = true;
         });
     }
-
-
+    
     document.addEventListener('DOMContentLoaded', () => {
-    // Spinner on form submit
-    document.querySelectorAll('form').forEach(form => {
-        form.addEventListener('submit', (e) => {
-            // ✅ Only show spinner if form is valid
-            if (!form.checkValidity()) {
-                return; // Let browser handle validation errors
-            }
-            showSpinnerAndDisableButtons();
-        });
-    });
-
-
-
-        // Spinner on form submission (safer than beforeunload)
-        document.addEventListener('submit', function(e) {
-            const spinner = document.getElementById('spinner-overlay');
-            if (spinner) {
-                spinner.style.display = 'flex';
-            }
-            document.querySelectorAll('button, input[type=submit]').forEach(el => {
-                el.disabled = true;
-            });
-        });
-    });
-</script>
-<script>
-    (function() {
-        'use strict';
+        hideSpinner();
+        enableButtons();
         
-        // Add global error handler to catch and suppress dataset errors
-        window.addEventListener('error', function(e) {
-            if (e.message && e.message.includes('Cannot read properties of null (reading \'dataset\')')) {
-                // Silently suppress dataset access errors
-                e.preventDefault();
-                e.stopPropagation();
-                return true; // Prevent default error handling
-            }
-        });
-        
-        // Hide spinner immediately (before DOM loads)
-        if (document.getElementById('spinner-overlay')) {
-            document.getElementById('spinner-overlay').style.display = 'none';
-        }
-        
-        function showSpinner() {
-            const spinner = document.getElementById('spinner-overlay');
-            if (spinner) {
-                spinner.style.display = 'flex';
-            }
-        }
-        
-        function hideSpinner() {
-            const spinner = document.getElementById('spinner-overlay');
-            if (spinner) {
-                spinner.style.display = 'none';
-            }
-        }
-        
-        function enableButtons() {
-            document.querySelectorAll('button, input[type=submit]').forEach(el => {
-                el.disabled = false;
-            });
-        }
-        
-        function disableButtons() {
-            document.querySelectorAll('button, input[type=submit]').forEach(el => {
-                el.disabled = true;
-            });
-        }
-        
-        // Initialize on DOM ready
-        document.addEventListener('DOMContentLoaded', () => {
-            hideSpinner();
-            enableButtons();
-            
-            // Form submissions
-            document.querySelectorAll('form').forEach(form => {
-                form.addEventListener('submit', (e) => {
-                    if (form.checkValidity()) {
-                        showSpinner();
-                        disableButtons();
-                    }
-                });
-            });
-            
-            // Navigation with debouncing (removed problematic unload events)
-            let navigationTimer;
-            
-            // Use safer page visibility change instead of unload
-            document.addEventListener('visibilitychange', () => {
-                if (document.visibilityState === 'hidden') {
-                    clearTimeout(navigationTimer);
-                    navigationTimer = setTimeout(() => {
-                        showSpinner();
-                        disableButtons();
-                    }, 50);
-                } else {
-                    clearTimeout(navigationTimer);
+        document.querySelectorAll('form').forEach(form => {
+            form.addEventListener('submit', (e) => {
+                if (form.checkValidity()) {
+                    showSpinner();
+                    disableButtons();
                 }
             });
         });
-        
-        // Handle browser back/forward
-        window.addEventListener('pageshow', (event) => {
-            hideSpinner();
-            enableButtons();
-        });
-        
-        // Handle visibility change
-        document.addEventListener('visibilitychange', () => {
-            if (!document.hidden) {
-                hideSpinner();
-                enableButtons();
-            }
-        });
-    })();
-    </script>
+    });
+    
+    document.addEventListener('click', function(e) {
+
+        const link = e.target.closest('a');
+
+        if (!link) return;
+
+        if (
+            link.target === '_blank' ||
+            link.hasAttribute('download') ||
+            link.getAttribute('href') === '#' ||
+            link.href.startsWith('javascript:')
+        ) return;
+
+        showSpinner();
+        disableButtons();
+
+    });
+
+    window.addEventListener('pageshow', function() {
+        hideSpinner();
+        enableButtons();
+    });
+    
+})();
+</script>
 {% endblock javascript %}
 
     <div id="spinner-overlay" class="spinner-overlay">

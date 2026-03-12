@@ -229,6 +229,10 @@
 
     //  Extra safety: stop spinner on full load too
     window.addEventListener('load', hideSpinnerAndEnableButtons);
+
+    window.addEventListener('pageshow', function() {
+        hideSpinnerAndEnableButtons()
+    });
 </script>
 
 

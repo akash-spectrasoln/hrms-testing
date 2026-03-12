@@ -47,7 +47,13 @@
                 <li>
                     <a href="{% url 'leave-report' %}">
                         <i data-feather="file-text"></i>
-                        <span data-key="t-dashboard"><strong>Suboordinates leaves</strong></span>
+                        <span data-key="t-dashboard"><strong>Subordinates leaves</strong></span>
+                    </a>
+                </li>
+                <li>
+                    <a href="{% url 'emp_leaves' %}">
+                        <i data-feather="bar-chart-2"></i>
+                        <span data-key="t-dashboard"><strong>Employees leaves</strong></span>
                     </a>
                 </li>
                 {% endif %}

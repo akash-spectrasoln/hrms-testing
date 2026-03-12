@@ -1,5 +1,5 @@
 from celery import shared_task
-from .models import Employees, Communication,TimesheetHdr, Employees, Holiday, StateHoliday, LeaveRequest,Project,AssignProject
+from .models import Employees, Communication,TimesheetHdr, TimesheetItem,Employees, Holiday, StateHoliday, LeaveRequest,Project,AssignProject
 from datetime import datetime, timedelta
 from django.core.mail import send_mail
 from django.conf import settings
@@ -7,6 +7,8 @@ from datetime import date
 from django.db.models import Q
 @shared_task
 def send_birthday_emails():
+
+    """sends an email to admins listing employees who have birthdays next week (Monday-Sunday)"""
     # Get today's date
     today = datetime.now().date()
 
@@ -23,7 +25,7 @@ def send_birthday_emails():
     admin_employees = Communication.objects.all()
 
     # Get all employees to check their birthdays
-    employees = Employees.objects.all()
+    employees = Employees.objects.all().exclude(employee_status="resigned")
 
     # Prepare a list of employees with birthdays in the next week
     employees_with_birthday = []
@@ -114,7 +116,7 @@ def send_birthday_emails_today():
     admin_employees = Communication.objects.all()
 
     # Get all employees to check their birthdays
-    employees = Employees.objects.all()
+    employees = Employees.objects.all().exclude(employee_status="resigned")
 
     # Prepare a list of employees with birthdays TODAY
     employees_with_birthday_today = []
@@ -137,7 +139,7 @@ def send_birthday_emails_today():
 
     if employees_with_birthday_today:
         for admin in admin_employees:
-            subject = "🎂 Employee Birthday Today!"
+            subject = "Employee Birthday Today!"
 
             # Plain text fallback
             plain_message = f"Hi {admin.user.first_name},\n\nPlease view this email in HTML format to see today's birthday celebrants.\n\nBest regards,\nYour Leave Management System"
@@ -195,7 +197,7 @@ def send_anniversary_emails():
     today = datetime.now().date()
 
     # Get all employees
-    employees = Employees.objects.all()
+    employees = Employees.objects.all().exclude(employee_status="resigned")
 
     for employee in employees:
         try:
@@ -324,6 +326,7 @@ def send_timesheet_reminder(day_type="monday_morning", country_id=None):
         Employees.objects.filter(is_deleted=False, user__is_active=True)
         .exclude(employee_type__code="C")
         .exclude(excl_folup=True)
+        .exclude(employee_status="resigned")
     )
     if country_id:
         employees = employees.filter(country_id=country_id)
@@ -473,3 +476,284 @@ def send_timesheet_reminder(day_type="monday_morning", country_id=None):
         "Timesheet reminder task completed for day_type=%s, country_id=%s",
         day_type, country_id
     )
+
+from django.db.models import Count
+from timesheet_app.views import get_week_start_end
+
+@shared_task
+def send_pendingtimesheet_emails():
+
+    """
+    sending emails to the manager if there is any timesheet pending to be approved
+    """
+
+    managers = Employees.objects.annotate(num_reports=Count('employees_managed')).filter(num_reports__gt=0,employee_status="employed")
+
+
+    for manager in managers:
+
+        subordinates = manager.employees_managed.all()
+
+        today = datetime.now().date()
+
+        # Find this week's Sunday
+        current_week_start = today - timedelta(days=today.weekday() + 1) if today.weekday() != 6 else today
+
+        # Previous week's Saturday
+        cutoff_week_end = current_week_start - timedelta(days=1)
+
+        #checking any timesheets pending for approval till previous week
+        pending_timesheets = TimesheetHdr.objects.filter(employee__in=subordinates,week_end__lte=cutoff_week_end,is_approved=False).order_by("week_start")
+
+        if pending_timesheets.exists():
+            total_count = pending_timesheets.count()
+
+            subject = "Pending Timesheet Approvals"
+
+            message_text = (
+                f"You have {total_count} pending timesheet(s) "
+            )
+
+            plain_message = (
+                f"Dear {manager.first_name},\n\n"
+                f"{message_text}\n\n"
+                f"Please review them at your earliest convenience.\n\n"
+                f"Best regards,\nSpectra HR Team"
+            )
+
+            # HTML version
+            week_html = ""
+            for ts in pending_timesheets:
+                week_html += f"""
+                    <li>
+                        {ts.employee.first_name} : {ts.week_start} to {ts.week_end}
+                    </li>
+                """
+            html_message = f"""
+            <html>
+            <body style="font-family: Arial, sans-serif; color:#333;">
+                <div style="max-width:600px; padding:20px;
+                            border:1px solid #ddd; border-radius:8px; background:#fafafa;">
+
+                    <p>Dear {manager.first_name},</p>
+
+                    <p>You have <strong>{total_count}</strong>
+                    pending timesheet(s) waiting for approval:</p>
+
+                    <ul>
+                        {week_html}
+                    </ul>
+
+                    <p>Please review them at your earliest convenience.</p>
+
+                    <p>Best regards,<br>Spectra HR Team</p>
+                </div>
+            </body>
+            </html>
+            """
+            send_mail(
+                subject,
+                plain_message,
+                settings.DEFAULT_FROM_EMAIL,
+                ["hancelxavier@gmail.com"],
+                html_message=html_message,
+                fail_silently=False,
+            )
+
+@shared_task    
+def email_to_manager():
+    """
+    Send email to manager if subordinates didn't enter timesheet
+    (excluding holidays, state holidays, and leave days)
+    """
+
+    today = datetime.now().date()
+
+    current_week_start = today - timedelta(days=today.weekday() + 1) if today.weekday() != 6 else today  # sunday
+
+    duration_week_start = current_week_start - timedelta(days=28)
+    duration_week_end = current_week_start - timedelta(days=1)
+    
+    # fetching managers
+    managers = Employees.objects.annotate(num_reports=Count('employees_managed')).filter(num_reports__gt=0,employee_status="employed",id=314)
+
+    for manager in managers:
+
+        # fetching subordinates excluding resigned employees (if resignation date is on previous week then included)
+        subordinates = manager.employees_managed.filter(Q(resignation_date__isnull=True) | Q(resignation_date__gte=duration_week_start))
+
+        not_entered=[]
+        for emp in subordinates:
+
+
+            emp_holidays = set(
+                Holiday.objects.filter(
+                    date__range=(duration_week_start,duration_week_end),
+                    country=emp.country
+                ).values_list("date", flat=True)
+            )      
+            emp_holidays |= set(
+                StateHoliday.objects.filter(
+                    date__range=(duration_week_start,duration_week_end),
+                    state=emp.state
+                ).values_list("date", flat=True)
+            ) 
+            # Collect leave days
+            leave_days = set()
+            leaves = LeaveRequest.objects.filter(
+                employee_master=emp,
+                status="Approved",
+                start_date__lte=duration_week_end,
+                end_date__gte=duration_week_start,
+            )
+            for leave in leaves:
+                start = max(leave.start_date, duration_week_start)
+                end = min(leave.end_date, duration_week_end)
+                for i in range((end - start).days + 1):
+                    leave_days.add(start + timedelta(days=i))
+            
+
+            # Compute working days once
+            working_days = []
+            d = duration_week_start
+
+            while d <= duration_week_end:
+                if d.weekday() < 5:
+                    working_days.append(d)
+                d += timedelta(days=1)
+
+            # filtering only the working days in a week by excluding holidays and leaves
+            # if no timesheet entry is done on a working day then it is notified to the manager
+            for date in working_days:
+
+                # checks if the date(working day in a week)
+                if emp.resignation_date and date > emp.resignation_date:
+                    break
+                if date in leave_days or date in emp_holidays:
+                    continue  # skip holidays and leave days
+
+                # ts_hdr.timesheet_items fetches the per day timesheet entries of ts_hdr record
+                if not TimesheetItem.objects.filter(hdr__employee_id=emp.id,wrk_date=date).exists():
+                    not_entered.append(f"{emp.first_name} {emp.last_name}:{date}")
+
+        # Send email if any missing timesheet
+        if not_entered:
+            subject = "Subordinates Timesheet Pending"
+            plain_message = (
+                f"Dear {manager.first_name},\n\n"
+                f"The following team members have missing timesheet entries "
+                f"for the period {duration_week_start} to {duration_week_end}.\n\n"
+                f"Missing Timesheet Entry Dates:\n"
+                + "\n".join(not_entered) +
+                "\n\nPlease ensure the timesheets are completed at the earliest.\n\n"
+                f"Best regards,\nSpectra HR Team"
+            )
+
+            week_html = "".join([f"<li>{ts}</li>" for ts in not_entered])
+            html_message = f"""
+            <html>
+            <body style="font-family: Arial, sans-serif; color:#333;">
+                <div style="max-width:600px; padding:20px; border:1px solid #ddd; border-radius:8px; background:#fafafa;">
+                    <p>Dear {manager.first_name},</p>
+                    <p>
+                        The following team members have missing timesheet entries 
+                        for the timeperiod <strong>{duration_week_start} to {duration_week_end}</strong>.
+                    </p>
+
+                    <p><strong>Missing Timesheet Entry Dates:</strong></p>
+                    <ul>
+                        {week_html}
+                    </ul>
+                    <p>Please ensure the timesheets are completed at the earliest.</p>
+                    <p>Best regards,<br>Spectra HR Team</p>
+                </div>
+            </body>
+            </html>
+            """
+            send_mail(
+                subject,
+                plain_message,
+                settings.DEFAULT_FROM_EMAIL,
+                ["hancelxavier@gmail.com"],
+                html_message=html_message,
+                fail_silently=False,
+            )
+
+
+@shared_task
+def delayed_timesheet_entry():
+    """
+    Send email to employee if they have delayed timesheet entries
+    in the previous month.
+
+    """
+
+    today = timezone.now().date()
+
+    # First day of current month
+    first_day_current_month = today.replace(day=1)
+
+    # Last day of previous month
+    last_day_previous_month = first_day_current_month - timedelta(days=1)
+
+    # First day of previous month
+    first_day_previous_month = last_day_previous_month.replace(day=1)
+
+    employees = Employees.objects.all().exclude(employee_status="resigned")
+
+    for emp in employees:
+        delayed_entries = TimesheetHdr.objects.filter(
+            employee=emp,
+            is_delayed=True,
+            week_start__lte=last_day_previous_month,
+            week_end__gte=first_day_previous_month
+        ).order_by("week_start")
+
+        if delayed_entries.exists():
+            subject = "Delayed Timesheet Entry"
+
+            week_html=""
+            for entry in delayed_entries:
+                week_html+=f"""
+                <li>
+                    {entry.week_start} to {entry.week_end}
+                </li>
+                """
+
+
+            plain_message = (
+                f"Dear {emp.first_name},\n\n"
+                f"You have delayed timesheet entries for the month "
+                f"{first_day_previous_month.strftime('%B %Y')}.\n\n"
+                f"Please try to update your timesheet on time.\n\n"
+                f"Best regards,\n"
+                f"Spectra HR Team"
+            )
+
+            html_message = f"""
+            <html>
+            <body style="font-family: Arial, sans-serif; color:#333;">
+                <div style="max-width:600px; padding:20px; border:1px solid #ddd; border-radius:8px; background:#fafafa;">
+                    <p>Dear {emp.first_name},</p>
+                    <p>
+                        You have <strong>{delayed_entries.count()} delayed timesheet entries</strong> 
+                        for <strong>{first_day_previous_month.strftime('%B %Y')}</strong> on weeks:
+                    </p>
+                    <ul>
+                        {week_html}
+                    </ul>
+                    <p>Please try to update your timesheet on time.</p>
+                    <p>Best regards,<br>Spectra HR Team</p>
+                </div>
+            </body>
+            </html>
+            """
+
+            send_mail(
+                subject,
+                plain_message,
+                settings.DEFAULT_FROM_EMAIL,
+                ["hancelxavier@gmail.com"],
+                html_message=html_message,
+                fail_silently=False,
+            )   
