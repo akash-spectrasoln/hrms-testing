@@ -35,8 +35,8 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.getenv('SECRET_KEY')
 #
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
-# DEBUG = False
+# DEBUG = True
+DEBUG = False
 
 STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
@@ -125,9 +125,6 @@ DATABASES = {
         'PASSWORD': os.getenv('HRMS_PASSWORD'),
         'HOST': os.getenv('HRMS_HOST'),  # or 'localhost' if using Cloud SQL Proxy
         'PORT': '5432',  # PostgreSQL default port, or '3306' for MySQL
-        'OPTIONS': {
-            'options': '-c search_path="LMS",public'
-        },
     }
 }
 
@@ -218,7 +215,7 @@ ADMIN_EMAIL = os.getenv('ADMIN_EMAIL')
 ADMIN_PASSWORD = os.getenv('ADMIN_PASSWORD')
 
 
-CELERY_BROKER_URL =   'redis://default:SNJRMtypPEloKZQERh6ohQ8L6MazR99T@redis-13695.c83.us-east-1-2.ec2.cloud.redislabs.com:13695'
+CELERY_BROKER_URL =  'redis://redis:6379/0'
 CELERY_RESULT_BACKEND = CELERY_BROKER_URL
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
