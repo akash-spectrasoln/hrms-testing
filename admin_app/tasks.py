@@ -555,7 +555,7 @@ def send_pendingtimesheet_emails():
                 subject,
                 plain_message,
                 settings.DEFAULT_FROM_EMAIL,
-                ["hancelxavier@gmail.com"],
+                [manager.company_email],
                 html_message=html_message,
                 fail_silently=False,
             )
@@ -575,7 +575,7 @@ def email_to_manager():
     duration_week_end = current_week_start - timedelta(days=1)
     
     # fetching managers
-    managers = Employees.objects.annotate(num_reports=Count('employees_managed')).filter(num_reports__gt=0,employee_status="employed",id=314)
+    managers = Employees.objects.annotate(num_reports=Count('employees_managed')).filter(num_reports__gt=0,employee_status="employed")
 
     for manager in managers:
 
@@ -674,7 +674,7 @@ def email_to_manager():
                 subject,
                 plain_message,
                 settings.DEFAULT_FROM_EMAIL,
-                ["hancelxavier@gmail.com"],
+                [manager.company_email],
                 html_message=html_message,
                 fail_silently=False,
             )
@@ -753,7 +753,7 @@ def delayed_timesheet_entry():
                 subject,
                 plain_message,
                 settings.DEFAULT_FROM_EMAIL,
-                ["hancelxavier@gmail.com"],
+                [emp.company_email],
                 html_message=html_message,
                 fail_silently=False,
             )   
