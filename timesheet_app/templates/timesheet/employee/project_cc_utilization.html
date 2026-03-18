@@ -16,7 +16,7 @@
                     <div class="d-flex align-items-center gap-2">
                         <a id="downloadBtn"
                            href="#"
-                           data-url="{% if report_data %}{% url 'export_project_cc_utilization' %}?start_date={{ start_date|date:'Y-m-d' }}&end_date={{ end_date|date:'Y-m-d' }}{% endif %}"
+                           data-url="{% if report_data %}{% url 'export_project_cc_utilization_manager' %}?start_date={{ start_date|date:'Y-m-d' }}&end_date={{ end_date|date:'Y-m-d' }}{% endif %}"
                            class="btn btn-success btn-sm {% if not report_data %}disabled{% endif %}">
                             <i class="fas fa-download"></i> Download Excel
                         </a>

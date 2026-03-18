@@ -66,7 +66,7 @@ path("work-utilization/", ts_views.employee_work_utilization_view, name="work_ut
 path("work-utilization/export/", ts_views.export_employee_utilization, name="export_employee_utilization"),
 path("project-cc-utilization/", ts_views.employee_project_cc_utilization_view, name="project_cc_utilization"),
 # Excel Export
-path("export/project-cc-utilization/", ts_views.export_project_cc_utilization, name="export_project_cc_utilization"),
+path("export/project-cc-utilization_manager/", ts_views.export_project_cc_utilization_manager, name="export_project_cc_utilization_manager"),
 path("pending-timesheets/", ts_views.pending_timesheets, name="pending_timesheets"),
 path("subordinates-missing-timsheets",ts_views.subordinatesmissingtimesheet,name="subo-missing-tsheets")
 ]

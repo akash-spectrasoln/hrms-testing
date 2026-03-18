@@ -75,7 +75,7 @@ path('export-emp-bank/',export_employee_bank_details,name='export_employee_bank_
 path('setup/', setup_list_create_view, name='setup_list'),
 path('setup/edit/<int:pk>/', setup_edit_view, name='setup_edit'),
 path('setup/delete/<int:pk>/', setup_delete_view, name='setup_delete'),
-path('employees_missing_timesheets/',employeesmissingtimesheet,name="employees_missing_timesheets"),
+
 
 # Devices
 path("devices/", DeviceListView.as_view(), name="device-list"),
@@ -112,6 +112,9 @@ path('admin-leavereport/',admin_leave_reports,name='admin_leave_reports'),
 path("work-utilization/", ts_views.admin_work_utilization_view, name="admin_work_utilization"),
 path("work-utilization/export/", ts_views.export_admin_utilization, name="export_admin_utilization"),
 path("project-cc-utilization/", ts_views.admin_project_cc_utilization_view, name="admin_project_cc_utilization"),
+path("export/project-cc-utilization/", ts_views.export_project_cc_utilization, name="export_project_cc_utilization"),
+path('employees_missing_timesheets/',employeesmissingtimesheet,name="employees_missing_timesheets"),
+path('timesheet_details/',ts_views.timesheets_details_admin,name="timesheets_details_admin")
 
 
 ]
