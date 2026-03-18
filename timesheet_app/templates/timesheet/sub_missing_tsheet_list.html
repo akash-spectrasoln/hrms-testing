@@ -270,8 +270,13 @@ document.addEventListener("DOMContentLoaded", function(){
 
         catch (err) {
 
-            alert("Error while downloading Excel: " + err.message);
-            console.error(err);
+            if (err.name === "AbortError") {
+                // User cancelled the save dialog
+                console.log("Download cancelled by user");
+            } else {
+                alert("Error while downloading Excel");
+                console.error(err);
+            }
 
             if (spinner) spinner.style.display = "none";
 

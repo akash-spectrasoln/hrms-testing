@@ -2111,6 +2111,117 @@ def pending_timesheets(request):
     
     return render(request, 'timesheet/pending_timesheets.html', context)
 
+
+from django.db.models import Count
+@admin_signin_required
+def timesheets_details_admin(request):
+    """
+    Shows all pending and approved timesheet entries for weeks older than the previous week.
+    Example: If current week is Sun 21 – Sat 28, shows only weeks ending on or before Sat 20.
+    """
+    # check if the user have employee profile in Employees table
+    user_emp_profile=hasattr(request.user, "employee_profile")
+    week_start_filter = request.GET.get("week_start")
+
+    if week_start_filter:
+        cutoff_date = datetime.strptime(week_start_filter, "%Y-%m-%d").date()
+        cutoff_week = int(cutoff_date.strftime("%U"))
+        cutoff_year = cutoff_date.year
+
+    else:
+        # Get current date and calculate cutoff
+        today = datetime.now().date()
+        current_week_num = int(today.strftime("%U"))  # Current week (0-based from %U)
+        # Calculate cutoff: previous week's end (include previous week)
+        cutoff_week = current_week_num - 1  # Previous week
+        cutoff_year = today.year
+    
+    # Get cutoff week's end date (Saturday) - this will be the previous week's end
+    cutoff_week_start, cutoff_week_end = get_week_start_end(cutoff_year, cutoff_week)
+    
+    managers_list=Employees.objects.annotate(num_reports=Count('employees_managed')).filter(num_reports__gt=0,employee_status="employed").values('id', 'first_name', 'last_name')
+    
+
+    # Get all employees
+    employees = Employees.objects.select_related(
+        'country', 'state'
+    ).order_by('employee_id', 'first_name', 'last_name').exclude(user=request.user)
+    
+    manager_id = request.GET.get("manager_id")
+    if manager_id:
+        employees = employees.filter(manager__id=manager_id)
+    # Search filter
+    search_query = request.GET.get('search', '').strip()
+    if search_query:
+        employees = employees.filter(
+            Q(employee_id__icontains=search_query) |
+            Q(first_name__icontains=search_query) |
+            Q(last_name__icontains=search_query)
+        )
+    
+    # Get pending timesheets for weeks older than cutoff
+    pending_timesheets = TimesheetHdr.objects.filter(
+        employee__in=employees,
+        week_start__gte=cutoff_week_start,
+        week_end__lte=cutoff_week_end,  # Only weeks ending on or before cutoff
+    ).select_related('employee').prefetch_related('timesheet_items').order_by(
+        'week_end', 'employee__employee_id' ,'employee__first_name','employee__last_name' # Newest weeks first, then by employee
+    )
+
+    # Build timesheet data with additional fields
+    timesheet_data = []
+    for ts_hdr in pending_timesheets:
+        # Calculate week info
+        week_start, week_end = ts_hdr.week_start, ts_hdr.week_end
+        week_num = int(week_end.strftime("%U")) - 1
+        year = week_end.year
+        
+        
+        # Get employee stats for that week
+        employee_ids = [ts_hdr.employee.id]
+        leave_days = build_leave_days(employee_ids, week_start, week_end)
+        holidays_cache = build_holidays_cache([ts_hdr.employee], week_start, week_end)
+        stats = calculate_timesheet_stats(ts_hdr.employee, ts_hdr, week_start, leave_days, holidays_cache)
+        
+        # Add additional fields
+        stats.update({
+            'tsheet_id': ts_hdr.tsheet_id,
+            'week_start': week_start,
+            'week_end': week_end,
+            'week_num': week_num,
+            'year': year,
+            'submitted_date': ts_hdr.updated_at,  # Use updated_at for more accurate submission time
+            'updated_date': ts_hdr.updated_at,
+            'is_delayed': ts_hdr.is_delayed,
+            'can_approve': stats.get('can_approve', False),
+            'is_approved':ts_hdr.is_approved
+        })
+        
+        timesheet_data.append(stats)
+    
+    # Apply status filter - default to Pending
+    status_filter = request.GET.get('status', 'Pending')
+    if status_filter == 'Pending':
+        timesheet_data = [d for d in timesheet_data if not d.get("is_approved")]
+
+    elif status_filter == 'Approved':
+        timesheet_data = [d for d in timesheet_data if d.get("is_approved")]
+
+    
+    context = {
+        'timesheet_data': timesheet_data,
+        'search_query': search_query,
+        'selected_status': status_filter,
+        'cutoff_date': cutoff_week_end,
+        'cutoff_week_start':cutoff_week_start,
+        'user_emp_profile':user_emp_profile,
+        'managers_list':managers_list,
+        'selected_manager':manager_id
+    }
+    
+    return render(request, 'timesheet/admin/timesheet_details_admin.html', context)
+
+
 employee_signin_required
 @require_POST
 def approve_timesheet(request):
@@ -2263,12 +2374,12 @@ def generate_utilization_report(logged_in_employee, start_date, end_date):
     """
     # Step 1: Choose employees for report
     if logged_in_employee is None:  # Admin
-        employees = Employees.objects.filter(Q(resignation_date__isnull=True) | Q(resignation_date__gte=start_date)).order_by("employee_id", "first_name", "last_name")
+        employees = Employees.objects.filter(Q(resignation_date__isnull=True) | Q(resignation_date__gte=start_date),excl_TSheet=False).order_by("employee_id", "first_name", "last_name")
     else:
         if logged_in_employee.user.is_staff or logged_in_employee.user.is_superuser:
-            employees = Employees.objects.filter(Q(resignation_date__isnull=True) | Q(resignation_date__gte=start_date)).order_by("employee_id", "first_name", "last_name")
+            employees = Employees.objects.filter(Q(resignation_date__isnull=True) | Q(resignation_date__gte=start_date),excl_TSheet=False).order_by("employee_id", "first_name", "last_name")
         elif logged_in_employee.employees_managed.exists():
-            employees = Employees.objects.filter(manager=logged_in_employee).filter(Q(resignation_date__isnull=True) | Q(resignation_date__gte=start_date)).order_by("employee_id", "first_name", "last_name")
+            employees = Employees.objects.filter(manager=logged_in_employee).filter(Q(resignation_date__isnull=True) | Q(resignation_date__gte=start_date),excl_TSheet=False).order_by("employee_id", "first_name", "last_name")
         else:
             raise PermissionDenied("You are not authorized to view this report.")
 
@@ -2554,6 +2665,10 @@ def export_employee_utilization(request):
         raise PermissionDenied("Employee profile not found.")
 
     report_data = generate_utilization_report(employee_obj, start_date, end_date)
+    # Filter to include only subordinates
+    report_data = [
+        r for r in report_data if r["employee_obj"] in employee_obj.employees_managed.all()
+    ]
 
     return _build_excel_response(report_data, "Employee_Utilization.xlsx")
 
@@ -2566,11 +2681,11 @@ def generate_project_cc_utilization_report(logged_in_employee, start_date, end_d
 
     # --- Employee scope ---
     if logged_in_employee is None:
-        employees = Employees.objects.filter(Q(resignation_date__isnull=True) | Q(resignation_date__gte=start_date)).order_by('employee_id', 'first_name', 'last_name')
+        employees = Employees.objects.filter(Q(resignation_date__isnull=True) | Q(resignation_date__gte=start_date),excl_TSheet=False).order_by('employee_id', 'first_name', 'last_name')
     elif logged_in_employee.user.is_staff or logged_in_employee.user.is_superuser:
-        employees = Employees.objects.filter(Q(resignation_date__isnull=True) | Q(resignation_date__gte=start_date)).order_by('employee_id','first_name','last_name')
+        employees = Employees.objects.filter(Q(resignation_date__isnull=True) | Q(resignation_date__gte=start_date),excl_TSheet=False).order_by('employee_id','first_name','last_name')
     elif logged_in_employee.employees_managed.exists():
-        employees = logged_in_employee.employees_managed.all().filter(Q(resignation_date__isnull=True) | Q(resignation_date__gte=start_date)).order_by('employee_id','first_name','last_name')
+        employees = logged_in_employee.employees_managed.all().filter(Q(resignation_date__isnull=True) | Q(resignation_date__gte=start_date),excl_TSheet=False).order_by('employee_id','first_name','last_name')
     else:
         raise PermissionDenied("You are not authorized to view this report.")
 
@@ -2785,6 +2900,8 @@ import openpyxl
 from django.http import HttpResponse
 
 
+# this is for downloading from admin side
+@admin_signin_required
 def export_project_cc_utilization(request):
     # --- Get and validate dates ---
     start_str = request.GET.get("start_date")
@@ -2810,6 +2927,81 @@ def export_project_cc_utilization(request):
 
     # --- Generate report data ---
     report_data = generate_project_cc_utilization_report(employee_obj, start_date, end_date)
+
+    # --- Create Excel workbook ---
+    wb = openpyxl.Workbook()
+    sheet = wb.active
+    sheet.title = "Project vs CC Utilization"
+
+    headers = [
+        "Employee",
+        "Total Working Days",
+        "Weekday Worked",
+        "Weekend Worked",
+        "Holidays",
+        "Leave Days",
+        "Available Days",
+        "Project Days",
+        "CC Days",
+        "Project Utilization %",
+        "CC Utilization %",
+    ]
+    sheet.append(headers)
+
+    for entry in report_data:
+        sheet.append([
+            entry.get("employee_name"),
+            entry.get("total_working_days", 0),
+            entry.get("weekday_worked", 0),
+            entry.get("weekend_worked", 0),
+            entry.get("holiday_days", 0),
+            entry.get("leave_days", 0),
+            entry.get("available_days", 0),
+            entry.get("project_days", 0),
+            entry.get("cc_days", 0),
+            f"{entry.get('project_utilization', 0)}%",
+            f"{entry.get('cc_utilization', 0)}%",
+        ])
+
+    # --- Prepare response ---
+    response = HttpResponse(
+        content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+    response["Content-Disposition"] = 'attachment; filename="Project_CC_Utilization.xlsx"'
+    wb.save(response)
+    return response
+
+
+# this is for downloading from manager side 
+@employee_signin_required
+def export_project_cc_utilization_manager(request):
+    # --- Get and validate dates ---
+    start_str = request.GET.get("start_date")
+    end_str = request.GET.get("end_date")
+
+    if not start_str or not end_str:
+        return HttpResponseBadRequest("Start and End date are required.")
+
+    try:
+        start_date = datetime.strptime(start_str, "%Y-%m-%d").date()
+        end_date = datetime.strptime(end_str, "%Y-%m-%d").date()
+    except ValueError:
+        return HttpResponseBadRequest("Invalid date format. Use YYYY-MM-DD.")
+
+    # --- Determine employee scope ---
+
+    try:
+        employee_obj = Employees.objects.get(user=request.user)
+    except Employees.DoesNotExist:
+        raise PermissionDenied("Employee profile not found.")
+
+    # --- Generate report data ---
+    report_data = generate_project_cc_utilization_report(employee_obj, start_date, end_date)
+
+
+    report_data = [
+        r for r in report_data if r["employee_obj"] in employee_obj.employees_managed.all()
+    ]
 
     # --- Create Excel workbook ---
     wb = openpyxl.Workbook()
@@ -2891,7 +3083,7 @@ def subordinatesmissingtimesheet(request):
             Employees.objects.filter(
                 Q(resignation_date__isnull=True) |
                 Q(resignation_date__gte=previous_week_start),
-                first_name__icontains=name_param,manager=manager
+                first_name__icontains=name_param,manager=manager,excl_TSheet=False
             )
         )
     else:
@@ -2899,7 +3091,7 @@ def subordinatesmissingtimesheet(request):
             Employees.objects.filter(
                 Q(resignation_date__isnull=True) |
                 Q(resignation_date__gte=previous_week_start),
-                manager=manager
+                manager=manager,excl_TSheet=False
             )
         )
 

@@ -153,6 +153,7 @@ class Employees(models.Model):
     incentive = models.TextField(null=True,blank=True)
     joining_bonus=models.TextField(null=True)
     hr_emails=models.BooleanField(default=False)
+    excl_TSheet = models.BooleanField(default=False)
     pan_card = models.TextField(
          
         null=True, 

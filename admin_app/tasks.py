@@ -327,6 +327,7 @@ def send_timesheet_reminder(day_type="monday_morning", country_id=None):
         .exclude(employee_type__code="C")
         .exclude(excl_folup=True)
         .exclude(employee_status="resigned")
+        .exclude(excl_TSheet=True)
     )
     if country_id:
         employees = employees.filter(country_id=country_id)
@@ -492,7 +493,7 @@ def send_pendingtimesheet_emails():
 
     for manager in managers:
 
-        subordinates = manager.employees_managed.all()
+        subordinates = manager.employees_managed.all().exclude(excl_TSheet=True)
 
         today = datetime.now().date()
 
@@ -580,7 +581,7 @@ def email_to_manager():
     for manager in managers:
 
         # fetching subordinates excluding resigned employees (if resignation date is on previous week then included)
-        subordinates = manager.employees_managed.filter(Q(resignation_date__isnull=True) | Q(resignation_date__gte=duration_week_start))
+        subordinates = manager.employees_managed.filter(Q(resignation_date__isnull=True) | Q(resignation_date__gte=duration_week_start),excl_TSheet=False)
 
         not_entered=[]
         for emp in subordinates:
@@ -699,7 +700,7 @@ def delayed_timesheet_entry():
     # First day of previous month
     first_day_previous_month = last_day_previous_month.replace(day=1)
 
-    employees = Employees.objects.all().exclude(employee_status="resigned",excl_folup = True)
+    employees = Employees.objects.all().exclude(Q(employee_status="resigned") | Q(excl_folup=True) | Q(excl_TSheet=True))
 
     for emp in employees:
         delayed_entries = TimesheetHdr.objects.filter(

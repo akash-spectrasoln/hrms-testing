@@ -2844,14 +2844,14 @@ def employeesmissingtimesheet(request):
             Employees.objects.filter(
                 Q(resignation_date__isnull=True) |
                 Q(resignation_date__gte=previous_week_start),
-                first_name__icontains=name_param
+                first_name__icontains=name_param,excl_TSheet=False
             ).exclude(user=request.user)
         )
     else:
         employees = list(
             Employees.objects.filter(
                 Q(resignation_date__isnull=True) |
-                Q(resignation_date__gte=previous_week_start)
+                Q(resignation_date__gte=previous_week_start),excl_TSheet=False
             ).exclude(user=request.user)
         )
 
