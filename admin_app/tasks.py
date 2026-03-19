@@ -527,7 +527,7 @@ def send_pendingtimesheet_emails():
             for ts in pending_timesheets:
                 week_html += f"""
                     <li>
-                        {ts.employee.first_name} : {ts.week_start} to {ts.week_end}
+                        {ts.employee.first_name} {ts.employee.last_name} : {ts.week_start} to {ts.week_end}
                     </li>
                 """
             html_message = f"""
