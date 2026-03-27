@@ -21,7 +21,7 @@ def derive_key(cmp_id: int, salt: bytes, iterations: int = 100000) -> bytes:
             backend=default_backend()
         )
         key = kdf.derive(str(cmp_id).encode())
-        print(f"[Key Derivation] CMP ID: {cmp_id}, Salt: {salt.hex()}, Key: {key.hex()}")
+
         return key
     except Exception as e:
         raise ValueError(f"Key derivation failed: {e}")
@@ -31,7 +31,7 @@ def encrypt_field(data, cmp_id: int, iterations: int = 100000):
     """
     Encrypt a field using AES-GCM mode.
     """
-    print("inside encrypt")
+
     original_type = type(data).__name__
     salt = os.urandom(16)  # Generate a new random salt for each encryption
     nonce = os.urandom(12)  # 12-byte nonce for AES-GCM
@@ -58,7 +58,6 @@ def encrypt_field(data, cmp_id: int, iterations: int = 100000):
          iterations
     ]
 
-    print("[Encryption Output]:", result)
     return result
 
 
@@ -67,12 +66,7 @@ def decrypt_field(encrypted_data: str, cmp_id: int, nonce: str, tag: str, salt: 
     Decrypt a field using AES-GCM mode.
     """
     try:
-        print("[Decryption Debugging]")
-        print(f"CMP ID: {cmp_id}")
-        print(f"Encrypted Data (Base64): {encrypted_data}")
-        print(f"Nonce (Base64): {nonce}")
-        print(f"Tag (Base64): {tag}")
-        print(f"Salt (Base64): {salt}")
+
 
         # Decode inputs from base64
         encrypted_data = base64.b64decode(encrypted_data)
@@ -80,9 +74,6 @@ def decrypt_field(encrypted_data: str, cmp_id: int, nonce: str, tag: str, salt: 
         tag = base64.b64decode(tag)
         salt = base64.b64decode(salt)
 
-        print(f"Decoded Salt: {salt.hex()}")
-        print(f"Decoded Nonce: {nonce.hex()}")
-        print(f"Decoded Tag: {tag.hex()}")
 
         # Derive the decryption key
         key = derive_key(cmp_id, salt, iterations)
@@ -105,18 +96,17 @@ def decrypt_field(encrypted_data: str, cmp_id: int, nonce: str, tag: str, salt: 
         elif original_type == 'dict':
             try:
                 
-                print("dict data",type(data))
+
                 data_str = data.decode('utf-8')
                 data_str = data_str.replace("'", '"')
                 return json.loads(data_str)
                 
             except json.JSONDecodeError as e:
-                print(f"Error decoding dictionary: {e}")
+
                 return None
         else:
             
-            print("data",data)
-            print("type of",type(data))
+
             return data  # Raw bytes if type is unknown
 
     except InvalidTag:
