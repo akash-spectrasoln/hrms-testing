@@ -1139,6 +1139,20 @@ def delete_leave(request, leave_id):
         leave.approved_by = leave.employee_user
         leave.save()
         
+        # Recalculate timesheet totals for affected weeks (if timesheet already exists)
+        # If timesheet doesn't exist yet, it will be calculated correctly when created
+        print(f"[DEBUG] manage_leave_request: Leave approved for employee {employee.id} ({employee.first_name}) from {leave.start_date} to {leave.end_date}")
+        from admin_app.models import TimesheetHdr
+        affected_timesheets = TimesheetHdr.objects.filter(
+            employee=employee,
+            week_start__lte=leave.end_date,
+            week_end__gte=leave.start_date
+        )
+        for ts_hdr in affected_timesheets:
+
+            ts_hdr.recalc_totals(update_timestamp=False)  # Don't update timestamp for manager actions
+
+        
         messages.success(request, "Planned leave deleted successfully.")
     else:
         messages.error(request, "Invalid delete operation.")
@@ -1833,22 +1847,6 @@ def manage_leave_request(request, leave_request_id):
                 emp_leave_details.pending_casual -=leave_duration
                 emp_leave_details.save()
 
-            # Recalculate timesheet totals for affected weeks (if timesheet already exists)
-            # If timesheet doesn't exist yet, it will be calculated correctly when created
-            print(f"[DEBUG] manage_leave_request: Leave approved for employee {employee.id} ({employee.first_name}) from {leave_request.start_date} to {leave_request.end_date}")
-            from admin_app.models import TimesheetHdr
-            affected_timesheets = TimesheetHdr.objects.filter(
-                employee=employee,
-                week_start__lte=leave_request.end_date,
-                week_end__gte=leave_request.start_date
-            )
-            print(f"[DEBUG] manage_leave_request: Found {affected_timesheets.count()} timesheet(s) overlapping with leave period")
-            for ts_hdr in affected_timesheets:
-                print(f"[DEBUG] manage_leave_request: Recalculating timesheet {ts_hdr.tsheet_id} (week {ts_hdr.week_start} to {ts_hdr.week_end})")
-                print(f"[DEBUG] manage_leave_request: Before recalculation - tot_hrs_wrk={ts_hdr.tot_hrs_wrk}, tot_lev_hrs={ts_hdr.tot_lev_hrs}, tot_hol_hrs={ts_hdr.tot_hol_hrs}")
-                ts_hdr.recalc_totals(update_timestamp=False)  # Don't update timestamp for manager actions
-                print(f"[DEBUG] manage_leave_request: After recalculation - tot_hrs_wrk={ts_hdr.tot_hrs_wrk}, tot_lev_hrs={ts_hdr.tot_lev_hrs}, tot_hol_hrs={ts_hdr.tot_hol_hrs}")
-
             
     
     # Email to employee: LEAVE APPROVED
@@ -1936,6 +1934,17 @@ def manage_leave_request(request, leave_request_id):
             leave_request.approved_by = request.user
 
         leave_request.save()
+        # Recalculate timesheet totals for affected weeks (if timesheet already exists)
+        # If timesheet doesn't exist yet, it will be calculated correctly when created
+        from admin_app.models import TimesheetHdr
+        affected_timesheets = TimesheetHdr.objects.filter(
+            employee=employee,
+            week_start__lte=leave_request.end_date,
+            week_end__gte=leave_request.start_date
+        )
+        for ts_hdr in affected_timesheets:
+            ts_hdr.recalc_totals(update_timestamp=False)  # Don't update timestamp for manager actions
+
         return redirect('manager_leave_requests')
 
     return render(
@@ -2213,19 +2222,14 @@ def allocate_leave(request, employee_id):
            
             # Recalculate timesheet totals for affected weeks (if timesheet already exists)
             # If timesheet doesn't exist yet, it will be calculated correctly when created
-            print(f"[DEBUG] allocate_leave: Leave allocated for employee {employee.id} ({employee.first_name}) from {start_date} to {end_date}")
             from admin_app.models import TimesheetHdr
             affected_timesheets = TimesheetHdr.objects.filter(
                 employee=employee,
                 week_start__lte=end_date,
                 week_end__gte=start_date
             )
-            print(f"[DEBUG] allocate_leave: Found {affected_timesheets.count()} timesheet(s) overlapping with leave period")
             for ts_hdr in affected_timesheets:
-                print(f"[DEBUG] allocate_leave: Recalculating timesheet {ts_hdr.tsheet_id} (week {ts_hdr.week_start} to {ts_hdr.week_end})")
-                print(f"[DEBUG] allocate_leave: Before recalculation - tot_hrs_wrk={ts_hdr.tot_hrs_wrk}, tot_lev_hrs={ts_hdr.tot_lev_hrs}, tot_hol_hrs={ts_hdr.tot_hol_hrs}")
                 ts_hdr.recalc_totals(update_timestamp=False)  # Don't update timestamp for manager actions
-                print(f"[DEBUG] allocate_leave: After recalculation - tot_hrs_wrk={ts_hdr.tot_hrs_wrk}, tot_lev_hrs={ts_hdr.tot_lev_hrs}, tot_hol_hrs={ts_hdr.tot_hol_hrs}")
            
             current_year=date.today().year
             reset_period = HolidayResetPeriod.objects.filter(country=employee.country).first()
