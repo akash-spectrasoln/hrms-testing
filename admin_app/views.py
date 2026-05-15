@@ -1775,7 +1775,7 @@ def admin_leave_requests(request):
     fy_start, fy_end = get_financial_year_dates(request, country_obj, reference_date=reference_date)
 
     leave_requests = LeaveRequest.objects.select_related('employee_user', 'employee_master').filter(
-        start_date__lte=fy_end + relativedelta(months=9), 
+        start_date__lte=fy_end, 
         end_date__gte=fy_start,
         employee_master__country=country_obj,
     )
