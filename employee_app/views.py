@@ -1199,6 +1199,9 @@ def my_leave_history(request):
     validity_range = f"{fin_year_start.strftime('%b %d, %Y')} - {fin_year_end.strftime('%b %d, %Y')}"
 
     status_filter = request.GET.get('status', '').lower()
+    year_str = request.GET.get('year', '')
+    # allowing the user to see previous years leave history 
+    available_years=[fin_year_start.year,fin_year_start.year - 1] #available years for filtering leave history (just current year and previous year)
 
     # Batch fetch all leave requests for the user, for this year (use select_related for related access in template)
     leave_requests_qs = LeaveRequest.objects.filter(employee_user=user).select_related('employee_master').order_by('-start_date')
@@ -1214,6 +1217,15 @@ def my_leave_history(request):
         leave_requests_qs = leave_requests_qs.filter(status__iexact='Rejected')
     elif status_filter == 'deleted':
         leave_requests_qs = leave_requests_qs.filter(status__iexact='Deleted')
+
+    if year_str:
+        year_filter = int(year_str)
+        fy_filter=fin_year_start.replace(year=year_filter)
+        fend_filter=fin_year_end.replace(year=year_filter + 1)
+        leave_requests_qs = leave_requests_qs.filter(start_date__lte=fend_filter,end_date__gte=fy_filter)
+    else:
+        year_filter = fin_year_start.year
+        leave_requests_qs = leave_requests_qs.filter(start_date__lte=fin_year_end,end_date__gte=fin_year_start)
 
     leave_requests = list(leave_requests_qs)
 
@@ -1409,6 +1421,8 @@ def my_leave_history(request):
         'financial_year_start': fin_year_start,
         'financial_year_end': fin_year_end,
         'financial_year_range_display': validity_range,
+        "available_years": available_years,
+        "selected_year":year_filter
     }
 
     return render(request, 'my_leave_history.html', context)
@@ -1617,17 +1631,17 @@ def manager_leave_requests(request):
     # Reference date for financial year calc: mid-year of selected year or today if no year specified
     try:
         year = int(year_str)
-        reference_date = date(year, 7, 1)
+        reference_date = date.today().replace(year=year)
     except (ValueError, TypeError):
         reference_date = date.today()
 
     # Financial year start and end — update your get_financial_year_dates to accept country instance
-    fy_start, fy_end = get_financial_year_dates(request, employee)
+    fy_start, fy_end = get_financial_year_dates(request, employee,reference_date)
 
     # Base leave requests filtered by subordinates and financial year overlap
     leave_requests = LeaveRequest.objects.filter(
         employee_master__in=subordinates,
-        start_date__lte=fy_end + relativedelta(months=9),
+        start_date__lte=fy_end,
         end_date__gte=fy_start,
     )
 
@@ -1639,7 +1653,13 @@ def manager_leave_requests(request):
         )
 
     # Filter by status
-    if 'status' in request.GET:
+
+    if status == "Upcoming":
+        leave_statuses=["Pending","Approved"]
+        todays_date=datetime.today()
+        leave_requests = leave_requests.filter(status__in=leave_statuses,end_date__gte=todays_date)
+
+    elif 'status' in request.GET:
         if status != '':
             leave_requests = leave_requests.filter(status__iexact=status)
         # else: empty means show all - no filter
