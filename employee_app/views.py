@@ -1200,8 +1200,14 @@ def my_leave_history(request):
 
     status_filter = request.GET.get('status', '').lower()
     year_str = request.GET.get('year', '')
+
     # allowing the user to see previous years leave history 
     available_years=[fin_year_start.year,fin_year_start.year - 1] #available years for filtering leave history (just current year and previous year)
+
+    if year_str:
+        year_filter = int(year_str)
+        fin_year_start=fin_year_start.replace(year=year_filter)
+        fin_year_end=fin_year_end.replace(year=year_filter + 1)
 
     # Batch fetch all leave requests for the user, for this year (use select_related for related access in template)
     leave_requests_qs = LeaveRequest.objects.filter(employee_user=user).select_related('employee_master').order_by('-start_date')
@@ -1220,8 +1226,8 @@ def my_leave_history(request):
 
     if year_str:
         year_filter = int(year_str)
-        fy_filter=fin_year_start.replace(year=year_filter)
-        fend_filter=fin_year_end.replace(year=year_filter + 1)
+        fy_filter=fin_year_start
+        fend_filter=fin_year_end
         leave_requests_qs = leave_requests_qs.filter(start_date__lte=fend_filter,end_date__gte=fy_filter)
     else:
         year_filter = fin_year_start.year
@@ -1321,7 +1327,7 @@ def my_leave_history(request):
         planned_leaves = 0
         pending_leaves = 0
 
-        year_to_use = date.today().year - 1 if date.today().month < reset_period.start_month else date.today().year
+        year_to_use = fin_year_start.year
         leave_details=get_leave_policy_details(employee,year_to_use)
         holiday_policy = leave_details['allowed_holiday_policy']
         employee_leaves, created = LeaveDetails.objects.get_or_create(employee=employee, year=year_to_use,defaults={"total_casual_leaves":holiday_policy})
@@ -1336,7 +1342,7 @@ def my_leave_history(request):
             )
 
             if employee_leaves and updated_used != employee_leaves.casual_leaves_used:
-                diff=updated_used-employee_leaves.casual_leaves_used
+                diff=max(0,updated_used-employee_leaves.casual_leaves_used)
                 employee_leaves.casual_leaves_used = updated_used
                 employee_leaves.planned_casual = max(0, (employee_leaves.planned_casual or 0) - diff)
                 employee_leaves.save()
@@ -1358,7 +1364,7 @@ def my_leave_history(request):
             )
 
             if employee_leaves and updated_used != employee_leaves.floating_holidays_used:
-                diff=updated_used-employee_leaves.floating_holidays_used
+                diff=max(0,updated_used-employee_leaves.floating_holidays_used)
                 employee_leaves.floating_holidays_used = updated_used
                 employee_leaves.planned_float = max(0, (employee_leaves.planned_float or 0) - diff)
                 employee_leaves.save()
@@ -2078,7 +2084,7 @@ def allocate_leave(request, employee_id):
     country_holiday_dates = set(
         Holiday.objects.filter(
             country=employee.country,
-            date__range=(financial_year_start, fy_end_extended)
+            date__range=(financial_year_start - relativedelta(months=3) , fy_end_extended)
         ).values_list('date', flat=True)
     )
 
@@ -2086,7 +2092,7 @@ def allocate_leave(request, employee_id):
     state_holiday_dates = set(
         StateHoliday.objects.filter(
             state=employee.state,
-            date__range=(financial_year_start, fy_end_extended),
+            date__range=(financial_year_start - relativedelta(months=3), fy_end_extended),
             country=employee.country
         ).values_list('date', flat=True)
     )
@@ -2096,14 +2102,14 @@ def allocate_leave(request, employee_id):
     floating_holidays = set(
         FloatingHoliday.objects.filter(
             country=employee.country,
-            date__range=(financial_year_start, fy_end_extended)
+            date__range=(financial_year_start - relativedelta(months=3), fy_end_extended)
         ).values_list('date', flat=True)
     )
 
     state_excluded = set(
     StateHoliday.objects.filter(
         country=employee.country,
-        date__range=(financial_year_start, fy_end_extended)
+        date__range=(financial_year_start - relativedelta(months=3), fy_end_extended)
     ).exclude(
         state=employee.state
     ).values_list('date', flat=True)
@@ -2274,9 +2280,16 @@ def allocate_leave(request, employee_id):
                 return redirect('request_leave')
             emp_leave_details, created = LeaveDetails.objects.get_or_create(employee=employee,year=current_year,defaults={'total_casual_leaves':holiday_policy})
             if leave_type == "Floating Leave":
-                emp_leave_details.planned_float += leave_days
+                if leave_request.end_date < today:
+                    emp_leave_details.floating_holidays_used += leave_days
+                else:    
+                    emp_leave_details.planned_float += leave_days
             elif leave_type == "Casual Leave":
-                emp_leave_details.planned_casual += leave_days
+                if leave_request.end_date < today:
+                    emp_leave_details.casual_leaves_used += leave_days
+                else:
+                    emp_leave_details.planned_casual += leave_days
+
             emp_leave_details.save()
 
             send_mail(

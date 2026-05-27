@@ -244,7 +244,6 @@ def send_anniversary_emails():
 
         except Exception as e:
             # Skip employees with invalid data
-            print(f"Error processing employee {employee.id}: {e}")
             continue
 
 from django.utils import timezone
@@ -758,3 +757,184 @@ def delayed_timesheet_entry():
                 html_message=html_message,
                 fail_silently=False,
             )   
+
+
+from .models import HolidayResetPeriod,Holiday,StateHoliday,LeaveDetails
+from django.shortcuts import get_object_or_404
+from .views import overlapping_leave_days
+
+@shared_task
+def update_used_leaves():
+    """
+    backgorund job to update the used leaves count of all employees
+    """
+
+    today = date.today()
+    last_date = today - timedelta(days=1)
+    employees = Employees.objects.all().exclude(resignation_date__lt=today,employee_status="resigned").select_related('country', 'state')
+
+    # All reset periods keyed by country
+    reset_periods = {
+        rp.country_id: rp
+        for rp in HolidayResetPeriod.objects.all()
+    }
+
+    if not reset_periods:
+        return  # Nothing to process
+    
+
+    year = last_date.year
+
+    #all possible finacial year start data with reset periods 
+    all_fy_start = [
+        date(year - 1, rp.start_month, rp.start_day)
+        for rp in reset_periods.values()
+    ]
+
+    all_fy_ends = [
+        date(year + 1, rp.end_month, rp.end_day)
+        for rp in reset_periods.values()
+    ]
+    
+    global_fy_start = min(all_fy_start)
+    global_fy_end   = max(all_fy_ends)
+
+    holidays_by_country = {}
+    for h in Holiday.objects.filter(
+        date__range=(global_fy_start, global_fy_end)
+    ).values('country_id', 'date'):
+        holidays_by_country.setdefault(h['country_id'], set()).add(h['date'])
+
+
+    holidays_by_state = {}
+    for sh in StateHoliday.objects.filter(
+        date__range=(global_fy_start, global_fy_end)
+    ).values('state_id', 'date'):
+        holidays_by_state.setdefault(sh['state_id'], set()).add(sh['date'])
+
+  
+    employee_ids = list(employees.values_list('id', flat=True))
+    # PRE-LOAD LeaveDetails for ALL employees in ONE query
+
+    # employee_id is used instead of employee to get the raw integer FK value
+    leave_details_map = {
+        (ld.employee_id, ld.year): ld
+        for ld in LeaveDetails.objects.filter(
+            employee__in=employee_ids,
+            year__in=[year - 1, year]  # cover FY boundary edge case
+        )
+    }
+
+
+    # PRE-LOAD LeaveRequests filtered to global FY range (ONE query)
+    leave_requests_map = {}
+    for lr in LeaveRequest.objects.filter(
+        employee_master__in=employee_ids,
+        status__in=['Accepted', 'Approved'],
+        start_date__lte=global_fy_end,
+        end_date__gte=global_fy_start
+    ).values('employee_master', 'leave_type', 'start_date', 'end_date', 'status'):
+        leave_requests_map.setdefault(lr['employee_master'], []).append(lr)
+    
+
+    # PROCESS employees and collect updates
+    to_update = []
+
+    for employee in employees:
+        current_year = date.today().year
+        leave_rc_edited = False
+        reset_period = reset_periods.get(employee.country_id)
+        if reset_period:
+            start_month = reset_period.start_month
+            start_day = reset_period.start_day
+            end_month=reset_period.end_month
+            end_day=reset_period.end_day
+            financial_year_start_date = date(current_year, start_month, start_day)
+            financial_year_end_date = date(current_year+1, end_month, end_day)
+        else:
+            continue
+
+        if financial_year_start_date <= last_date <= financial_year_end_date:
+            pass
+        elif last_date < financial_year_start_date:
+            current_year -= 1 
+            financial_year_start_date=financial_year_start_date.replace(year=current_year)
+            financial_year_end_date=financial_year_end_date.replace(year=current_year+1)
+
+        #fetching the employees leave details record
+        emp_leave_details = leave_details_map.get((employee.id, current_year))
+
+        #only processing if the leave record is available for the employee 
+        if emp_leave_details:
+            # Build holiday set from pre-loaded data
+            holidays_set = (
+                holidays_by_country.get(employee.country_id, set()) |
+                holidays_by_state.get(employee.state_id, set())
+            )
+
+            leaves_qs = [
+                l for l in leave_requests_map.get(employee.id, [])
+                if l['start_date'] <= financial_year_end_date
+                and l['end_date'] >= financial_year_start_date
+            ]
+            
+            # Pre-slice all leaves into buckets for fast sum in the summary
+            leaves_by_type = {k: [] for k, _ in LeaveRequest.LEAVE_TYPES}
+            for leave in leaves_qs:
+                leaves_by_type.setdefault(leave['leave_type'], []).append(leave)
+            
+            for leave_type, description in LeaveRequest.LEAVE_TYPES:
+                leave_type_lower = leave_type.lower()
+                lvs = leaves_by_type.get(leave_type, [])
+                
+                
+                if leave_type_lower == "casual leave":
+                    updated_used = sum(
+                        overlapping_leave_days(l['start_date'], l['end_date'], financial_year_start_date, financial_year_end_date, holidays_set)
+                        for l in lvs if l['status'] in ['Accepted', 'Approved'] and l['end_date'] < date.today()
+                    )
+
+                    planned_count = sum(
+                        overlapping_leave_days(l['start_date'], l['end_date'], financial_year_start_date, financial_year_end_date, holidays_set)
+                        for l in lvs if l['status'] in ['Accepted', 'Approved'] and l['end_date'] >= date.today()
+                    )
+
+                    
+                    if updated_used != emp_leave_details.casual_leaves_used or planned_count != emp_leave_details.planned_casual:
+                        emp_leave_details.casual_leaves_used = updated_used
+                        emp_leave_details.planned_casual = planned_count
+                        leave_rc_edited = True
+                        
+                        
+
+                elif leave_type_lower == "floating leave":
+                    updated_used = sum(
+                        overlapping_leave_days(l['start_date'], l['end_date'], financial_year_start_date, financial_year_end_date, holidays_set)
+                        for l in lvs if l['status'] in ['Accepted', 'Approved'] and l['end_date'] < date.today()
+                    )
+                    planned_count = sum(
+                        overlapping_leave_days(l['start_date'], l['end_date'], financial_year_start_date, financial_year_end_date, holidays_set)
+                        for l in lvs if l['status'] in ['Accepted', 'Approved'] and l['end_date'] >= date.today()
+                    )
+                   
+                    if updated_used != emp_leave_details.floating_holidays_used or planned_count != emp_leave_details.planned_float:
+                        emp_leave_details.floating_holidays_used = updated_used
+                        emp_leave_details.planned_float = planned_count
+                        leave_rc_edited = True
+                    
+            if leave_rc_edited:
+                to_update.append(emp_leave_details)      
+        else:
+            continue
+            
+
+    # BULK UPDATE in one DB call instead of N saves
+    if to_update:
+        LeaveDetails.objects.bulk_update(
+            to_update,
+            fields=[
+                'casual_leaves_used', 'planned_casual',
+                'floating_holidays_used', 'planned_float'
+            ],
+            batch_size=500
+        )        

@@ -1938,7 +1938,7 @@ def timesheet_approval_list(request):
     # --- 3. Get Subordinates ---
     subordinates = Employees.objects.filter(manager=manager).select_related(
         'country', 'state'
-    ).filter(Q(resignation_date__isnull=True) | Q(resignation_date__gte=week_start)).order_by('employee_id', 'first_name', 'last_name')
+    ).filter(Q(resignation_date__isnull=True) | Q(resignation_date__gte=week_start),excl_TSheet=False).order_by('employee_id', 'first_name', 'last_name')
 
     if search_query:
         subordinates = subordinates.filter(
