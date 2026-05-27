@@ -406,12 +406,28 @@ from django.shortcuts import get_object_or_404, redirect
 from django.contrib import messages
 from datetime import date
 from .models import LeaveRequest, Employees  # Adjust this import if your app name/model name differs
+
+def overlapping_leave_days(start_date, end_date, fy_start, fy_end, skip_holidays=None):
+    if not start_date or not end_date:
+        return 0
+    start = max(start_date, fy_start)
+    end = min(end_date, fy_end)
+    days = 0
+    d = start
+    while d <= end:
+        if d.weekday() < 5:  # Monday-Friday are 0-4
+            if not skip_holidays or d not in skip_holidays:
+                days += 1
+        d += timedelta(days=1)
+    return days if days > 0 else 0
+
+
 @signin_required
 def delete_leave_request(request, leave_id):
     if request.method == "POST":
         leave_request = get_object_or_404(LeaveRequest, id=leave_id)
 
-        if leave_request.status in ['Approved','Rejected','Deleted']:
+        if leave_request.status in ['Deleted']:
             messages.warning(request,f"Leave request has already been {leave_request.status.lower()}.")
             return redirect('leave_request_display')
         
@@ -433,16 +449,73 @@ def delete_leave_request(request, leave_id):
             pass
         elif leave_request.start_date > financial_year_end_date:
             current_year += 1 
+            financial_year_start_date=financial_year_start_date.replace(year=current_year)
+            financial_year_end_date=financial_year_end_date.replace(year=current_year+1)
+
         else:
             current_year-=1
+            financial_year_start_date=financial_year_start_date.replace(year=current_year)
+            financial_year_end_date=financial_year_end_date.replace(year=current_year+1)
 
-        year=leave_request.start_date.year
-        emp_leave_details=get_object_or_404(LeaveDetails,employee=employee,year=current_year)
+        year=current_year
+        emp_leave_details=get_object_or_404(LeaveDetails,employee=employee,year=year)
 
-        if leave_request.leave_type == 'Floating Leave':
+        if leave_request.leave_type == 'Floating Leave' and leave_request.status != 'Approved' :
             emp_leave_details.pending_float -= leave_request.leave_days
-        else:
+        elif leave_request.leave_type == 'Casual Leave' and leave_request.status != 'Approved':
             emp_leave_details.pending_casual -= leave_request.leave_days
+
+        elif leave_request.leave_type == 'Floating Leave' and leave_request.status == 'Approved' and leave_request.end_date >= date.today():
+            emp_leave_details.planned_float -= leave_request.leave_days
+        elif leave_request.leave_type == 'Casual Leave' and leave_request.status == 'Approved' and leave_request.end_date >= date.today():
+            emp_leave_details.planned_casual -= leave_request.leave_days
+        else:
+            leave_request.status = "Deleted"
+            leave_request.approved_by = request.user  # Set who deleted
+            leave_request.save()
+            holidays = set(
+                Holiday.objects.filter(
+                    country=employee.country,
+                    date__range=(financial_year_start_date, financial_year_end_date)
+                ).values_list('date', flat=True)
+            )
+            state_holiday_dates = set(
+                StateHoliday.objects.filter(
+                    state=employee.state,
+                    date__range=(financial_year_start_date, financial_year_end_date)
+                ).values_list('date', flat=True)
+            )
+            #combine both 
+            holidays |= state_holiday_dates
+            holidays_set = set(holidays)
+            leaves_qs = LeaveRequest.objects.filter(
+                employee_master=employee,
+                start_date__lte=financial_year_end_date,
+                end_date__gte=financial_year_start_date
+            )
+            # Pre-slice all leaves into buckets for fast sum in the summary
+            leaves_by_type = {k: [] for k, _ in LeaveRequest.LEAVE_TYPES}
+            for leave in leaves_qs:
+                leaves_by_type.setdefault(leave.leave_type, []).append(leave)
+            
+            for leave_type, description in LeaveRequest.LEAVE_TYPES:
+                leave_type_lower = leave_type.lower()
+                lvs = leaves_by_type.get(leave_type, [])
+                
+                
+                if leave_type_lower == "casual leave":
+                    updated_used = sum(
+                        overlapping_leave_days(l.start_date, l.end_date, financial_year_start_date, financial_year_end_date, holidays_set)
+                        for l in lvs if l.status in ['Accepted', 'Approved'] and l.end_date < date.today()
+                    )
+                    
+                    emp_leave_details.casual_leaves_used = updated_used
+                elif leave_type_lower == "floating leave":
+                    updated_used = sum(
+                        overlapping_leave_days(l.start_date, l.end_date, financial_year_start_date, financial_year_end_date, holidays_set)
+                        for l in lvs if l.status in ['Accepted', 'Approved'] and l.end_date < date.today()
+                    )
+                    emp_leave_details.floating_holidays_used = updated_used
         emp_leave_details.save()
 
         leave_request.status = "Deleted"
