@@ -220,7 +220,7 @@ def project_list(request):
     status_filter = request.GET.get('status', 'current').strip().lower()
 
     if status_filter == 'current':
-        projects = projects.filter(valid_from__lte=today, valid_to__gte=today)
+        projects = projects.filter(is_active=True,is_deleted=False,valid_from__lte=today, valid_to__gte=today)
     elif status_filter == 'expired':
         projects = projects.filter(Q(valid_to__lt=today) | Q(is_deleted=True))
 
@@ -363,6 +363,15 @@ def project_delete_view(request, pk):
     next_url = request.GET.get('next', reverse('project_list'))
 
     if request.method == 'POST':
+        is_used = AssignProject.objects.filter(project=project).exists()
+
+        if is_used:
+            messages.error(
+                request,
+                "This project cannot be deleted because it is referenced in AssignProject records."
+            )
+            return redirect(next_url)
+        
         project.soft_delete()
         messages.success(request, "Project deactivated (soft-deleted) successfully!")
         
@@ -548,7 +557,7 @@ class AssignProjectListView(ListView):
         status_filter = self.request.GET.get('status', 'current').strip().lower()
 
         if status_filter == 'current':
-            qs = qs.filter(start_date__lte=today, end_date__gte=today)
+            qs = qs.filter(start_date__lte=today, end_date__gte=today,is_active=True,is_deleted=False)
         elif status_filter == 'expired':
     # Include assignments that are either expired OR deleted
             qs = qs.filter(Q(end_date__lt=today) | Q(is_deleted=True))
@@ -619,6 +628,13 @@ class AssignProjectDeleteView(View):
     def post(self, request, pk):
         assignment = get_object_or_404(AssignProject, pk=pk)
         next_url = request.GET.get('next', reverse('assign-project-list'))
+        is_used = TimesheetItem.objects.filter(project_assignment=assignment).exists()
+        if is_used:
+            messages.error(
+                request,
+                "This assignment cannot be deleted because it is referenced in TimesheetItem records."
+            )
+            return redirect(next_url)
         assignment.is_deleted = True
         assignment.save()
         messages.success(request, "Assignment removed successfully.")
@@ -1307,7 +1323,8 @@ def get_timesheet_day_data(request):
     project_assignments = AssignProject.objects.filter(
         employee=employee,
         start_date__lte=date_obj,
-        project__is_active=True
+        project__is_active=True,
+        is_deleted=False
     ).filter(
         Q(end_date__gte=date_obj) | Q(end_date__isnull=True)
     ).select_related("project__client")
