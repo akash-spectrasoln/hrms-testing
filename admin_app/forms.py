@@ -432,12 +432,23 @@ class DeviceTrackerForm(forms.ModelForm):
         self.fields['device'].required = False
 
         # Employee dropdown - only show employed employees with active users
-        self.fields["employee"].queryset = Employees.objects.filter(
+        employee_queryset = Employees.objects.filter(
             is_deleted=False,
-            user__isnull=False,            # ensure user relationship exists
-            user__is_active=True,          # exclude inactive users
-            employee_status='employed'     # only show employed employees
-        ).select_related('user').order_by("employee_id")
+            user__isnull=False,
+            user__is_active=True,
+            employee_status="employed"
+        )
+
+        # When editing, include the employee currently assigned
+        if self.instance.pk and self.instance.employee:
+            employee_queryset = employee_queryset | Employees.objects.filter(
+                pk=self.instance.employee.pk
+            )
+
+        self.fields["employee"].queryset = employee_queryset.distinct().order_by(
+            "employee_id"
+        )
+
         self.fields["employee"].label_from_instance = (
             lambda obj: f"{obj.employee_id} - {obj.first_name} {obj.last_name}"
         )
